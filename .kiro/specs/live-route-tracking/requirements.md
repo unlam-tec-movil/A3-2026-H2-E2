@@ -19,7 +19,7 @@ Entonces:
 - El temporizador muestra 00:00:00.
 - La distancia muestra 0 km.
 - La velocidad muestra 0 km/h.
-- Los botones de "Reanudar" y "Finalizar" están deshabilitados.
+- El estado de habilitación o deshabilitación de los botones de control (Pausar / Reanudar / Finalizar) queda pendiente de definición con el equipo (no se asume su estado inicial).
 
 #### Escenario 2: Visualizar el recorrido en vivo
 Dado que hay un recorrido en curso y el GPS proporciona ubicaciones válidas,
@@ -38,7 +38,7 @@ Entonces:
 - El indicador "GPS" muestra la señal con barras completas.
 - El registro del recorrido continúa normalmente.
 
-*Aclaración:* El indicador de calidad de señal GPS debe manejarse independientemente del filtro de precisión de los puntos. La precisión de una ubicación no debe determinar automáticamente el estado visual de las barras de señal.
+*Aclaración:* El indicador visual de calidad de señal GPS debe manejarse independientemente del filtro de precisión de los puntos. La precisión de una ubicación no determina automáticamente el estado visual de las barras de señal (no se asume que una precisión ≤ 30 m determine directamente las barras de señal).
 
 #### Escenario 4: Pérdida de señal GPS
 Dado que hay un recorrido en curso,
@@ -48,7 +48,7 @@ Entonces:
 - No se agregan puntos inválidos a la traza.
 - El registro continúa cuando se recibe nuevamente una ubicación GPS válida.
 
-*Aclaración:* Los 15 segundos se cuentan desde la última ubicación GPS válida recibida, no simplemente desde la última lectura GPS. Una ubicación válida debe cumplir el criterio de precisión establecido en el escenario 5.
+*Aclaración:* El temporizador de 15 segundos se contabiliza estrictamente desde la última ubicación GPS válida recibida, y no desde cualquier lectura GPS. Una ubicación válida debe cumplir el criterio de precisión establecido en el escenario 5.
 
 #### Escenario 5: Descartar un punto GPS impreciso
 Dado que hay un recorrido en curso,
@@ -66,6 +66,7 @@ Cuando el corredor toca el botón "Pausar",
 Entonces:
 - Se pausa el temporizador.
 - Se detiene el registro de la traza.
+- Se detiene el incremento de distancia recorrida.
 - El botón "Pausar" cambia a "Reanudar".
 
 **6.2 - Reanudar**
@@ -74,6 +75,7 @@ Cuando el corredor toca el botón "Reanudar",
 Entonces:
 - Se reanuda el temporizador.
 - Se reanuda el registro de la traza.
+- Se reanuda el incremento de distancia recorrida.
 - El botón "Reanudar" cambia a "Pausar".
 
 #### Escenario 7: Centrar el mapa en mi posición actual
@@ -85,38 +87,70 @@ Entonces:
 
 #### Escenario 8: Cambiar de pestaña sin perder el recorrido
 Dado que hay un recorrido en curso,
-Cuando el corredor cambia de la pestaña "Mapa" a "Historial",
+Cuando el corredor cambia de la pestaña "Mapa" a "Historial" (u otra pestaña),
 Entonces:
-- El recorrido continúa en curso.
-- Al volver a la pestaña "Mapa" se muestra nuevamente la traza actualizada.
-- El temporizador mantiene el tiempo transcurrido.
+- El recorrido continúa en curso conservando su estado actual (activo o pausado).
+- Al volver a la pestaña "Mapa" se muestra nuevamente la traza y las métricas en el estado correspondiente.
 
-*Aclaración:* Si el recorrido está pausado al cambiar de pestaña, debe conservarse el estado pausado. El temporizador y el registro de la traza solo continúan cuando el recorrido está activo.
+*Aclaración:* Si el recorrido está pausado al cambiar de pestaña, el temporizador, la distancia y el registro de la traza deben permanecer detenidos. Solo deben avanzar cuando el recorrido esté activo. Al cambiar de pestaña se debe conservar el estado actual.
+
+#### Escenario 9: Finalizar el recorrido [PROPUESTA PENDIENTE DE APROBACIÓN DEL EQUIPO]
+*(Propuesto al no encontrarse definición previa en otras historias del proyecto; sujeto a revisión y aprobación del equipo)*
+
+**9.1 - Solicitar finalización**
+Dado que hay un recorrido en curso (activo o pausado),
+Cuando el corredor toca el botón "Finalizar",
+Entonces:
+- Se solicita confirmación para finalizar el recorrido mediante un diálogo para evitar detenciones accidentales.
+
+**9.2 - Confirmar finalización**
+Dado que se muestra el diálogo de confirmación de finalización,
+Cuando el corredor confirma la finalización,
+Entonces:
+- Se detiene definitivamente el temporizador, el cálculo de distancia y el registro de la traza.
+- Se preservan las métricas finales consolidadas del recorrido (tiempo, distancia, velocidad y traza).
+- Se transiciona a la pantalla de resultado o cierre del recorrido ("¡Meta cumplida!" o "Recorrido finalizado").
+
+**9.3 - Cancelar finalización**
+Dado que se muestra el diálogo de confirmación de finalización,
+Cuando el corredor cancela la acción,
+Entonces:
+- Se cierra el diálogo de confirmación.
+- El recorrido continúa en el estado en que se encontraba (activo o pausado) sin alteración de las métricas ni pérdida de datos.
 
 ### Puntos pendientes de revisión con el equipo
-- **Botón "Finalizar":** Se mantiene pendiente para verificar si ya está contemplado en otra historia del proyecto o si se definirán escenarios adicionales para la confirmación y conclusión del recorrido.
+- **Estado inicial de los botones:** No está definido qué botones deben estar habilitados o deshabilitados al ingresar al mapa sin recorrido en curso; no se asume ningún comportamiento previo y queda identificado como pendiente de definición con el equipo.
+- **Comportamiento de Pausar, Reanudar y Finalizar:**
+  - Tras revisar el proyecto, no se identificaron definiciones formales en otras historias de usuario para Pausar, Reanudar ni Finalizar.
+  - Para Pausar y Reanudar se mantienen los escenarios 6.1 y 6.2 asegurando el congelamiento integral de temporizador, distancia y traza.
+  - Para Finalizar se propone formalmente el Escenario 9 (solicitud con diálogo de confirmación, detención definitiva de métricas y navegación a resultado), el cual queda pendiente de aprobación del equipo.
+- **Internacionalización e idiomas:** Se ratifica que no se incorpora soporte para múltiples idiomas ni nuevos idiomas; la aplicación se mantiene exclusivamente en español rioplatense.
 
 ## Introduction
-Esta funcionalidad permite a los corredores seguir su actividad en tiempo real desde la pestaña "Mapa" de Trazo. Mientras el corredor se desplaza, la aplicación muestra su ubicación sobre el mapa, traza la ruta seguida en vivo y actualiza las métricas clave: tiempo transcurrido, distancia acumulada y velocidad instantánea. La funcionalidad proporciona controles para pausar y reanudar la salida, recentrar la vista del mapa y asegurar la continuidad de la sesión al navegar entre pestañas de la app. Asimismo, incorpora mecanismos de robustez para descartar lecturas GPS imprecisas (mayores a 30 metros) y alertar al usuario ante la pérdida prolongada de señal válida (15 segundos).
+Esta funcionalidad permite a los corredores seguir su actividad en tiempo real desde la pestaña "Mapa" de Trazo. Mientras el corredor se desplaza, la aplicación muestra su ubicación sobre el mapa, traza la ruta seguida en vivo y actualiza las métricas clave: tiempo transcurrido, distancia acumulada y velocidad instantánea. La funcionalidad proporciona controles para pausar y reanudar la salida, recentrar la vista del mapa y asegurar la continuidad de la sesión al navegar entre pestañas de la app. Asimismo, incorpora mecanismos de robustez para descartar lecturas GPS imprecisas (mayores a 30 metros) y alertar al usuario ante la pérdida prolongada de señal válida (15 segundos contabilizados desde la última ubicación válida). La aplicación se concibe exclusivamente en español, sin soporte de internacionalización.
 
 ## Boundary Context
 - **In scope**:
-  - Estado inicial de la pestaña "Mapa" cuando no hay un recorrido en curso.
+  - Estado inicial de la pestaña "Mapa" cuando no hay un recorrido en curso (dejando el estado de habilitación de botones pendiente de definición).
   - Visualización de la ubicación actual del corredor y trazado en vivo sobre el mapa.
   - Cálculo y presentación continua de las métricas de recorrido: tiempo transcurrido, distancia recorrida y velocidad actual.
   - Filtrado de puntos GPS con precisión superior a 30 metros (descarte de traza y de incremento de distancia).
-  - Indicador de estado de señal GPS y detección de pérdida de señal tras 15 segundos consecutivos sin puntos válidos, mostrando el aviso correspondiente.
-  - Controles de pausa y reanudación del recorrido con alternancia de estado y congelamiento de métricas.
+  - Indicador visual de calidad de señal GPS (manejado independientemente del filtro de precisión).
+  - Detección de pérdida de señal tras 15 segundos consecutivos sin puntos válidos (contabilizados desde la última ubicación GPS válida), mostrando el aviso "Sin señal GPS".
+  - Controles de pausa y reanudación del recorrido con alternancia de estado y detención de temporizador, distancia y traza.
   - Recentrado del mapa sobre la ubicación actual tras desplazamientos manuales del usuario.
-  - Conservación y persistencia de la sesión de recorrido (activo o pausado) al navegar entre las pestañas de la aplicación.
+  - Conservación del estado de la sesión (activo o pausado) al navegar entre pestañas de la aplicación, manteniendo detenidos el temporizador, la distancia y la traza en caso de estar pausado.
+  - Propuesta de flujo de finalización del recorrido con confirmación previa (pendiente de aprobación del equipo).
 - **Out of scope**:
   - Modal y selección de meta de inicio del recorrido (cubierto por la funcionalidad `start-run` / HU-02 y HU-03).
   - Diálogos y pantallas de resultado posterior al fin del recorrido ("¡Meta cumplida!" / "Recorrido finalizado").
   - Pantalla y flujo de guardado de recorrido en el historial (cubierto por la funcionalidad `save-run`).
   - Detección y alertas de frenadas bruscas o irregularidades del suelo (cubiertas por historias especializadas de sensores).
+  - Soporte para múltiples idiomas, nuevos idiomas o mecanismos de internacionalización (la aplicación se mantiene exclusivamente en español).
 - **Adjacent expectations**:
   - La funcionalidad de inicio entrega un recorrido iniciado con su meta seleccionada hacia la pestaña "Mapa".
-  - El comportamiento del botón "Finalizar" queda pendiente de alineación con el equipo para determinar si se incorpora un diálogo de confirmación dentro de esta funcionalidad o si la acción delega directamente en el flujo de fin de recorrido.
+  - El estado inicial de los botones de control cuando no hay un recorrido activo queda pendiente de definición con el equipo.
+  - El comportamiento del botón "Finalizar" queda sujeto a aprobación del equipo a partir de la propuesta planteada.
 
 ## Requirements
 
@@ -126,7 +160,7 @@ Esta funcionalidad permite a los corredores seguir su actividad en tiempo real d
 #### Acceptance Criteria
 1. When el corredor abre la pestaña "Mapa" sin un recorrido en curso, the Trazo app shall centrar el mapa en la posición actual del corredor.
 2. While no hay un recorrido en curso, the Trazo app shall mostrar el temporizador en "00:00:00", la distancia en "0 km" y la velocidad en "0 km/h".
-3. While no hay un recorrido en curso, the Trazo app shall mantener deshabilitados los controles de "Reanudar" y "Finalizar".
+3. While no hay un recorrido en curso, the Trazo app shall [PENDIENTE DE DEFINICIÓN CON EL EQUIPO: establecer el estado de habilitación o deshabilitación de los controles de recorrido sin asumir un comportamiento previo].
 
 ### Requirement 2: Visualización y métricas del recorrido en vivo
 **Objective:** As a corredor, I want ver mi avance, la traza de mi camino y mis métricas en vivo, so that pueda monitorear mi rendimiento en tiempo real.
@@ -143,8 +177,8 @@ Esta funcionalidad permite a los corredores seguir su actividad en tiempo real d
 
 #### Acceptance Criteria
 1. While un recorrido está en curso, when la señal GPS tiene calidad suficiente, the Trazo app shall mostrar el indicador "GPS" con barras completas de señal.
-2. The Trazo app shall determinar el estado visual de las barras de señal GPS de forma independiente del filtro de precisión de los puntos.
-3. While un recorrido está en curso, if transcurren 15 segundos consecutivos sin recibir ubicaciones GPS válidas que cumplan el criterio de precisión, then the Trazo app shall mostrar el aviso "Sin señal GPS".
+2. The Trazo app shall determinar el estado visual de las barras de señal GPS de forma independiente del filtro de precisión de los puntos, sin asumir que una precisión menor o igual a 30 metros determina automáticamente las barras de señal.
+3. While un recorrido está en curso, if transcurren 15 segundos consecutivos sin recibir ubicaciones GPS válidas (contabilizados a partir de la última ubicación GPS válida recibida y no desde cualquier lectura GPS), then the Trazo app shall mostrar el aviso "Sin señal GPS".
 4. While se muestra el aviso "Sin señal GPS", the Trazo app shall no agregar puntos a la traza ni sumar distancia.
 5. When se recibe nuevamente una ubicación GPS válida tras haber mostrado "Sin señal GPS", the Trazo app shall ocultar el aviso y continuar el registro del recorrido.
 
@@ -161,9 +195,9 @@ Esta funcionalidad permite a los corredores seguir su actividad en tiempo real d
 
 #### Acceptance Criteria
 1. While un recorrido está en curso y activo, when el corredor toca el botón "Pausar", the Trazo app shall pausar el temporizador.
-2. While un recorrido está pausado, the Trazo app shall suspender el incremento de distancia y el registro de nuevos puntos en la traza.
+2. While un recorrido está pausado, the Trazo app shall suspender el incremento de distancia acumulada y el registro de nuevos puntos en la traza.
 3. When el recorrido pasa a estado pausado, the Trazo app shall cambiar el botón de control de "Pausar" a "Reanudar".
-4. While un recorrido está pausado, when el corredor toca el botón "Reanudar", the Trazo app shall reanudar el conteo del temporizador y el registro de la traza y distancia.
+4. While un recorrido está pausado, when el corredor toca el botón "Reanudar", the Trazo app shall reanudar el conteo del temporizador, la distancia acumulada y el registro de la traza.
 5. When el recorrido se reanuda, the Trazo app shall cambiar el botón de control de "Reanudar" a "Pausar".
 
 ### Requirement 6: Recentrado de la vista del mapa
@@ -177,16 +211,25 @@ Esta funcionalidad permite a los corredores seguir su actividad en tiempo real d
 **Objective:** As a corredor, I want cambiar de pestaña sin que se interrumpa mi recorrido, so that pueda consultar otras secciones de la app con tranquilidad.
 
 #### Acceptance Criteria
-1. While un recorrido está en curso, when el corredor cambia de la pestaña "Mapa" a otra pestaña (como "Historial" o "Inicio"), the Trazo app shall mantener el recorrido en curso.
+1. While un recorrido está en curso, when el corredor cambia de la pestaña "Mapa" a otra pestaña (como "Historial" o "Inicio"), the Trazo app shall mantener el recorrido en curso conservando su estado actual (activo o pausado).
 2. While el recorrido está activo durante la navegación fuera de la pestaña "Mapa", the Trazo app shall continuar incrementando el temporizador y acumulando la distancia y la traza.
-3. While el recorrido está pausado durante la navegación fuera de la pestaña "Mapa", the Trazo app shall conservar el estado pausado sin incrementar el temporizador ni la distancia.
-4. When el corredor vuelve a la pestaña "Mapa", the Trazo app shall mostrar la traza actualizada y el temporizador con el tiempo transcurrido correspondiente.
+3. While el recorrido está pausado durante la navegación fuera de la pestaña "Mapa", the Trazo app shall mantener detenidos el temporizador, la distancia y el registro de la traza, conservando el estado pausado.
+4. When el corredor vuelve a la pestaña "Mapa", the Trazo app shall mostrar el recorrido en el mismo estado en que se encontraba (activo o pausado), con la traza, la distancia y el temporizador correspondientes.
 
 ### Requirement 8: Formato, idioma y accesibilidad
 **Objective:** As a corredor, I want una interfaz clara, accesible y adaptada a mi idioma, so that pueda utilizar los controles con comodidad mientras corro.
 
 #### Acceptance Criteria
-1. The Trazo app shall mostrar todos los textos de esta funcionalidad en español rioplatense con voseo.
+1. The Trazo app shall mostrar todos los textos de esta funcionalidad exclusivamente en español rioplatense con voseo, sin incorporar soporte para múltiples idiomas ni internacionalización.
 2. The Trazo app shall mostrar las métricas de distancia y velocidad utilizando la coma como separador decimal.
 3. The Trazo app shall asegurar que todos los controles tocables del mapa y del panel de recorrido tengan un área táctil mínima de 48 × 48 dp.
 4. The Trazo app shall proveer descripciones accesibles para lectores de pantalla en los botones de control de recorrido, el botón de recentrado y los avisos de estado de señal GPS.
+
+### Requirement 9: Finalización del recorrido [PROPUESTA PENDIENTE DE APROBACIÓN DEL EQUIPO]
+**Objective:** As a corredor, I want poder finalizar mi recorrido de forma segura y sin pérdidas accidentales, so that pueda concluir mi salida y registrar mis resultados finales.
+
+#### Acceptance Criteria
+1. Where el corredor toca el botón "Finalizar" durante un recorrido (activo o pausado), the Trazo app shall [PROPUESTA PENDIENTE DE APROBACIÓN: solicitar confirmación mediante un diálogo antes de dar por terminado el recorrido].
+2. When el corredor confirma la finalización del recorrido, the Trazo app shall [PROPUESTA PENDIENTE DE APROBACIÓN: detener de forma definitiva el temporizador, el cálculo de distancia y el registro de la traza].
+3. When el corredor cancela la solicitud de finalización, the Trazo app shall [PROPUESTA PENDIENTE DE APROBACIÓN: cerrar el diálogo y mantener el recorrido en su estado previo sin alterar las métricas ni la sesión].
+4. When la finalización es confirmada, the Trazo app shall [PROPUESTA PENDIENTE DE APROBACIÓN: transicionar a la pantalla de resultado del recorrido con las métricas finales consolidadas].
