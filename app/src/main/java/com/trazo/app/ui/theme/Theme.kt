@@ -8,33 +8,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import com.trazo.app.ui.theme.Error200
-import com.trazo.app.ui.theme.Error600
-import com.trazo.app.ui.theme.Error800
-import com.trazo.app.ui.theme.Info200
-import com.trazo.app.ui.theme.Info700
-import com.trazo.app.ui.theme.Info900
-import com.trazo.app.ui.theme.Neutral0
-import com.trazo.app.ui.theme.Neutral100
-import com.trazo.app.ui.theme.Neutral200
-import com.trazo.app.ui.theme.Neutral300
-import com.trazo.app.ui.theme.Neutral50
-import com.trazo.app.ui.theme.Neutral600
-import com.trazo.app.ui.theme.Neutral700
-import com.trazo.app.ui.theme.Neutral900
-import com.trazo.app.ui.theme.Primary100
-import com.trazo.app.ui.theme.Primary300
-import com.trazo.app.ui.theme.Primary500
-import com.trazo.app.ui.theme.Primary900
-import com.trazo.app.ui.theme.Primary950
-import com.trazo.app.ui.theme.Secondary200
-import com.trazo.app.ui.theme.Secondary700
-import com.trazo.app.ui.theme.Success200
-import com.trazo.app.ui.theme.Success700
-import com.trazo.app.ui.theme.TrazoShapes
-import com.trazo.app.ui.theme.TrazoTypography
-import com.trazo.app.ui.theme.Warning200
-import com.trazo.app.ui.theme.Warning700
 
 private val TrazoLightColors =
     lightColorScheme(

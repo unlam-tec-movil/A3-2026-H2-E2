@@ -1,5 +1,6 @@
 package com.trazo.app.ui.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -23,6 +24,9 @@ fun TrazoApp() {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        // El inset de la barra de estado no se consume acá: lo maneja cada pantalla
+        // (Inicio lo cubre con su barra superior).
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             BottomNavBar(
                 currentRoute = currentRoute,
@@ -41,7 +45,11 @@ fun TrazoApp() {
             startDestination = TrazoDestination.HOME.route,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(TrazoDestination.HOME.route) { HomeScreen() }
+            composable(TrazoDestination.HOME.route) {
+                // El modal "Iniciar nuevo recorrido" y la pantalla de Configuración
+                // pertenecen a otras historias.
+                HomeScreen(onStartRunClick = {}, onSettingsClick = {})
+            }
             composable(TrazoDestination.MAP.route) { MapScreen() }
             composable(TrazoDestination.HISTORY.route) { HistoryScreen() }
         }
