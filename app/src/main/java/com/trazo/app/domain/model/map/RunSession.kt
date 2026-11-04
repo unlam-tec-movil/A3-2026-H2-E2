@@ -10,4 +10,5 @@ data class RunSession(
     val lastValidLocationTimestamp: Long? = null,
     val accumulatedElapsedTimeMillis: Long = 0L,
     val resumedAtMonotonicTimestamp: Long? = null,
+    val gpsQuality: GpsQuality = GpsQuality.NO_SIGNAL,
 )
