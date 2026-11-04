@@ -73,4 +73,6 @@ dependencies {
 
     // Coil
     implementation(libs.coil)
+
+    implementation(libs.play.services.location)
 }
