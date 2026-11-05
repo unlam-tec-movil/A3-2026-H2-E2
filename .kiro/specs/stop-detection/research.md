@@ -1,4 +1,4 @@
-# Investigación · frenadas-pausas-personales
+# Investigación · stop-detection
 
 ## Análisis de brechas (gap analysis)
 

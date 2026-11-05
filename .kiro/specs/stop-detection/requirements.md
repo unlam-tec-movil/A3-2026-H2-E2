@@ -14,7 +14,7 @@ HU-05.1 · Frenadas y pausas personales
 
 **Escenarios a cubrir:**
 1. **Movimiento continuo:** Dado que hay un recorrido en curso y el corredor se mueve, Cuando el movimiento continúa sin superar el umbral de detención, Entonces el estado se mantiene como Movimiento continuo y no se registra ninguna frenada.
-2. **Frenada por semáforo o intersección:** Dado que hay un recorrido en curso y el corredor se mueve, Cuando permanece sin movimiento durante 8 segundos, Entonces el estado cambia a Frenada, se registra la ubicación de la detención y se muestra una alerta animada con el mensaje «Se detectó una frenada por semáforo o intersección».
+2. **Frenada por semáforo o intersección:** Dado que hay un recorrido en curso y el corredor se mueve, Cuando permanece sin movimiento durante 8 segundos, Entonces el estado cambia a Frenada, se registra la ubicación de la detención y se muestra una alerta animada con el título «Frenada detectada» y el detalle «Semáforo o intersección».
 3. **Detención inferior a 8 segundos:** Dado que hay un recorrido en curso, Cuando el corredor permanece sin movimiento menos de 8 segundos y retoma el movimiento, Entonces la detención no se registra como frenada y el estado vuelve a Movimiento continuo.
 4. **Frenada que se prolonga más de 20 segundos:** Dado que hay un recorrido en curso y el corredor permanece sin movimiento más de 20 segundos, Entonces se muestra un mensaje para identificar el tipo de detención con las opciones «Frenada» y «Pausa personal».
 5. **Confirmar una frenada prolongada:** Dado que la app detectó una detención de más de 20 segundos, Cuando el corredor selecciona «Frenada», Entonces la detención se mantiene registrada como frenada y se conserva su ubicación.
@@ -52,18 +52,20 @@ Durante un recorrido en curso, Trazo debe distinguir cuándo el corredor deja de
 **Objective:** Como corredor, quiero ver un aviso claro cuando la app detecta una frenada, para saber que quedó registrada.
 
 #### Acceptance Criteria
-1. When el estado cambia a «Frenada», the Trazo App shall mostrar una alerta animada con el mensaje «Se detectó una frenada por semáforo o intersección».
+1. When el estado cambia a «Frenada», the Trazo App shall mostrar una alerta animada con el título «Frenada detectada» y el detalle «Semáforo o intersección».
 2. Where el corredor tiene activada la opción del sistema para quitar animaciones, the Trazo App shall mostrar la alerta sin animación.
 3. When se muestra la alerta de frenada, the Trazo App shall anunciarla a los servicios de accesibilidad.
 4. The Trazo App shall comunicar la alerta de frenada con texto e ícono, sin depender solo del color.
+5. When transcurren 4 segundos desde que se muestra la alerta de frenada, the Trazo App shall cerrar la alerta automáticamente.
 
 ### Requirement 4: Consulta ante una detención prolongada
 **Objective:** Como corredor, quiero poder indicar si mi detención fue una frenada o una pausa personal, para que mi recorrido refleje lo que realmente pasó.
 
 #### Acceptance Criteria
-1. When hay un recorrido en curso y el corredor permanece sin movimiento más de 20 segundos, the Trazo App shall mostrar un mensaje para identificar el tipo de detención con las opciones «Frenada» y «Pausa personal».
+1. When hay un recorrido en curso y el corredor permanece sin movimiento más de 20 segundos, contados desde que el corredor se quedó quieto (no desde que apareció la alerta de frenada), the Trazo App shall mostrar un mensaje para identificar el tipo de detención con las opciones «Frenada» y «Pausa personal».
 2. When el corredor selecciona «Frenada», the Detector de Frenadas shall mantener la detención registrada como frenada y conservar su ubicación.
 3. When el corredor selecciona «Pausa personal», the Detector de Frenadas shall no contabilizar la detención como frenada.
 4. When el corredor selecciona «Pausa personal», the Detector de Frenadas shall excluir la ubicación de la detención de las frenadas registradas.
 5. When el corredor selecciona una de las opciones, the Trazo App shall cerrar el mensaje de identificación.
 6. The Trazo App shall presentar el mensaje de identificación con texto accionable, legible con la fuente del sistema al 200 % y con objetivos táctiles de al menos 48 dp.
+7. If el corredor retoma el movimiento sin contestar el mensaje de identificación, then the Trazo App shall cerrar el mensaje automáticamente y the Detector de Frenadas shall mantener la detención registrada como frenada.
