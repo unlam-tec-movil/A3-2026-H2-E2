@@ -120,3 +120,40 @@ _Fecha: 2026-11-04 · Requisitos analizados: `requirements.md` (generados, sin a
 - **Coordinar antes de implementar:** integración con `origin/HU-04-map` (`RunState`, `RunSessionRepository`, `LocationClient`), y con HU-05.2 (propiedad del sensor y su ciclo de vida).
 - **Pruebas:** agregar `kotlinx-coroutines-test` (hoy ausente) para probar los temporizadores de 8 s / 20 s con tiempo virtual; tests de Compose para el diálogo con fuente al 200 % y objetivos de 48 dp.
 - **Archivos de steering faltantes:** conviene generar `product.md`, `tech.md` y `structure.md` con `/kiro-steering` para que el diseño no dependa solo de los documentos de UI.
+
+---
+
+## Descubrimiento y síntesis del diseño
+
+_Fecha: 2026-11-04 · Tipo de descubrimiento: ligero (extensión sobre una base casi vacía; sin investigación web, solo análisis del código y de `origin/HU-04-map`)._
+
+### Fuentes consultadas
+- `requirements.md` (actualizado con las decisiones del equipo), el gap analysis de arriba, `design-system.md`, `ui-components.md` y la skill `trazo-design-system` (§6.8 `BrakeAlert`; consulté también la guía de accesibilidad y el patrón `Content` + `@Preview`).
+- Código de `origin/HU-04-map`: `RunState`, `RunSession`, `RoutePoint`, `RunSessionRepository`, `LocationClient`, `ApplicationScope`.
+- `app/build.gradle.kts` y `gradle/libs.versions.toml` (sin coroutines-test, sin MockK).
+
+### Conflictos del gap analysis ya resueltos por los requisitos
+| Tema | Resolución vigente |
+|---|---|
+| Texto de la alerta | Título «Frenada detectada» + detalle «Semáforo o intersección» (3.1), igual que el sistema de diseño |
+| Duración de la alerta | 4 s (3.5) |
+| «Más de 20 s» | Estricto y medido desde que el corredor se quedó quieto (4.1) |
+| Diálogo sin respuesta | Se cierra al retomar el movimiento y la frenada se conserva (4.7) |
+
+### Decisiones de diseño
+1. **Umbral de detención**: desviación estándar de la magnitud `|a|` en una ventana de 1 s sobre `TYPE_ACCELEROMETER`; valor inicial 0,5 m/s². Elegido porque cancela la gravedad y es independiente de la orientación; evita `TYPE_LINEAR_ACCELERATION` (no disponible en todos los equipos). Se descarta combinar con la velocidad del GPS porque la historia pide solo el acelerómetro y HU-04 todavía no está integrada. **Debe calibrarse en dispositivo.**
+2. **Confirmación de reanudación (1,5 s)**: sin ella, un pico de ruido en un semáforo parte una detención en dos frenadas e incumple 2.3. Es un refinamiento de «retoma el movimiento», no un cambio de requisito.
+3. **Tiempo**: cada observación usa `MonotonicClock` inyectado (no el timestamp del `SensorEvent`) y un tick de 500 ms que reevalúa el último valor, de modo que los 8 s y 20 s no dependen de que el sensor siga emitiendo.
+4. **Quién cierra la alerta a los 4 s**: el ViewModel (es presentación y se prueba con tiempo virtual); el dominio solo expone la frenada nueva.
+5. **Qué es «recorrido en curso»**: solo `RunState.RUNNING`. Las frenadas se vacían cuando cambia el `id` del recorrido (no en reanudaciones) y se conservan al terminar para que `save-run` las lea.
+6. **Pausa personal**: se elimina la frenada de la lista (se registró a los 8 s, 2.2) y una fase `PersonalPause` evita volver a registrar la misma detención.
+7. **Ubicación**: última `RoutePoint` de la sesión activa; si no hay, `location = null` (no se demora el registro).
+
+### Síntesis
+- **Generalización**: `MotionSource` devuelve magnitudes, no un booleano «quieto», para que HU-05.2 (regularidad) pueda reutilizarlo; el interfaz se generaliza, la implementación se limita a lo que pide esta spec.
+- **Construir vs. adoptar**: sin librerías nuevas; `SensorManager`, `AlertDialog` y `AnimatedVisibility` cubren el requisito. No se adopta un detector de actividad (Activity Recognition API de Play Services) por la dependencia nueva, el permiso `ACTIVITY_RECOGNITION` y porque no ofrece el control de 8 s/20 s.
+- **Simplificación**: sin casos de uso intermedios (el ViewModel usa el repositorio), sin tabla de estados genérica, una sola `StopPhase` sellada; `Braking` con `QueryStatus` en lugar de tres fases.
+
+### Riesgos registrados
+- Calibración del umbral; sensor con pantalla apagada (servicio en primer plano de HU-04); ubicación nula; propiedad del sensor con HU-05.2; momento de lectura de `brakes` por `save-run`. Detalle en `design.md`, «Riesgos y preguntas abiertas».
+- Tareas de integración (módulo Hilt, adaptadores, montaje en `MapScreen`) bloqueadas hasta que HU-04 llegue a `develop`.
