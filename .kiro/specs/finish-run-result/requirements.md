@@ -38,6 +38,7 @@ Hoy, cuando un corredor registra un recorrido con una meta de distancia en Trazo
 - **Adjacent expectations**:
   - El registro del recorrido entrega en todo momento la distancia, el tiempo, la velocidad promedio, las frenadas, la regularidad y la meta elegida (3, 5 o 10 km). Esta funcionalidad los muestra y los conserva, pero no los calcula ni los modifica.
   - La pantalla «Guardar recorrido» recibe el recorrido finalizado desde esta funcionalidad. Los datos que ya espera la spec `save-run` (fecha y hora de inicio, modo demo y traza) también se conservan.
+  - La fecha (día del recorrido) y la hora de inicio las registra el sistema al comenzar el recorrido y se especifican en el escenario 1 de HU-02/HU-03, a cargo de otra persona. El modo demo sigue pendiente de definir por el equipo.
 
 ## Requirements
 
@@ -82,6 +83,7 @@ Hoy, cuando un corredor registra un recorrido con una meta de distancia en Trazo
 
 #### Acceptance Criteria
 1. The Trazo App shall mostrar en la pantalla de resultado la distancia, el tiempo y la regularidad del recorrido, y el botón «Continuar».
+   - Where el celular no tiene acelerómetro, no hay regularidad: the Trazo App shall mostrar «No disponible» en lugar de la regularidad.
 2. When el recorrido terminó con la meta cumplida, the Trazo App shall mostrar la pantalla de resultado con el título «¡Meta cumplida!» y una animación de celebración.
 3. When el recorrido terminó antes de alcanzar la meta, the Trazo App shall mostrar la pantalla de resultado con el título «Recorrido finalizado» y sin animación.
 4. Where el corredor tiene activada la opción del sistema para quitar animaciones, the Trazo App shall mostrar la pantalla «¡Meta cumplida!» sin animación y con el mismo contenido.
@@ -94,6 +96,15 @@ Hoy, cuando un corredor registra un recorrido con una meta de distancia en Trazo
 #### Acceptance Criteria
 1. When el corredor toca «Continuar» en la pantalla de resultado, the Trazo App shall abrir la pantalla «Guardar recorrido».
 2. When se abre «Guardar recorrido» desde la pantalla de resultado, the Trazo App shall conservar la distancia, el tiempo, la velocidad promedio, las frenadas, la regularidad y la meta elegida del recorrido finalizado.
+   - Where el celular no tiene acelerómetro, no hay regularidad: the Trazo App shall enviar la regularidad a «Guardar recorrido» como «sin dato», nunca como 0 %.
 3. When se abre «Guardar recorrido» desde la pantalla de resultado, the Trazo App shall conservar además la fecha y hora de inicio, la marca de modo demo y la traza del recorrido.
 4. When se abre «Guardar recorrido» desde la pantalla de resultado, the Trazo App shall indicar si el recorrido alcanzó la meta o terminó antes de alcanzarla.
 5. The Trazo App shall dejar el ingreso del título, de los destacados y de las fotografías a la pantalla «Guardar recorrido».
+
+### Requirement 7: Prioridad del cierre
+**Objective:** As a corredor, I want que el cierre del recorrido no se mezcle con otros avisos, so that vea un solo mensaje a la vez.
+
+#### Acceptance Criteria
+1. While hay visible un aviso o diálogo de cierre (el aviso de meta alcanzada, el diálogo «Todavía no llegaste a tu meta» o el aviso de recorrido demasiado corto), the Trazo App shall no mostrar la alerta de frenada ni la consulta de 20 segundos de HU-05.
+2. While hay visible un aviso o diálogo de cierre y se produce una frenada, the Trazo App shall registrar igualmente la frenada.
+3. If había una consulta de 20 segundos pendiente cuando apareció el aviso o diálogo de cierre, then the Trazo App shall resolver esa consulta como frenada.
