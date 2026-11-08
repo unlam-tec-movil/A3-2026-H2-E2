@@ -1,0 +1,15 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<rect width="96" height="96" rx="24.6154" fill="#2E474B"/>
+<path d="M29 46.9065C36.1263 38.533 44.6779 38.2753 50.3789 40.3365C56.365 42.3977 62.4936 41.3671 66.7694 36.9871" stroke-width="5.41599" stroke-linecap="square" stroke-linejoin="round" stroke="#CDFDCD"/>
+<path d="M50.0937 40.3365L45.8179 57.8566" stroke-width="5.41599" stroke-linecap="round" stroke-linejoin="round" stroke="#CDFDCD"/>
+<path d="M45.8184 57.8566C42.9679 61.4636 38.9771 63.8684 33.8462 65.0707" stroke-width="5.41599" stroke-linecap="square" stroke-linejoin="round" stroke="#CDFDCD"/>
+<path d="M45.8179 57.8566C51.7089 58.0283 55.3196 60.6048 56.6499 65.586L62.0658 67.3896" stroke-width="5.41599" stroke-linecap="square" stroke-linejoin="round" stroke="#CDFDCD"/>
+<use xlink:href="#stroke0_353_1274" fill="#CDFDCD"/>
+<mask id="stroke1_353_1274" fill="white">
+<use xlink:href="#stroke0_353_1274"/>
+</mask>
+<path d="M58.6457 32.3494C58.6457 34.1993 56.9866 35.6989 54.9401 35.6989C52.8935 35.6989 51.2344 34.1993 51.2344 32.3494C51.2344 30.4996 52.8935 29 54.9401 29C56.9866 29 58.6457 30.4996 58.6457 32.3494Z" stroke-width="0.285052" stroke="#CDFDCD" mask="url(#stroke1_353_1274)"/>
+<defs>
+<path id="stroke0_353_1274" d="M54.9401 35.6989C56.9866 35.6989 58.6457 34.1993 58.6457 32.3494C58.6457 30.4996 56.9866 29 54.9401 29C52.8935 29 51.2344 30.4996 51.2344 32.3494C51.2344 34.1993 52.8935 35.6989 54.9401 35.6989Z"/>
+</defs>
+</svg>

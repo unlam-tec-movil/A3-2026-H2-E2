@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Trazo</string>
+    <string name="nav_home">Inicio</string>
+    <string name="nav_map">Mapa</string>
+    <string name="nav_history">Historial</string>
+    <string name="home_empty_runs">Todavía no hay recorridos</string>
+    <string name="home_start_run">Iniciar un recorrido</string>
+    <string name="home_start_run_fab_description">Nuevo recorrido</string>
+    <string name="home_settings_description">Configuración</string>
 </resources>

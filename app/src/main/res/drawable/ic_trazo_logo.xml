@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo de Trazo. Fuente: design/assets/logo.svg (96 × 96). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Fondo: cuadrado redondeado (rx 24.6154) -->
+    <path
+        android:fillColor="#2E474B"
+        android:pathData="M24.6154,0H71.3846A24.6154,24.6154 0,0 1,96 24.6154V71.3846A24.6154,24.6154 0,0 1,71.3846 96H24.6154A24.6154,24.6154 0,0 1,0 71.3846V24.6154A24.6154,24.6154 0,0 1,24.6154 0Z" />
+
+    <!-- Brazos -->
+    <path
+        android:pathData="M29,46.9065C36.1263,38.533 44.6779,38.2753 50.3789,40.3365C56.365,42.3977 62.4936,41.3671 66.7694,36.9871"
+        android:strokeWidth="5.41599"
+        android:strokeColor="#CDFDCD"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="round" />
+
+    <!-- Torso -->
+    <path
+        android:pathData="M50.0937,40.3365L45.8179,57.8566"
+        android:strokeWidth="5.41599"
+        android:strokeColor="#CDFDCD"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Pierna trasera -->
+    <path
+        android:pathData="M45.8184,57.8566C42.9679,61.4636 38.9771,63.8684 33.8462,65.0707"
+        android:strokeWidth="5.41599"
+        android:strokeColor="#CDFDCD"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="round" />
+
+    <!-- Pierna delantera -->
+    <path
+        android:pathData="M45.8179,57.8566C51.7089,58.0283 55.3196,60.6048 56.6499,65.586L62.0658,67.3896"
+        android:strokeWidth="5.41599"
+        android:strokeColor="#CDFDCD"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="round" />
+
+    <!-- Cabeza (en el SVG era relleno + trazo enmascarado de 0.29; equivale a este relleno) -->
+    <path
+        android:fillColor="#CDFDCD"
+        android:pathData="M54.9401,35.6989C56.9866,35.6989 58.6457,34.1993 58.6457,32.3494C58.6457,30.4996 56.9866,29 54.9401,29C52.8935,29 51.2344,30.4996 51.2344,32.3494C51.2344,34.1993 52.8935,35.6989 54.9401,35.6989Z" />
+</vector>
