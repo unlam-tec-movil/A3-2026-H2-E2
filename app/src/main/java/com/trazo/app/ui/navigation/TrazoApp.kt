@@ -16,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.ui.components.common.StartRunDialog
 import com.trazo.app.ui.screens.history.HistoryScreen
 import com.trazo.app.ui.screens.home.HomeScreen
@@ -58,7 +59,8 @@ fun TrazoApp() {
                 // El modal "Iniciar nuevo recorrido" y la pantalla de Configuración
                 // pertenecen a otras historias.
                 HomeScreen(
-                    onStartRunClick = startRunViewModel::onStartRunRequested,
+                    // Provisorio: falta consultar el permiso y el estado real de la ubicación.
+                    onStartRunClick = { startRunViewModel.onStartRunRequested(LocationStatus.READY) },
                     onSettingsClick = {},
                 )
             }
