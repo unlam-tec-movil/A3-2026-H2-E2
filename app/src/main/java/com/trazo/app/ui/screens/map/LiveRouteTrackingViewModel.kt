@@ -49,7 +49,7 @@ class LiveRouteTrackingViewModel
             combine(activeSessionFlow, locationRefresh) { session, _ ->
                 session
             }.flatMapLatest { session ->
-                if (session?.state == RunState.RUNNING) {
+                if (session?.state == RunState.ACTIVE) {
                     flowOf<RawLocationPoint?>(null)
                 } else {
                     locationClient
@@ -130,7 +130,7 @@ class LiveRouteTrackingViewModel
             }
 
             val location =
-                if (state == RunState.RUNNING) {
+                if (state == RunState.ACTIVE) {
                     routePoints.lastOrNull()?.toRawLocationPoint()
                 } else {
                     currentLocation

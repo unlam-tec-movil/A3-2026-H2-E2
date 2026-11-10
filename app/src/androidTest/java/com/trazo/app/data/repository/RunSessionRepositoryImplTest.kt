@@ -23,6 +23,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(AndroidJUnit4::class)
@@ -62,6 +63,7 @@ class RunSessionRepositoryImplTest {
                 id = "test-session",
                 goal = RunGoal.THREE_KILOMETERS,
                 startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                startedAt = Clock.System.now(),
             )
 
         repository.attachActiveSession(initializedSession)
@@ -69,7 +71,7 @@ class RunSessionRepositoryImplTest {
         val session = repository.activeSession.value
 
         assertNotNull(session)
-        assertEquals(RunState.RUNNING, session?.state)
+        assertEquals(RunState.ACTIVE, session?.state)
         assertEquals("test-session", session?.id)
         assertEquals(RunGoal.THREE_KILOMETERS, session?.goal)
         assertEquals(GpsQuality.NO_SIGNAL, session?.gpsQuality)
@@ -83,6 +85,7 @@ class RunSessionRepositoryImplTest {
                     id = "test-session",
                     goal = RunGoal.THREE_KILOMETERS,
                     startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
                 )
 
             repository.attachActiveSession(initializedSession)
@@ -104,6 +107,7 @@ class RunSessionRepositoryImplTest {
                     id = "test-session",
                     goal = RunGoal.THREE_KILOMETERS,
                     startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
                 )
 
             repository.attachActiveSession(initializedSession)
@@ -113,7 +117,7 @@ class RunSessionRepositoryImplTest {
 
             assertTrue(result.isSuccess)
             assertEquals(
-                RunState.RUNNING,
+                RunState.ACTIVE,
                 repository.activeSession.value?.state,
             )
         }
@@ -126,6 +130,7 @@ class RunSessionRepositoryImplTest {
                     id = "test-session",
                     goal = RunGoal.THREE_KILOMETERS,
                     startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
                 )
 
             repository.attachActiveSession(initializedSession)
@@ -155,6 +160,7 @@ class RunSessionRepositoryImplTest {
                     id = "test-session",
                     goal = RunGoal.THREE_KILOMETERS,
                     startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
                 )
 
             repository.attachActiveSession(initializedSession)
@@ -206,6 +212,7 @@ class RunSessionRepositoryImplTest {
                     id = "test-session",
                     goal = RunGoal.THREE_KILOMETERS,
                     startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
                 )
 
             repository.attachActiveSession(initializedSession)
@@ -237,6 +244,7 @@ class RunSessionRepositoryImplTest {
                     id = "test-session",
                     goal = RunGoal.THREE_KILOMETERS,
                     startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
                 )
 
             repository.attachActiveSession(initializedSession)
@@ -269,6 +277,7 @@ class RunSessionRepositoryImplTest {
                     id = "test-session",
                     goal = RunGoal.THREE_KILOMETERS,
                     startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
                 )
 
             repository.attachActiveSession(initializedSession)
@@ -311,6 +320,7 @@ class RunSessionRepositoryImplTest {
                     id = "test-session",
                     goal = RunGoal.THREE_KILOMETERS,
                     startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
                 )
 
             repository.attachActiveSession(initializedSession)

@@ -19,7 +19,7 @@ data class LiveRouteTrackingUiState(
     val currentLocation: RawLocationPoint? = null,
 ) {
     val isRunning: Boolean
-        get() = runState == RunState.RUNNING
+        get() = runState == RunState.ACTIVE
 
     val isPaused: Boolean
         get() = runState == RunState.PAUSED

@@ -29,6 +29,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.atan2
 import kotlin.math.sqrt
+import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class RunSessionRepositoryImpl
@@ -45,6 +46,11 @@ class RunSessionRepositoryImpl
         override val activeSession: StateFlow<RunSession?> =
             _activeSession.asStateFlow()
 
+        private val _isRunInProgress = MutableStateFlow(false)
+
+        override val isRunInProgress: StateFlow<Boolean> =
+            _isRunInProgress.asStateFlow()
+
         private var locationJob: Job? = null
         private var signalJob: Job? = null
         private var timerJob: Job? = null
@@ -58,15 +64,19 @@ class RunSessionRepositoryImpl
                 RunSession(
                     id = session.id,
                     goal = session.goal,
-                    state = RunState.RUNNING,
+                    state = RunState.ACTIVE,
                     routePoints = emptyList(),
                     metrics = RunMetrics(),
                     startMonotonicTimestamp = session.startMonotonicTimestamp,
+                    startedAt = session.startedAt,
                     lastValidLocationTimestamp = null,
                     accumulatedElapsedTimeMillis = 0L,
                     resumedAtMonotonicTimestamp = now,
                     gpsQuality = GpsQuality.NO_SIGNAL,
+                    goalReached = false,
                 )
+
+            _isRunInProgress.value = true
 
             startTracking()
         }
@@ -76,7 +86,7 @@ class RunSessionRepositoryImpl
                 try {
                     val session = requireActiveSession()
 
-                    check(session.state == RunState.RUNNING) {
+                    check(session.state == RunState.ACTIVE) {
                         "El recorrido no está en curso."
                     }
 
@@ -122,7 +132,7 @@ class RunSessionRepositoryImpl
 
                     _activeSession.value =
                         session.copy(
-                            state = RunState.RUNNING,
+                            state = RunState.ACTIVE,
                             lastValidLocationTimestamp = null,
                             resumedAtMonotonicTimestamp = now,
                             gpsQuality = GpsQuality.NO_SIGNAL,
@@ -144,7 +154,7 @@ class RunSessionRepositoryImpl
                     val session = requireActiveSession()
 
                     check(
-                        session.state == RunState.RUNNING ||
+                        session.state == RunState.ACTIVE ||
                             session.state == RunState.PAUSED,
                     ) {
                         "No hay un recorrido que pueda finalizarse."
@@ -171,9 +181,11 @@ class RunSessionRepositoryImpl
                             goal = session.goal,
                             routePoints = session.routePoints.toList(),
                             metrics = finalMetrics,
+                            startedAt = session.startedAt,
                             startedAtMonotonicTimestamp =
                                 session.startMonotonicTimestamp,
                             finishedAtMonotonicTimestamp = now,
+                            goalReached = session.goalReached,
                         )
 
                     _activeSession.value =
@@ -183,6 +195,8 @@ class RunSessionRepositoryImpl
                             accumulatedElapsedTimeMillis = elapsedTime,
                             resumedAtMonotonicTimestamp = null,
                         )
+
+                    _isRunInProgress.value = false
 
                     Result.success(summary)
                 } catch (exception: CancellationException) {
@@ -195,6 +209,7 @@ class RunSessionRepositoryImpl
         override fun resetToIdle() {
             stopJobs()
             _activeSession.value = null
+            _isRunInProgress.value = false
         }
 
         private fun startTracking() {
@@ -238,7 +253,7 @@ class RunSessionRepositoryImpl
                                     _activeSession.value
                                         ?: return@withLock
 
-                                if (session.state == RunState.RUNNING) {
+                                if (session.state == RunState.ACTIVE) {
                                     _activeSession.value =
                                         session.copy(
                                             gpsQuality = quality,
@@ -261,7 +276,7 @@ class RunSessionRepositoryImpl
                     _activeSession.value
                         ?: return@withLock
 
-                if (session.state != RunState.RUNNING) {
+                if (session.state != RunState.ACTIVE) {
                     return@withLock
                 }
 
@@ -274,6 +289,10 @@ class RunSessionRepositoryImpl
 
                 val totalDistance =
                     session.metrics.distanceMeters + additionalDistance
+
+                val goalReached =
+                    session.goalReached ||
+                        totalDistance >= session.goal.distanceKm * 1_000.0
 
                 val elapsedTime =
                     calculateElapsedTime(
@@ -303,6 +322,7 @@ class RunSessionRepositoryImpl
                         metrics = metrics,
                         lastValidLocationTimestamp =
                             rawPoint.monotonicTimestampMillis,
+                        goalReached = goalReached,
                     )
             }
         }
@@ -313,14 +333,14 @@ class RunSessionRepositoryImpl
             timerJob =
                 applicationScope.launch {
                     while (isActive) {
-                        delay(TIMER_INTERVAL_MILLIS)
+                        delay(TIMER_INTERVAL_MILLIS.milliseconds)
 
                         mutex.withLock {
                             val session =
                                 _activeSession.value
                                     ?: return@withLock
 
-                            if (session.state != RunState.RUNNING) {
+                            if (session.state != RunState.ACTIVE) {
                                 return@withLock
                             }
 

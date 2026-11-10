@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 interface RunSessionRepository {
     val activeSession: StateFlow<RunSession?>
 
+    val isRunInProgress: StateFlow<Boolean>
+
     fun attachActiveSession(session: InitializedRunSession)
 
     suspend fun pauseSession(): Result<Unit>
