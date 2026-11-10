@@ -15,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.trazo.app.ui.screens.map.LiveRouteTrackingUiState
+import com.trazo.app.ui.theme.Spacing
+import com.trazo.app.ui.theme.TrazoShapes
+import com.trazo.app.ui.theme.tabular
 import java.util.Locale
 
 @Composable
@@ -24,21 +27,23 @@ fun RunPanel(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        shape = TrazoShapes.medium,
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
             ),
+        border = CardDefaults.outlinedCardBorder(),
         elevation =
             CardDefaults.cardElevation(
-                defaultElevation = 4.dp,
+                defaultElevation = 0.dp,
             ),
     ) {
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Text(
                 text = "Tu recorrido",
@@ -48,7 +53,7 @@ fun RunPanel(
 
             Text(
                 text = formatElapsedTime(uiState.elapsedTimeSeconds),
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.displayMedium.tabular(),
                 fontWeight = FontWeight.Bold,
             )
 
@@ -87,7 +92,7 @@ private fun MetricItem(
 ) {
     Column(
         horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
             text = label,
@@ -97,17 +102,17 @@ private fun MetricItem(
 
         Row(
             verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge.tabular(),
                 fontWeight = FontWeight.Bold,
             )
 
             Text(
                 text = unit,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

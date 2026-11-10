@@ -3,6 +3,7 @@ package com.trazo.app.ui.components.layout
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -11,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.trazo.app.ui.screens.map.LiveRouteTrackingUiState
+import com.trazo.app.ui.theme.Sizes
+import com.trazo.app.ui.theme.Spacing
 
 @Composable
 fun RunControls(
@@ -22,7 +25,7 @@ fun RunControls(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         Button(
             onClick = {
@@ -33,26 +36,29 @@ fun RunControls(
                 }
             },
             enabled = uiState.canPause || uiState.canResume,
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(Sizes.runControl),
         ) {
             Text(
-                text =
-                    if (uiState.isPaused) {
-                        "Reanudar"
-                    } else {
-                        "Pausar"
-                    },
+                text = if (uiState.isPaused) "Reanudar" else "Pausar",
+                style = MaterialTheme.typography.labelLarge,
             )
         }
 
         OutlinedButton(
             onClick = onFinish,
             enabled = uiState.canFinish,
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(Sizes.runControl),
         ) {
             Text(
                 text = "Finalizar",
                 color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelLarge,
             )
         }
     }

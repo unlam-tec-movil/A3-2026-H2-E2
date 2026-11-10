@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.trazo.app.domain.model.map.GpsQuality
+import com.trazo.app.ui.theme.TrazoTheme
 
 @Composable
 fun GpsIndicator(
@@ -18,19 +19,19 @@ fun GpsIndicator(
     val (label, color) =
         when (gpsQuality) {
             GpsQuality.NO_SIGNAL -> {
-                "Sin señal GPS" to MaterialTheme.colorScheme.error
+                "Sin señal GPS" to TrazoTheme.extendedColors.warning
             }
 
             GpsQuality.LOW_SIGNAL -> {
-                "Señal GPS baja" to MaterialTheme.colorScheme.error
+                "Señal GPS baja" to TrazoTheme.extendedColors.warning
             }
 
             GpsQuality.MEDIUM_SIGNAL -> {
-                "Señal GPS media" to MaterialTheme.colorScheme.tertiary
+                "Señal GPS media" to TrazoTheme.extendedColors.info
             }
 
             GpsQuality.FULL_SIGNAL -> {
-                "Buena señal GPS" to MaterialTheme.colorScheme.primary
+                "Buena señal GPS" to TrazoTheme.extendedColors.success
             }
         }
 

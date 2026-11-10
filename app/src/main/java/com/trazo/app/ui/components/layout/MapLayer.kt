@@ -3,6 +3,7 @@ package com.trazo.app.ui.components.layout
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.Icon
@@ -16,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
@@ -27,6 +29,9 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.trazo.app.domain.model.map.RoutePoint
+import com.trazo.app.ui.theme.Sizes
+import com.trazo.app.ui.theme.Spacing
+import com.trazo.app.ui.theme.TrazoTheme
 
 @Composable
 fun MapLayer(
@@ -73,6 +78,16 @@ fun MapLayer(
             }
         }
 
+    val density = LocalDensity.current
+
+    val traceWidth = with(density) {
+        Sizes.traceLiveWidth.toPx()
+    }
+
+    val traceOutlineWidth = with(density) {
+        (Sizes.traceLiveWidth + 2.dp).toPx()
+    }
+
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -101,7 +116,14 @@ fun MapLayer(
             if (routeCoordinates.size >= 2) {
                 Polyline(
                     points = routeCoordinates,
-                    width = 12f,
+                    color = TrazoTheme.extendedColors.traceLiveOutline,
+                    width = traceOutlineWidth,
+                )
+
+                Polyline(
+                    points = routeCoordinates,
+                    color = TrazoTheme.extendedColors.traceLive,
+                    width = traceWidth,
                 )
             }
         }
@@ -117,10 +139,10 @@ fun MapLayer(
                     )
                 }
             },
-            modifier =
-                Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(Spacing.lg)
+                .size(Sizes.minTouchTarget),
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.primary,
         ) {

@@ -14,6 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -21,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.maps.model.LatLng
+import com.trazo.app.ui.components.layout.FinishConfirmDialog
 import com.trazo.app.ui.components.layout.GpsIndicator
 import com.trazo.app.ui.components.layout.MapLayer
 import com.trazo.app.ui.components.layout.RunControls
@@ -35,14 +39,17 @@ fun MapScreen(
 
     val uiState by viewModel.uiState.collectAsState()
 
+    var showFinishConfirmDialog by remember {
+        mutableStateOf(false)
+    }
+
     val locationPermissionLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.RequestMultiplePermissions(),
         ) { permissions ->
-
             val hasPermission =
                 permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                    permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+                        permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
 
             if (hasPermission) {
                 viewModel.refreshCurrentLocation()
@@ -85,7 +92,6 @@ fun MapScreen(
     Scaffold(
         modifier = modifier,
     ) { paddingValues ->
-
         Box(
             modifier =
                 Modifier
@@ -128,10 +134,21 @@ fun MapScreen(
                         viewModel.resumeRun()
                     },
                     onFinish = {
-                        viewModel.finishRun()
+                        showFinishConfirmDialog = true
                     },
                 )
             }
+
+            FinishConfirmDialog(
+                showFinishConfirmDialog = showFinishConfirmDialog,
+                onConfirmFinish = {
+                    showFinishConfirmDialog = false
+                    viewModel.finishRun()
+                },
+                onCancelFinish = {
+                    showFinishConfirmDialog = false
+                },
+            )
         }
     }
 }

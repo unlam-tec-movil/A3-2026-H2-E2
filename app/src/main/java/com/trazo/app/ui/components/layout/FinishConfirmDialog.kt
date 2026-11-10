@@ -1,9 +1,12 @@
 package com.trazo.app.ui.components.layout
 
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.trazo.app.ui.theme.TrazoShapes
 
 @Composable
 fun FinishConfirmDialog(
@@ -15,19 +18,28 @@ fun FinishConfirmDialog(
 
     AlertDialog(
         onDismissRequest = onCancelFinish,
+        shape = TrazoShapes.extraLarge,
         confirmButton = {
             TextButton(
                 onClick = onConfirmFinish,
             ) {
-                Text("Finalizar")
+                Text(
+                    text = "Finalizar",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
         },
         dismissButton = {
-            TextButton(
+            OutlinedButton(
                 onClick = onCancelFinish,
             ) {
-                Text("Cancelar")
+                Text(
+                    text = "Cancelar",
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
         },
+        containerColor = MaterialTheme.colorScheme.surface,
     )
 }
