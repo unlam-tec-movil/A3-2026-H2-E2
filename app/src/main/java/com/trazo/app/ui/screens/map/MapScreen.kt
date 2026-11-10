@@ -20,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.maps.model.LatLng
@@ -29,6 +28,7 @@ import com.trazo.app.ui.components.layout.GpsIndicator
 import com.trazo.app.ui.components.layout.MapLayer
 import com.trazo.app.ui.components.layout.RunControls
 import com.trazo.app.ui.components.layout.RunPanel
+import com.trazo.app.ui.theme.Spacing
 
 @Composable
 fun MapScreen(
@@ -49,7 +49,7 @@ fun MapScreen(
         ) { permissions ->
             val hasPermission =
                 permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                        permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+                    permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
 
             if (hasPermission) {
                 viewModel.refreshCurrentLocation()
@@ -107,7 +107,7 @@ fun MapScreen(
                 modifier =
                     Modifier
                         .align(Alignment.TopStart)
-                        .padding(16.dp),
+                        .padding(Spacing.lg),
             ) {
                 GpsIndicator(
                     gpsQuality = uiState.gpsQuality,
@@ -118,8 +118,8 @@ fun MapScreen(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 RunPanel(
                     uiState = uiState,
