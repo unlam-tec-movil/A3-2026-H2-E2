@@ -1,5 +1,6 @@
 package com.trazo.app.ui.screens.startrun
 
+import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.domain.model.RunGoal
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -27,7 +28,7 @@ class StartRunViewModelTest {
 
     @Test
     fun onStartRunRequested_showsDialogWithNoGoal() {
-        viewModel.onStartRunRequested()
+        viewModel.onStartRunRequested(LocationStatus.READY)
 
         val state = viewModel.uiState.value
         assertTrue(state.isDialogVisible)
@@ -36,7 +37,7 @@ class StartRunViewModelTest {
 
     @Test
     fun onGoalSelected_marksGoalAndEnablesConfirm() {
-        viewModel.onStartRunRequested()
+        viewModel.onStartRunRequested(LocationStatus.READY)
 
         viewModel.onGoalSelected(RunGoal.KM_5)
 
@@ -47,7 +48,7 @@ class StartRunViewModelTest {
 
     @Test
     fun onGoalSelected_withAnotherGoal_keepsOnlyTheNewOne() {
-        viewModel.onStartRunRequested()
+        viewModel.onStartRunRequested(LocationStatus.READY)
         viewModel.onGoalSelected(RunGoal.KM_3)
 
         viewModel.onGoalSelected(RunGoal.KM_10)
@@ -57,7 +58,7 @@ class StartRunViewModelTest {
 
     @Test
     fun onConfirm_withoutGoal_returnsNullAndKeepsDialogOpen() {
-        viewModel.onStartRunRequested()
+        viewModel.onStartRunRequested(LocationStatus.READY)
 
         val result = viewModel.onConfirm()
 
@@ -67,7 +68,7 @@ class StartRunViewModelTest {
 
     @Test
     fun onConfirm_withGoal_returnsGoalAndClosesDialog() {
-        viewModel.onStartRunRequested()
+        viewModel.onStartRunRequested(LocationStatus.READY)
         viewModel.onGoalSelected(RunGoal.KM_5)
 
         val result = viewModel.onConfirm()
@@ -78,7 +79,7 @@ class StartRunViewModelTest {
 
     @Test
     fun onDismiss_closesDialogAndForgetsGoal() {
-        viewModel.onStartRunRequested()
+        viewModel.onStartRunRequested(LocationStatus.READY)
         viewModel.onGoalSelected(RunGoal.KM_3)
 
         viewModel.onDismiss()
@@ -90,12 +91,48 @@ class StartRunViewModelTest {
 
     @Test
     fun onStartRunRequested_afterDismiss_startsWithNoGoal() {
-        viewModel.onStartRunRequested()
+        viewModel.onStartRunRequested(LocationStatus.READY)
         viewModel.onGoalSelected(RunGoal.KM_10)
         viewModel.onDismiss()
 
-        viewModel.onStartRunRequested()
+        viewModel.onStartRunRequested(LocationStatus.READY)
 
         assertNull(viewModel.uiState.value.selectedGoal)
+    }
+
+    @Test
+    fun onStartRunRequested_withPermissionDenied_doesNotOpenDialogAndKeepsIssue() {
+        viewModel.onStartRunRequested(LocationStatus.PERMISSION_DENIED)
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isDialogVisible)
+        assertEquals(LocationStatus.PERMISSION_DENIED, state.locationIssue)
+    }
+
+    @Test
+    fun onLocationIssueDismiss_clearsTheIssue() {
+        viewModel.onStartRunRequested(LocationStatus.PERMISSION_DENIED)
+
+        viewModel.onLocationIssueDismiss()
+
+        assertNull(viewModel.uiState.value.locationIssue)
+    }
+
+    @Test
+    fun onStartRunRequested_withAproximateOnly_doesNotOpenDialogAndKeepsIssue() {
+        viewModel.onStartRunRequested(LocationStatus.APPROXIMATE_ONLY)
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isDialogVisible)
+        assertEquals(LocationStatus.APPROXIMATE_ONLY, state.locationIssue)
+    }
+
+    @Test
+    fun onStartRunRequested_withDeviceLocationOff_doesNotOpenDialogAndKeepsIssue() {
+        viewModel.onStartRunRequested(LocationStatus.DEVICE_LOCATION_OFF)
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isDialogVisible)
+        assertEquals(LocationStatus.DEVICE_LOCATION_OFF, state.locationIssue)
     }
 }
