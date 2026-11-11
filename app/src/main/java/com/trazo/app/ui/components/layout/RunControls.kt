@@ -10,10 +10,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.trazo.app.ui.screens.map.LiveRouteTrackingUiState
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
+import com.trazo.app.ui.theme.TrazoShapes
 
 @Composable
 fun RunControls(
@@ -36,6 +36,7 @@ fun RunControls(
                 }
             },
             enabled = uiState.canPause || uiState.canResume,
+            shape = TrazoShapes.medium,
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -50,6 +51,7 @@ fun RunControls(
         OutlinedButton(
             onClick = onFinish,
             enabled = uiState.canFinish,
+            shape = TrazoShapes.medium,
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -57,7 +59,7 @@ fun RunControls(
         ) {
             Text(
                 text = "Finalizar",
-                color = MaterialTheme.colorScheme.error,
+                color = if (uiState.canFinish) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                 style = MaterialTheme.typography.labelLarge,
             )
         }

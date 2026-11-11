@@ -11,13 +11,27 @@ import com.trazo.app.ui.theme.TrazoShapes
 @Composable
 fun FinishConfirmDialog(
     showFinishConfirmDialog: Boolean,
+    goalReached: Boolean,
     onConfirmFinish: () -> Unit,
     onCancelFinish: () -> Unit,
 ) {
     if (!showFinishConfirmDialog) return
 
+    val messageText =
+        if (goalReached) {
+            "¿Estás seguro de que deseás finalizar?"
+        } else {
+            "Todavía no llegaste a tu meta. ¿Estás seguro de que deseás finalizar?"
+        }
+
     AlertDialog(
         onDismissRequest = onCancelFinish,
+        text = {
+            Text(
+                text = messageText,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
         shape = TrazoShapes.extraLarge,
         confirmButton = {
             TextButton(

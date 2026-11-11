@@ -18,7 +18,6 @@ import com.trazo.app.ui.screens.map.LiveRouteTrackingUiState
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoShapes
 import com.trazo.app.ui.theme.tabular
-import java.util.Locale
 
 @Composable
 fun RunPanel(
@@ -27,7 +26,7 @@ fun RunPanel(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = TrazoShapes.medium,
+        shape = TrazoShapes.large,
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
@@ -52,7 +51,7 @@ fun RunPanel(
             )
 
             Text(
-                text = formatElapsedTime(uiState.elapsedTimeSeconds),
+                text = uiState.formattedTime,
                 style = MaterialTheme.typography.displayMedium.tabular(),
                 fontWeight = FontWeight.Bold,
             )
@@ -64,20 +63,20 @@ fun RunPanel(
             ) {
                 MetricItem(
                     label = "Distancia",
-                    value = formatDistance(uiState.distanceMeters),
-                    unit = "km",
+                    value = uiState.formattedDistance,
+                    unit = uiState.distanceUnit,
                 )
 
                 MetricItem(
                     label = "Velocidad actual",
-                    value = formatSpeed(uiState.currentSpeedKmh),
-                    unit = "km/h",
+                    value = uiState.formattedSpeed,
+                    unit = uiState.speedUnit,
                 )
 
                 MetricItem(
                     label = "Promedio",
-                    value = formatSpeed(uiState.averageSpeedKmh),
-                    unit = "km/h",
+                    value = uiState.formattedAverageSpeed,
+                    unit = uiState.speedUnit,
                 )
             }
         }
@@ -118,31 +117,3 @@ private fun MetricItem(
         }
     }
 }
-
-private fun formatElapsedTime(seconds: Long): String {
-    val hours = seconds / 3600
-    val minutes = (seconds % 3600) / 60
-    val remainingSeconds = seconds % 60
-
-    return String.format(
-        Locale.ROOT,
-        "%02d:%02d:%02d",
-        hours,
-        minutes,
-        remainingSeconds,
-    )
-}
-
-private fun formatDistance(meters: Double): String =
-    String.format(
-        Locale.forLanguageTag("es-AR"),
-        "%.2f",
-        meters / 1000.0,
-    )
-
-private fun formatSpeed(speedKmh: Double): String =
-    String.format(
-        Locale.forLanguageTag("es-AR"),
-        "%.1f",
-        speedKmh,
-    )

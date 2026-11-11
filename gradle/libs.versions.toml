@@ -20,6 +20,7 @@ ksp = "2.3.11" # Procesamiento de código en tiempo de compilación.
 kover = "0.9.9" # Medición de cobertura de pruebas.
 ktlint = "14.2.0" # Análisis y formato del código Kotlin.
 mapsCompose = "6.4.1" # Integración de Google Maps con Jetpack Compose.
+coroutinesTest = "1.10.1"
 
 [libraries]
 # Iconos de Material Design para Compose
@@ -30,6 +31,7 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 
 # Dependencias para pruebas unitarias y de instrumentación
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 

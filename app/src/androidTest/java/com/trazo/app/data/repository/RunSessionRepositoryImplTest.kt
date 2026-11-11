@@ -6,9 +6,11 @@ import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RawLocationPoint
 import com.trazo.app.domain.model.map.RunGoal
+import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.usecases.GpsPointFilterPolicy
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.CoroutineScope
@@ -68,13 +70,14 @@ class RunSessionRepositoryImplTest {
 
         repository.attachActiveSession(initializedSession)
 
-        val session = repository.activeSession.value
+        val session = repository.activeSession.value as? RunSession.ActiveSession
 
         assertNotNull(session)
         assertEquals(RunState.ACTIVE, session?.state)
         assertEquals("test-session", session?.id)
         assertEquals(RunGoal.THREE_KILOMETERS, session?.goal)
-        assertEquals(GpsQuality.NO_SIGNAL, session?.gpsQuality)
+        assertEquals(GpsQuality.WEAK_SIGNAL, session?.gpsQuality)
+        assertTrue(repository.isRunInProgress.value)
     }
 
     @Test
@@ -93,10 +96,9 @@ class RunSessionRepositoryImplTest {
             val result = repository.pauseSession()
 
             assertTrue(result.isSuccess)
-            assertEquals(
-                RunState.PAUSED,
-                repository.activeSession.value?.state,
-            )
+            val session = repository.activeSession.value as? RunSession.ActiveSession
+            assertEquals(RunState.PAUSED, session?.state)
+            assertTrue(repository.isRunInProgress.value)
         }
 
     @Test
@@ -116,14 +118,13 @@ class RunSessionRepositoryImplTest {
             val result = repository.resumeSession()
 
             assertTrue(result.isSuccess)
-            assertEquals(
-                RunState.ACTIVE,
-                repository.activeSession.value?.state,
-            )
+            val session = repository.activeSession.value as? RunSession.ActiveSession
+            assertEquals(RunState.ACTIVE, session?.state)
+            assertTrue(repository.isRunInProgress.value)
         }
 
     @Test
-    fun finishSession_returnsFrozenSummary() =
+    fun finishSession_returnsFrozenSummaryAndResetsToIdle() =
         runBlocking {
             val initializedSession =
                 InitializedRunSession(
@@ -138,18 +139,10 @@ class RunSessionRepositoryImplTest {
             val result = repository.finishSession()
 
             assertTrue(result.isSuccess)
-            assertEquals(
-                "test-session",
-                result.getOrNull()?.id,
-            )
-            assertEquals(
-                RunGoal.THREE_KILOMETERS,
-                result.getOrNull()?.goal,
-            )
-            assertEquals(
-                RunState.FINISHED,
-                repository.activeSession.value?.state,
-            )
+            assertEquals("test-session", result.getOrNull()?.id)
+            assertEquals(RunGoal.THREE_KILOMETERS, result.getOrNull()?.goal)
+            assertEquals(RunSession.Idle, repository.activeSession.value)
+            assertFalse(repository.isRunInProgress.value)
         }
 
     @Test
@@ -178,8 +171,8 @@ class RunSessionRepositoryImplTest {
             )
 
             withTimeout(3_000L.milliseconds) {
-                repository.activeSession.first {
-                    it?.routePoints?.size == 1
+                repository.activeSession.first { session ->
+                    session is RunSession.ActiveSession && session.routePoints.size == 1
                 }
             }
 
@@ -195,13 +188,13 @@ class RunSessionRepositoryImplTest {
 
             val session =
                 withTimeout(3_000L.milliseconds) {
-                    repository.activeSession.first {
-                        it?.routePoints?.size == 2
-                    }
+                    repository.activeSession.first { s ->
+                        s is RunSession.ActiveSession && s.routePoints.size == 2
+                    } as RunSession.ActiveSession
                 }
 
-            assertEquals(2, session?.routePoints?.size)
-            assertTrue((session?.metrics?.distanceMeters ?: 0.0) > 100.0)
+            assertEquals(2, session.routePoints.size)
+            assertTrue(session.metrics.distanceMeters > 100.0)
         }
 
     @Test
@@ -227,13 +220,12 @@ class RunSessionRepositoryImplTest {
                 ),
             )
 
-            // Esperamos a que el repositorio procese el flujo.
             kotlinx.coroutines.delay(300L.milliseconds)
 
-            val session = repository.activeSession.value
+            val session = repository.activeSession.value as? RunSession.ActiveSession
 
             assertEquals(0, session?.routePoints?.size)
-            assertEquals(0.0, session?.metrics?.distanceMeters)
+            assertEquals(0.0, session?.metrics?.distanceMeters ?: 0.0)
         }
 
     @Test
@@ -252,21 +244,19 @@ class RunSessionRepositoryImplTest {
             fakeLocationClient.sendSignalQuality(GpsQuality.FULL_SIGNAL)
 
             withTimeout(3_000L.milliseconds) {
-                repository.activeSession.first {
-                    it?.gpsQuality == GpsQuality.FULL_SIGNAL
+                repository.activeSession.first { session ->
+                    session is RunSession.ActiveSession && session.gpsQuality == GpsQuality.FULL_SIGNAL
                 }
             }
 
             withTimeout(18_000L.milliseconds) {
-                repository.activeSession.first {
-                    it?.gpsQuality == GpsQuality.NO_SIGNAL
+                repository.activeSession.first { session ->
+                    session is RunSession.ActiveSession && session.gpsQuality == GpsQuality.NO_SIGNAL
                 }
             }
 
-            assertEquals(
-                GpsQuality.NO_SIGNAL,
-                repository.activeSession.value?.gpsQuality,
-            )
+            val session = repository.activeSession.value as? RunSession.ActiveSession
+            assertEquals(GpsQuality.NO_SIGNAL, session?.gpsQuality)
         }
 
     @Test
@@ -295,19 +285,21 @@ class RunSessionRepositoryImplTest {
             )
 
             withTimeout(3_000L.milliseconds) {
-                repository.activeSession.first {
-                    it?.routePoints?.size == 1
+                repository.activeSession.first { session ->
+                    session is RunSession.ActiveSession && session.routePoints.size == 1
                 }
             }
 
             val pauseResult = repository.pauseSession()
             assertTrue(pauseResult.isSuccess)
 
-            val metricsWhenPaused = repository.activeSession.value?.metrics
+            val activeSessionWhenPaused = repository.activeSession.value as? RunSession.ActiveSession
+            val metricsWhenPaused = activeSessionWhenPaused?.metrics
 
             kotlinx.coroutines.delay(2_500L.milliseconds)
 
-            val metricsAfterWaiting = repository.activeSession.value?.metrics
+            val activeSessionAfterWaiting = repository.activeSession.value as? RunSession.ActiveSession
+            val metricsAfterWaiting = activeSessionAfterWaiting?.metrics
 
             assertEquals(metricsWhenPaused, metricsAfterWaiting)
         }
@@ -338,15 +330,15 @@ class RunSessionRepositoryImplTest {
             )
 
             withTimeout(3_000L.milliseconds) {
-                repository.activeSession.first {
-                    it?.routePoints?.size == 1
+                repository.activeSession.first { session ->
+                    session is RunSession.ActiveSession && session.routePoints.size == 1
                 }
             }
 
             val pauseResult = repository.pauseSession()
             assertTrue(pauseResult.isSuccess)
 
-            val pausedSession = repository.activeSession.value
+            val pausedSession = repository.activeSession.value as? RunSession.ActiveSession
             val pausedDistance = pausedSession?.metrics?.distanceMeters ?: 0.0
             val pausedElapsedTime = pausedSession?.metrics?.elapsedTimeSeconds ?: 0L
 
@@ -367,10 +359,11 @@ class RunSessionRepositoryImplTest {
 
             val updatedSession =
                 withTimeoutOrNull(3_000L.milliseconds) {
-                    repository.activeSession.first {
-                        it?.routePoints?.size == 2 &&
-                            (it.metrics.distanceMeters > pausedDistance)
-                    }
+                    repository.activeSession.first { session ->
+                        session is RunSession.ActiveSession &&
+                            session.routePoints.size == 2 &&
+                            session.metrics.distanceMeters > pausedDistance
+                    } as? RunSession.ActiveSession
                 }
 
             assertNotNull(
@@ -383,8 +376,9 @@ class RunSessionRepositoryImplTest {
 
             val updatedElapsedTime =
                 withTimeoutOrNull(3_000L.milliseconds) {
-                    repository.activeSession.first {
-                        (it?.metrics?.elapsedTimeSeconds ?: 0L) > pausedElapsedTime
+                    repository.activeSession.first { session ->
+                        session is RunSession.ActiveSession &&
+                            session.metrics.elapsedTimeSeconds > pausedElapsedTime
                     }
                 }
 
@@ -394,4 +388,31 @@ class RunSessionRepositoryImplTest {
             )
         }
     }
+
+    @Test
+    fun locationPermissionRevoked_doesNotAutoPauseSession() =
+        runBlocking {
+            val initializedSession =
+                InitializedRunSession(
+                    id = "test-session",
+                    goal = RunGoal.THREE_KILOMETERS,
+                    startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
+                )
+
+            repository.attachActiveSession(initializedSession)
+
+            val sessionBefore = repository.activeSession.value as? RunSession.ActiveSession
+            assertNotNull(sessionBefore)
+            assertEquals(RunState.ACTIVE, sessionBefore?.state)
+
+            fakeLocationClient.triggerSecurityException()
+
+            kotlinx.coroutines.delay(1_500L.milliseconds)
+
+            val sessionAfter = repository.activeSession.value as? RunSession.ActiveSession
+            assertNotNull(sessionAfter)
+            assertEquals(RunState.ACTIVE, sessionAfter?.state)
+            assertTrue(repository.isRunInProgress.value)
+        }
 }

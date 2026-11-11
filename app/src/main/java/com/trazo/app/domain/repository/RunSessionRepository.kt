@@ -6,7 +6,7 @@ import com.trazo.app.domain.model.map.RunSession
 import kotlinx.coroutines.flow.StateFlow
 
 interface RunSessionRepository {
-    val activeSession: StateFlow<RunSession?>
+    val activeSession: StateFlow<RunSession>
 
     val isRunInProgress: StateFlow<Boolean>
 

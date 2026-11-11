@@ -141,9 +141,9 @@ class AndroidLocationClient
             )
 
         private fun Location.toGpsQuality(): GpsQuality =
-            when {
-                accuracy <= 10f -> GpsQuality.FULL_SIGNAL
-                accuracy <= 20f -> GpsQuality.MEDIUM_SIGNAL
-                else -> GpsQuality.LOW_SIGNAL
+            if (accuracy <= 15f) {
+                GpsQuality.FULL_SIGNAL
+            } else {
+                GpsQuality.WEAK_SIGNAL
             }
     }

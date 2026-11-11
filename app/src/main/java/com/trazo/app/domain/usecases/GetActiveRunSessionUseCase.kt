@@ -10,5 +10,5 @@ class GetActiveRunSessionUseCase
     constructor(
         private val repository: RunSessionRepository,
     ) {
-        operator fun invoke(): StateFlow<RunSession?> = repository.activeSession
+        operator fun invoke(): StateFlow<RunSession> = repository.activeSession
     }

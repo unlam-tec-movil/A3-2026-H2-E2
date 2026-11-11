@@ -5,5 +5,5 @@ data class RoutePoint(
     val longitude: Double,
     val accuracyMeters: Float,
     val speedMetersPerSecond: Float,
-    val timestampMillis: Long,
+    val monotonicTimestampMillis: Long,
 )

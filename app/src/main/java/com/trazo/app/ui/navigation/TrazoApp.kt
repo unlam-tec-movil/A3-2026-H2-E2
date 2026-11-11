@@ -42,7 +42,16 @@ fun TrazoApp() {
             modifier = Modifier.padding(innerPadding),
         ) {
             composable(TrazoDestination.HOME.route) { HomeScreen() }
-            composable(TrazoDestination.MAP.route) { MapScreen() }
+            composable(TrazoDestination.MAP.route) {
+                MapScreen(
+                    onStartRunClick = {
+                        // TODO (Persona 2): Abrir modal o flujo de inicio 'start-run'
+                    },
+                    onNavigateToResults = { _ ->
+                        // TODO (Persona 4): Navegar a la pantalla de Resultados pasando el resumen congelado
+                    },
+                )
+            }
             composable(TrazoDestination.HISTORY.route) { HistoryScreen() }
         }
     }

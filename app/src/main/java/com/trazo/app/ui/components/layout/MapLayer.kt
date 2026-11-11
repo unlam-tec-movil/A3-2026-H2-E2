@@ -15,12 +15,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.CameraMoveStartedReason
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -37,6 +39,9 @@ import com.trazo.app.ui.theme.TrazoTheme
 fun MapLayer(
     routePoints: List<RoutePoint>,
     currentLocation: LatLng?,
+    isMapCenteredOnRunner: Boolean,
+    onCenterMapClicked: () -> Unit,
+    onMapDragged: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val cameraPositionState = rememberCameraPositionState()
@@ -52,7 +57,7 @@ fun MapLayer(
             )
         }
 
-    LaunchedEffect(currentLocation) {
+    LaunchedEffect(currentLocation, isMapCenteredOnRunner) {
         currentLocation?.let { location ->
             markerState.position = location
 
@@ -64,8 +69,21 @@ fun MapLayer(
                     ),
                 )
                 hasCenteredInitially = true
+            } else if (isMapCenteredOnRunner) {
+                cameraPositionState.animate(
+                    CameraUpdateFactory.newLatLng(location),
+                )
             }
         }
+    }
+
+    LaunchedEffect(cameraPositionState) {
+        snapshotFlow { cameraPositionState.isMoving to cameraPositionState.cameraMoveStartedReason }
+            .collect { (isMoving, reason) ->
+                if (isMoving && reason == CameraMoveStartedReason.GESTURE) {
+                    onMapDragged()
+                }
+            }
     }
 
     val routeCoordinates =
@@ -79,14 +97,8 @@ fun MapLayer(
         }
 
     val density = LocalDensity.current
-
-    val traceWidth = with(density) {
-        Sizes.traceLiveWidth.toPx()
-    }
-
-    val traceOutlineWidth = with(density) {
-        (Sizes.traceLiveWidth + 2.dp).toPx()
-    }
+    val traceWidth = with(density) { Sizes.traceLiveWidth.toPx() }
+    val traceOutlineWidth = with(density) { (Sizes.traceLiveWidth + 2.dp).toPx() }
 
     Box(
         modifier = modifier.fillMaxSize(),
@@ -130,6 +142,7 @@ fun MapLayer(
 
         SmallFloatingActionButton(
             onClick = {
+                onCenterMapClicked()
                 currentLocation?.let { location ->
                     cameraPositionState.move(
                         CameraUpdateFactory.newLatLngZoom(
@@ -139,10 +152,11 @@ fun MapLayer(
                     )
                 }
             },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(Spacing.lg)
-                .size(Sizes.minTouchTarget),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(Spacing.lg)
+                    .size(Sizes.minTouchTarget),
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.primary,
         ) {

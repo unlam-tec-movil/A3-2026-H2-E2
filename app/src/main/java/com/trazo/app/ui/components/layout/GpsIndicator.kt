@@ -7,6 +7,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.ui.theme.TrazoTheme
@@ -22,12 +25,8 @@ fun GpsIndicator(
                 "Sin señal GPS" to TrazoTheme.extendedColors.warning
             }
 
-            GpsQuality.LOW_SIGNAL -> {
-                "Señal GPS baja" to TrazoTheme.extendedColors.warning
-            }
-
-            GpsQuality.MEDIUM_SIGNAL -> {
-                "Señal GPS media" to TrazoTheme.extendedColors.info
+            GpsQuality.WEAK_SIGNAL -> {
+                "Señal GPS débil" to TrazoTheme.extendedColors.warning
             }
 
             GpsQuality.FULL_SIGNAL -> {
@@ -36,7 +35,10 @@ fun GpsIndicator(
         }
 
     Row(
-        modifier = modifier,
+        modifier =
+            modifier.semantics(mergeDescendants = true) {
+                contentDescription = label
+            },
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -44,6 +46,7 @@ fun GpsIndicator(
             text = "●",
             color = color,
             style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.clearAndSetSemantics { },
         )
 
         Text(

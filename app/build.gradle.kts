@@ -79,6 +79,7 @@ dependencies {
 
     // Tests unitarios
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 
     // Tests instrumentados
     androidTestImplementation(platform(libs.androidx.compose.bom))

@@ -6,5 +6,4 @@ enum class RunState {
     PAUSED,
     STOPPED,
     PERSONAL_PAUSED,
-    FINISHED,
 }

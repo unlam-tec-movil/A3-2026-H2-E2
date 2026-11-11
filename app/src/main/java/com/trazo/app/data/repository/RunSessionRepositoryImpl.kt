@@ -41,9 +41,9 @@ class RunSessionRepositoryImpl
     ) : RunSessionRepository {
         private val mutex = Mutex()
 
-        private val _activeSession = MutableStateFlow<RunSession?>(null)
+        private val _activeSession = MutableStateFlow<RunSession>(RunSession.Idle)
 
-        override val activeSession: StateFlow<RunSession?> =
+        override val activeSession: StateFlow<RunSession> =
             _activeSession.asStateFlow()
 
         private val _isRunInProgress = MutableStateFlow(false)
@@ -56,12 +56,16 @@ class RunSessionRepositoryImpl
         private var timerJob: Job? = null
 
         override fun attachActiveSession(session: InitializedRunSession) {
+            if (_activeSession.value is RunSession.ActiveSession) {
+                return
+            }
+
             stopJobs()
 
             val now = SystemClock.elapsedRealtime()
 
             _activeSession.value =
-                RunSession(
+                RunSession.ActiveSession(
                     id = session.id,
                     goal = session.goal,
                     state = RunState.ACTIVE,
@@ -72,7 +76,7 @@ class RunSessionRepositoryImpl
                     lastValidLocationTimestamp = null,
                     accumulatedElapsedTimeMillis = 0L,
                     resumedAtMonotonicTimestamp = now,
-                    gpsQuality = GpsQuality.NO_SIGNAL,
+                    gpsQuality = GpsQuality.WEAK_SIGNAL,
                     goalReached = false,
                 )
 
@@ -135,7 +139,7 @@ class RunSessionRepositoryImpl
                             state = RunState.ACTIVE,
                             lastValidLocationTimestamp = null,
                             resumedAtMonotonicTimestamp = now,
-                            gpsQuality = GpsQuality.NO_SIGNAL,
+                            gpsQuality = GpsQuality.WEAK_SIGNAL,
                         )
 
                     startTracking()
@@ -182,20 +186,12 @@ class RunSessionRepositoryImpl
                             routePoints = session.routePoints.toList(),
                             metrics = finalMetrics,
                             startedAt = session.startedAt,
-                            startedAtMonotonicTimestamp =
-                                session.startMonotonicTimestamp,
+                            startedAtMonotonicTimestamp = session.startMonotonicTimestamp,
                             finishedAtMonotonicTimestamp = now,
                             goalReached = session.goalReached,
                         )
 
-                    _activeSession.value =
-                        session.copy(
-                            state = RunState.FINISHED,
-                            metrics = finalMetrics,
-                            accumulatedElapsedTimeMillis = elapsedTime,
-                            resumedAtMonotonicTimestamp = null,
-                        )
-
+                    _activeSession.value = RunSession.Idle
                     _isRunInProgress.value = false
 
                     Result.success(summary)
@@ -208,7 +204,7 @@ class RunSessionRepositoryImpl
 
         override fun resetToIdle() {
             stopJobs()
-            _activeSession.value = null
+            _activeSession.value = RunSession.Idle
             _isRunInProgress.value = false
         }
 
@@ -249,9 +245,7 @@ class RunSessionRepositoryImpl
                             }
                         }.collect { quality ->
                             mutex.withLock {
-                                val session =
-                                    _activeSession.value
-                                        ?: return@withLock
+                                val session = _activeSession.value as? RunSession.ActiveSession ?: return@withLock
 
                                 if (session.state == RunState.ACTIVE) {
                                     _activeSession.value =
@@ -265,16 +259,14 @@ class RunSessionRepositoryImpl
         }
 
         private suspend fun processLocation(rawPoint: RawLocationPoint) {
-            val point = rawPoint.toRoutePoint()
-
-            if (!gpsPointFilterPolicy.isValid(point)) {
+            if (!gpsPointFilterPolicy.isPointAccurate(rawPoint.accuracyMeters)) {
                 return
             }
 
+            val point = rawPoint.toRoutePoint()
+
             mutex.withLock {
-                val session =
-                    _activeSession.value
-                        ?: return@withLock
+                val session = _activeSession.value as? RunSession.ActiveSession ?: return@withLock
 
                 if (session.state != RunState.ACTIVE) {
                     return@withLock
@@ -320,8 +312,7 @@ class RunSessionRepositoryImpl
                     session.copy(
                         routePoints = session.routePoints + point,
                         metrics = metrics,
-                        lastValidLocationTimestamp =
-                            rawPoint.monotonicTimestampMillis,
+                        lastValidLocationTimestamp = rawPoint.monotonicTimestampMillis,
                         goalReached = goalReached,
                     )
             }
@@ -336,9 +327,7 @@ class RunSessionRepositoryImpl
                         delay(TIMER_INTERVAL_MILLIS.milliseconds)
 
                         mutex.withLock {
-                            val session =
-                                _activeSession.value
-                                    ?: return@withLock
+                            val session = _activeSession.value as? RunSession.ActiveSession ?: return@withLock
 
                             if (session.state != RunState.ACTIVE) {
                                 return@withLock
@@ -359,8 +348,8 @@ class RunSessionRepositoryImpl
 
                             val signalLost =
                                 gpsPointFilterPolicy.isSignalLost(
-                                    lastValidTimestampMillis = timeoutReference,
-                                    currentTimestampMillis = now,
+                                    lastValidLocationMonotonicTimestamp = timeoutReference,
+                                    currentMonotonicTimestamp = now,
                                 )
 
                             _activeSession.value =
@@ -387,7 +376,7 @@ class RunSessionRepositoryImpl
         }
 
         private fun calculateElapsedTime(
-            session: RunSession,
+            session: RunSession.ActiveSession,
             now: Long,
         ): Long {
             val currentSegment =
@@ -395,8 +384,7 @@ class RunSessionRepositoryImpl
                     ?.let { (now - it).coerceAtLeast(0L) }
                     ?: 0L
 
-            return session.accumulatedElapsedTimeMillis +
-                currentSegment
+            return session.accumulatedElapsedTimeMillis + currentSegment
         }
 
         private fun calculateAverageSpeed(
@@ -455,13 +443,12 @@ class RunSessionRepositoryImpl
                 longitude = longitude,
                 accuracyMeters = accuracyMeters,
                 speedMetersPerSecond = speedMetersPerSecond,
-                timestampMillis = monotonicTimestampMillis,
+                monotonicTimestampMillis = monotonicTimestampMillis,
             )
 
-        private fun requireActiveSession(): RunSession =
-            checkNotNull(_activeSession.value) {
-                "No hay un recorrido activo."
-            }
+        private fun requireActiveSession(): RunSession.ActiveSession =
+            (_activeSession.value as? RunSession.ActiveSession)
+                ?: throw IllegalStateException("No hay un recorrido activo.")
 
         private fun stopJobs() {
             locationJob?.cancel()
