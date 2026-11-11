@@ -438,6 +438,7 @@ data class StopDetectionConfig(
     val classifyAfterMillis: Long = 20_000,    // 4.1, estricto (>)
     val resumeConfirmMillis: Long = 1_500,
     val tickIntervalMillis: Long = 500,
+    val sampleStaleMillis: Long = 2_000,       // sin muestras por más de esto = sin evidencia
 )
 ```
 
@@ -503,7 +504,11 @@ son P0: sin ellos el repositorio no puede operar.
   recorrido»), invoca `RunStatePublisher.publish(runId, estado)`. La publicación es condicional: no
   sobreescribe `PAUSED` ni estados finales.
 - Cada muestra pasa por `StillnessEstimator`; el último booleano se reevalúa en cada tick para que
-  los 8 s y 20 s se cumplan aunque el sensor no emita muestras nuevas. Cada observación usa
+  los 8 s y 20 s se cumplan aunque el sensor no emita muestras nuevas, **salvo que el último dato
+  sea viejo**: si pasaron más de `sampleStaleMillis` (2 000 ms) desde la última muestra, el tick
+  observa `isStill = false` (sin evidencia = «en movimiento»). Así, si el sensor se corta (pantalla
+  apagada o cambio de app) no se arrastra un «quieto» viejo y no se registra una frenada falsa al
+  volver (1.3, 2.1). Cada observación usa
   `MonotonicClock.nowMillis()` (no el timestamp del `SensorEvent`) para unificar la base de tiempo.
 - Si el id del recorrido difiere del último id visto, parte de `StopDetector.initial()`. Si es el
   mismo (reanudación), conserva `brakes`. Al pasar a nulo aplica `onRunStopped`.
@@ -670,7 +675,9 @@ alerta para que las otras dos puedan depender de ella.
   cambia (1.4); muestras quietas + tiempo virtual 8 s → una frenada con ubicación (2.1, 2.2); pausa
   y reanudación con el mismo id conservan `brakes`; un id distinto las vacía; fin del recorrido
   conserva `brakes` y cancela la colección; `classifyCurrentStop` concurrente con ticks no pierde
-  actualizaciones. Con un `RunStatePublisher` falso: `Still → Braking` publica `STOPPED`,
+  actualizaciones; con el sensor sin emitir más de `sampleStaleMillis` tras un «quieto», los ticks
+  observan «en movimiento» y, al reanudar el tiempo, no se registra una frenada falsa (1.3, 2.1).
+  Con un `RunStatePublisher` falso: `Still → Braking` publica `STOPPED`,
   `PersonalPause` publica `PERSONAL_PAUSED`, retomar publica `ACTIVE`; con el recorrido en `PAUSED`
   (pausa manual) se deja de colectar el sensor y no se publica `ACTIVE`.
 - `StopDetectionViewModelTest`: alerta aparece al registrarse la frenada y se limpia a los 4 000 ms
@@ -711,10 +718,9 @@ alerta para que las otras dos puedan depender de ella.
   pantalla queda encendida, así que la detección solo funciona con la app visible. Desde Android 9
   las apps en segundo plano no reciben eventos de sensores continuos; si el corredor apaga la
   pantalla o cambia de app, la detección se interrumpe y no hay evidencia durante ese tiempo.
-  Mitigación propuesta (a decidir al implementar): que el repositorio no reevalúe como «quieto» un
-  último valor viejo; si no llegan muestras por un rato, se trata como «en movimiento» (en línea con
-  «nunca se registra una frenada sin evidencia»), para no registrar una frenada falsa al volver.
-  Pedir detección con pantalla apagada reabriría el tema (Revalidation Triggers).
+  Mitigación (ya parte del diseño): `sampleStaleMillis` en `StopDetectionConfig`; sin muestras
+  recientes el repositorio observa «en movimiento» (ver `StopDetectionRepositoryImpl`). Pedir
+  detección con pantalla apagada reabriría el tema (Revalidation Triggers).
 - **Función de `RunSessionRepository` para cambiar de estado (supuesto a confirmar con Persona 3)**:
   el contrato de HU-04 solo muestra `pauseSession` / `resumeSession` entre `ACTIVE` y `PAUSED`; no
   hay función para pasar a `STOPPED` ni a `PERSONAL_PAUSED`. Se asume una única función que cambia
@@ -722,6 +728,17 @@ alerta para que las otras dos puedan depender de ella.
   sobreescribe `PAUSED` ni `FINISHED`), detrás de `RunStatePublisher`. Falta confirmar su nombre, su
   firma, si es `suspend` y si congela o no el temporizador y la traza en `STOPPED` /
   `PERSONAL_PAUSED`. Hasta entonces `RunSessionStatePublisher` queda sin implementar.
+- **Pregunta abierta (consultada a Persona 3, sin respuesta aún)**: las precondiciones actuales de
+  HU-04 exigen `ACTIVE` (o `PAUSED`) para `pauseSession` y `finishSession`. Como el corredor puede
+  estar en `STOPPED` o `PERSONAL_PAUSED` al tocar «Pausar» o «Finalizar» (por ejemplo, en un
+  semáforo), hay que confirmar que ambas acciones acepten esos estados, que esos estados no
+  congelen métricas ni traza, y cómo se resuelve la carrera entre una acción manual y
+  `RunStatePublisher.publish` (que es condicional y no sobreescribe `PAUSED`). Bloquea solo las
+  tareas de integración; dominio, sensor y UI no dependen de la respuesta.
+- **Caso borde conocido (aceptado)**: si el corredor reanuda a mano desde `PAUSED` y sigue sin
+  moverse, la fase parte de `Moving` y se registra una segunda frenada a los 8 s para la misma
+  detención física (2.3 aplica por detención continua dentro de un tramo en curso). Se acepta sin
+  mitigación.
 - **Frenada sin ubicación**: se registra con `location = null` si no hay fix. Alternativa
   descartada: demorar el registro, que violaría 2.1/2.2. Los consumidores (pin del mapa, `save-run`)
   deben tolerar `null`.
