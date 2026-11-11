@@ -5,16 +5,18 @@
 **Purpose**: esta funcionalidad entrega al corredor el cierre de su recorrido: el aviso de meta
 alcanzada mientras sigue corriendo, el aviso de recorrido demasiado corto y la pantalla de resultado
 («¡Meta cumplida!» o «Recorrido finalizado») con el paso a «Guardar recorrido». La confirmación al
-tocar «Finalizar» (`FinishConfirmDialog`) la implementa Persona 3 (HU-04); esta spec solo le da la
-decisión que necesita.
+tocar «Finalizar» (`FinishConfirmDialog`) la implementa Persona 3 (HU-04), que elige el texto según
+`goalReached`; esta spec solo implementa el aviso de meta alcanzada (componente suelto en
+`map/components/`), el aviso de recorrido demasiado corto y la pantalla de resultado.
 
 **Users**: corredores recreativos que registran un recorrido con meta de 3, 5 o 10 km.
 
 **Impact**: hoy `MapScreen` es un placeholder y no existen el modelo de recorrido, la ruta `result`
 ni el botón «Finalizar». Este diseño agrega, sobre el contrato de HU-04, la decisión de cierre
 (pura y testeable), dos piezas de UI sueltas para el Mapa (aviso de meta y aviso de recorrido
-demasiado corto) y la pantalla `result`. El recorrido terminado viaja por id: la pantalla de resultado
-y `save-run` leen el `FrozenRunSummary` del repositorio de recorridos finalizados de Persona 3.
+demasiado corto) y la pantalla `result`. El recorrido terminado viaja por id: Persona 3 guarda el
+`FrozenRunSummary` en un almacén en memoria (`put`/`get`/`remove` por id); la pantalla de resultado lo
+lee con `get` y `save-run` lo lee y lo quita con `remove`.
 
 ### Goals
 
@@ -23,16 +25,17 @@ y `save-run` leen el `FrozenRunSummary` del repositorio de recorridos finalizado
 - Que llegar a la meta solo muestre el aviso: el registro sigue activo hasta que el corredor
   confirme (decisiones de la reunión de equipo, `team-notes/README.md`).
 - Que por navegación viaje solo el id del recorrido; el `FrozenRunSummary` completo (con la traza) se
-  lee del repositorio de recorridos finalizados, sin pasarlo por argumentos.
+  lee del almacén en memoria de Persona 3, sin pasarlo por argumentos.
 - Cumplir accesibilidad: «Quitar animaciones», fuente al 200 %, estado no solo por color.
 
 ### Non-Goals
 
 - Formulario de guardado, destacados y fotos (`save-run`).
-- Cálculo de frenadas (`stop-detection`), de regularidad (HU-05.2) y de las métricas (HU-04).
+- Cálculo de frenadas (`stop-detection`), de regularidad (HU-05.2) y de las métricas (HU-04). Las
+  frenadas no se ven en el resultado: se ven después, en la descripción del recorrido.
 - Botón «Finalizar» y su ubicación en `RunControls` (HU-04).
 - `FinishConfirmDialog`, sus textos y su elección según `goalReached` (Persona 3, HU-04).
-- Repositorio de recorridos finalizados (Persona 3, HU-04).
+- Almacén en memoria de recorridos finalizados (Persona 3, HU-04).
 - Persistencia en disco y recuperación ante muerte del proceso.
 - Librería de animación (Lottie): las animaciones son nativas de Compose.
 
@@ -40,8 +43,6 @@ y `save-run` leen el `FrozenRunSummary` del repositorio de recorridos finalizado
 
 ### This Spec Owns
 
-- Regla de cierre `FinishPolicy`: meta alcanzada, umbral de 200 m y los tres desenlaces de
-  «Finalizar».
 - Regla de cierre `FinishPolicy`: meta alcanzada, umbral de 200 m y los tres desenlaces de
   «Finalizar».
 - Casos de uso `CloseRunUseCase` (finaliza el recorrido y devuelve su id) y `DiscardRunUseCase`
@@ -60,8 +61,9 @@ y `save-run` leen el `FrozenRunSummary` del repositorio de recorridos finalizado
 - `FinishConfirmDialog` (HU-04, Persona 3): ella elige el texto según `goalReached` y agrega sus
   textos a `strings.xml` con prefijo `map_`, incluidos «Finalizar recorrido» y «Cancelar». Esta spec
   **no** lo implementa ni define esos textos. Los requisitos 2.1 y 3.1 describen su contenido.
-- Repositorio de recorridos finalizados (Persona 3): conserva el `FrozenRunSummary` por id, separado
-  del repositorio de la sesión activa. Esta spec solo lo lee.
+- Almacén en memoria de recorridos finalizados (Persona 3): conserva el `FrozenRunSummary` por id
+  (`put`/`get`/`remove`), separado del repositorio de la sesión activa. Esta spec solo usa `get` y
+  nunca llama a `remove` (desde el resultado no hay descarte; `remove` lo llama `save-run`).
 - Detección y conteo de frenadas, alerta de frenada y consulta de 20 s (`stop-detection`). Solo se
   consume su contrato; Persona 3 le pasa `suppressed = true` (ver Interfaces).
 - Regularidad del piso (sin dueño: HU-05.2) y modo demo (a definir entre Persona 2 y Persona 3, desde
@@ -72,7 +74,7 @@ y `save-run` leen el `FrozenRunSummary` del repositorio de recorridos finalizado
 ### Allowed Dependencies
 
 - `domain` (Kotlin puro): `RunSessionRepository`, `FrozenRunSummary`, `RunSession`, `RunGoal`,
-  `RoutePoint` y el repositorio de recorridos finalizados (HU-04, Persona 3); `StopDetectionRepository`,
+  `RoutePoint` y el almacén de recorridos finalizados (HU-04, Persona 3); `StopDetectionRepository`,
   `StopKind` (`stop-detection`).
 - `ui/screens/result` y `ui/screens/map/` → `domain`, `ui/components`, `ui/theme`. Nunca `data`.
 - Navigation Compose para la ruta `result/{runId}`.
@@ -83,12 +85,14 @@ y `save-run` leen el `FrozenRunSummary` del repositorio de recorridos finalizado
 
 - HU-04 cambia la forma de `FrozenRunSummary`, `RunSession` o `RunState`, o el contrato de
   `finishSession()` y `resetToIdle()`.
-- HU-04 cambia el nombre o la firma del repositorio de recorridos finalizados, o quién lo escribe.
+- HU-04 cambia el nombre o la firma del almacén de recorridos finalizados (`put`/`get`/`remove`), o
+  quién lo escribe.
 - HU-04 cambia cómo `FinishConfirmDialog` recibe la decisión de `FinishPolicy` (ver Interfaces).
 - `stop-detection` cambia `classifyCurrentStop`, el parámetro `suppressed` o la forma en que aporta
   las frenadas.
-- `save-run` cambia cómo lee el recorrido del repositorio de recorridos finalizados.
-- Se define el dueño de la regularidad o del modo demo, o se agregan al `FrozenRunSummary`
+- `save-run` cambia cómo lee el recorrido del almacén de recorridos finalizados o cuándo llama a
+  `remove`.
+- Se define el dueño de la regularidad, del modo demo o de las frenadas, o se agregan al `FrozenRunSummary`
   (ver Open Questions).
 
 ## Architecture
@@ -124,18 +128,18 @@ graph TB
     subgraph Contracts from other specs
         RunSessionRepository
         StopDetectionRepository
-        FinishedRunsRepository
+        FinishedRunStore
         FinishConfirmDialog
     end
     FinishRunViewModel --> RunSessionRepository
     FinishRunViewModel --> StopDetectionRepository
     CloseRunUseCase --> RunSessionRepository
     DiscardRunUseCase --> RunSessionRepository
-    ResultViewModel --> FinishedRunsRepository
-    SaveRunFlow --> FinishedRunsRepository
+    ResultViewModel --> FinishedRunStore
+    SaveRunFlow --> FinishedRunStore
 ```
 
-> `FinishConfirmDialog` y `FinishedRunsRepository` son de Persona 3. La línea punteada indica que el
+> `FinishConfirmDialog` y `FinishedRunStore` (nombre a confirmar) son de Persona 3. La línea punteada indica que el
 > diálogo se inyecta desde `MapScreen` (ver Interfaces); esta spec no lo implementa.
 
 **Architecture Integration**
@@ -148,8 +152,7 @@ graph TB
 - **Existing patterns preserved**: Screen/Content/ViewModel/UiState, state hoisting, ViewModel que
   solo observa repositorios `@Singleton`, textos en `strings.xml`, tokens de `ui/theme`.
 - **New components rationale**: `FinishPolicy` aísla la regla de 200 m y de meta (testeable sin
-  Android); el repositorio de recorridos finalizados (de Persona 3) evita pasar la traza por
-  navegación; `FinishRunViewModel` concentra el estado del aviso y de los diálogos de cierre.
+  Android); el almacén en memoria de Persona 3 evita pasar la traza por navegación; `FinishRunViewModel` concentra el estado del aviso y de los diálogos de cierre.
 - **Steering compliance**: dirección `ui → domain ← data`; sin hex ni medidas sueltas; voseo
   rioplatense.
 
@@ -199,7 +202,7 @@ app/src/test/java/com/trazo/app/              # replica el paquete de lo probado
 app/src/androidTest/java/com/trazo/app/ui/screens/{map/components,result}/
 ```
 
-> No hay `data/` ni `di/` en esta spec: el repositorio de recorridos finalizados es de Persona 3.
+> No hay `data/` ni `di/` en esta spec: el almacén de recorridos finalizados es de Persona 3.
 > `GoalReachedNotice` y `TooShortRunDialog` nacen en `screens/map/components/` como componentes
 > sueltos (solo los usa el Mapa). Si otra pantalla los necesita, se mueven a
 > `ui/components/common/` (regla de `ui-components.md`).
@@ -213,7 +216,8 @@ app/src/androidTest/java/com/trazo/app/ui/screens/{map/components,result}/
   haya celebración de meta, diálogo de confirmación o aviso de recorrido corto. Se hace en la tarea
   de integración, tras HU-04.
 - `ui/navigation/TrazoApp.kt` — agrega la ruta `result/{runId}` (`ResultScreen`), oculta la barra
-  inferior en esa ruta y navega a `saverun` con «Continuar». La ruta `saverun` es de Persona 1.
+  inferior en esa ruta y «Continuar» navega a la ruta `saverun` con el id. La ruta `saverun` es de
+  Persona 1.
 - `ui/navigation/TrazoDestination.kt` — sin cambios: `result` no es pestaña. La ruta se define como
   constante en `TrazoApp.kt`.
 - `ui/screens/startrun` y `stop-detection` — sin cambios; la alerta de frenada recibe el parámetro
@@ -255,7 +259,7 @@ sequenceDiagram
     participant P as FinishPolicy
     participant C as CloseRunUseCase
     participant R as RunSessionRepository
-    participant F as FinishedRunsRepository (Persona 3)
+    participant F as FinishedRunStore (Persona 3)
     U->>VM: onFinishRequested
     VM->>P: decide con distancia y meta actuales
     P-->>VM: FinishPrompt
@@ -263,7 +267,7 @@ sequenceDiagram
     U->>VM: onFinishConfirmed
     VM->>C: invoke
     C->>R: finishSession
-    R->>F: conserva FrozenRunSummary por id (supuesto)
+    R->>F: put(id, FrozenRunSummary) (supuesto)
     R-->>C: FrozenRunSummary
     C->>R: resetToIdle
     C-->>VM: Result id del recorrido
@@ -279,12 +283,14 @@ sequenceDiagram
   igual ve «¡Meta cumplida!»; el mensaje del diálogo puede quedar desactualizado, y es aceptable.
 - **El aviso de meta es derivado, no un estado guardado.** `goalReached = distancia ≥ meta` sobre
   `activeSession`. La distancia no decrece, así que no hace falta recordar que se alcanzó. El aviso
-  se ve mientras la sesión esté `ACTIVE` o `PAUSED`.
-- **«Finalizar» desde pausa** aplica la misma lógica (`finishSession()` acepta `ACTIVE` y `PAUSED`).
-  El modo demo y la regla de 200 m: aplica igual (decisión del análisis de brechas).
+  se ve mientras la sesión esté `ACTIVE`, `STOPPED`, `PERSONAL_PAUSED` o `PAUSED`.
+- **«Finalizar» funciona igual desde `ACTIVE`, `STOPPED`, `PERSONAL_PAUSED` y `PAUSED`**: misma
+  decisión de `FinishPolicy` y mismo cierre. *Supuesto a confirmar con el líder.* La regla de 200 m
+  aplica igual también en modo demo (decisión del análisis de brechas).
 - **Tras `finishSession()` se llama a `resetToIdle()`** para no dejar una sesión `FINISHED` sin
-  dueño. Los datos del recorrido viven en el repositorio de recorridos finalizados de Persona 3,
-  separado del de la sesión activa, y se leen por id (pantalla de resultado y `save-run`).
+  dueño. Los datos del recorrido viven en el almacén en memoria de Persona 3, separado del
+  repositorio de la sesión activa, y se leen por id con `get` (pantalla de resultado y `save-run`).
+  El resultado no llama a `remove`: lo llama `save-run`.
 - **Por navegación viaja solo el id** (`result/{runId}`); `CloseRunUseCase` lo toma del
   `FrozenRunSummary` que devuelve `finishSession()`.
 - **Descartar** usa `finishSession()` (detiene GPS y temporizador, ignora el resumen) y luego
@@ -316,15 +322,15 @@ sequenceDiagram
 | 4.4 | Volver o cerrar conserva el recorrido | `FinishRunViewModel` | `onTooShortDismissed` | TooShortDialog → Recording |
 | 4.5 | Descartar detiene, elimina y vuelve al Mapa en cero | `DiscardRunUseCase` | `onDiscardConfirmed` | Discarded |
 | 4.6 | Sin paso a «Guardar recorrido» si < 200 m | `CloseRunUseCase` | `FinishError.TooShort` | Closing |
-| 5.1 | Distancia, tiempo, regularidad y «Continuar» (o «No disponible») | `ResultContent`, `ResultFormatter` | `ResultUiState` | ResultGoal / ResultNoGoal |
+| 5.1 | 3 métricas (distancia, tiempo, regularidad) y «Continuar» (regularidad «sin dato» → «No disponible») | `ResultContent`, `ResultFormatter` | `ResultUiState` | ResultGoal / ResultNoGoal |
 | 5.2 | Título «¡Meta cumplida!» con animación | `GoalReachedCard` | `FrozenRunSummary.goalReached = true` | ResultGoal |
 | 5.3 | Título «Recorrido finalizado» sin animación | `GoalReachedCard` | `goalReached = false` | ResultNoGoal |
 | 5.4 | «¡Meta cumplida!» estática con «Quitar animaciones» | `GoalReachedCard`, `ReduceMotion` | `rememberReduceMotion()` | — |
 | 5.5 | Valores tal como los entrega el registro | `ResultFormatter`, `ResultViewModel` | Solo formatea; no recalcula | — |
 | 5.6 | No registra mientras se ve el resultado | `CloseRunUseCase` | `finishSession()` ya detuvo el registro | Closing |
-| 6.1 | «Continuar» abre «Guardar recorrido» | `ResultScreen`, `TrazoApp` | `onContinue(runId)` → ruta `saverun` | SaveRun |
-| 6.2 | Conserva distancia, tiempo, velocidad, frenadas, regularidad y meta | Repositorio de recorridos finalizados (**Persona 3**) | `FrozenRunSummary` por id. Frenadas: supuesto a confirmar. Regularidad: «sin dato» | SaveRun |
-| 6.3 | Conserva fecha y hora de inicio, demo y traza | Repositorio de recorridos finalizados (**Persona 3**) | `startedAt` y traza ya están; modo demo: supuesto a confirmar | SaveRun |
+| 6.1 | «Continuar» abre «Guardar recorrido» | `ResultScreen`, `TrazoApp` | `onContinue(runId)` → navega a la ruta `saverun` con el id | SaveRun |
+| 6.2 | Conserva distancia, tiempo, velocidad, frenadas, regularidad y meta | Almacén de recorridos finalizados (**Persona 3**) | `FrozenRunSummary` por id. Frenadas: supuesto a confirmar. Regularidad: «sin dato» | SaveRun |
+| 6.3 | Conserva fecha y hora de inicio, demo y traza | Almacén de recorridos finalizados (**Persona 3**) | `startedAt` y traza ya están; modo demo: supuesto a confirmar | SaveRun |
 | 6.4 | Indica meta alcanzada o no | `FrozenRunSummary` | `goalReached` | SaveRun |
 | 6.5 | Título, destacados y fotos son de `save-run` | — (límite de la spec) | Boundary Commitments | — |
 | 7.1 | Sin alerta de frenada ni consulta de 20 s con un aviso de cierre visible | `FinishRunViewModel`, `MapScreen` (**Persona 3**) | `isClosureVisible` → `suppressed = true` | Todos los estados de aviso |
@@ -341,7 +347,7 @@ sequenceDiagram
 | `FinishRunViewModel` | UI | Estado del aviso y diálogos; efectos | 1.1–1.4, 2.1–2.4, 3.1–3.4, 4.1–4.5, 7.1, 7.3 | `RunSessionRepository` (P0), casos de uso (P0), `StopDetectionRepository` (P1) | State |
 | `FinishRunOverlay` | UI | Monta aviso y diálogos; recibe el diálogo de confirmación de Persona 3 | 1.1–1.5, 2.1–2.4, 3.1–3.4, 4.1–4.5 | `FinishRunViewModel` (P0), `FinishConfirmDialog` (P0, Persona 3) | — |
 | `GoalReachedNotice`, `TooShortRunDialog` | UI | Presentación (componentes sueltos) | 1.1, 1.3, 1.5, 4.1 | `ui/theme` (P0), `ReduceMotion` (P1) | — |
-| `ResultViewModel` | UI | Estado de la pantalla de resultado | 5.1–5.5, 6.1 | Repositorio de recorridos finalizados (P0, Persona 3) | State |
+| `ResultViewModel` | UI | Estado de la pantalla de resultado | 5.1–5.5, 6.1 | Almacén de recorridos finalizados (P0, Persona 3) | State |
 | `ResultScreen`, `ResultContent`, `GoalReachedCard`, `ResultFormatter` | UI | Presentación del resultado | 5.1–5.4, 6.1 | `ui/theme` (P0), `ReduceMotion` (P1) | — |
 
 ### Domain
@@ -356,7 +362,7 @@ sequenceDiagram
 **Responsibilities & Constraints**
 - Funciones puras, sin estado ni Android. La distancia entra en metros; el adaptador convierte desde
   `RunMetrics.distanceKilometers` (Float, km) con `distanceKilometers * 1000.0`.
-- Un solo lugar define «meta alcanzada»: lo usan el aviso, el diálogo y `goalReached` del
+- Un solo lugar define «meta alcanzada»: lo usan el aviso, la decisión del diálogo de confirmación y
   el aviso de recorrido corto (evita cálculos distintos).
 
 **Contracts**: Service [x]
@@ -382,34 +388,36 @@ object FinishPolicy {
 > `RunGoal` en esta rama tiene `kilometers: Int`; la rama de HU-04 usa `distanceKm: Float`. Se usa
 > `kilometers`; si HU-04 cambia el enum al integrarse, se ajusta solo `FinishPolicy` (revalidación).
 
-#### Repositorio de recorridos finalizados (de Persona 3, no se implementa aquí)
+#### Almacén de recorridos finalizados (de Persona 3, no se implementa aquí)
 
 | Field | Detail |
 |-------|--------|
-| Intent | Conservar el `FrozenRunSummary` por id, separado del repositorio de la sesión activa |
+| Intent | Conservar el `FrozenRunSummary` por id, en memoria, separado del repositorio de la sesión activa |
 | Requirements | 5.1–5.5, 6.1–6.4 (lectura) |
 
-- Persona 3 lo crea en HU-04. La pantalla de resultado y `save-run` leen el `FrozenRunSummary` de ahí
-  por id; esta spec **reemplaza** el antiguo contenedor en memoria (`FinishedRun`,
-  `FinishedRunRepository`, `publish`/`clear`) y ya no define ni escribe ese modelo.
+- Persona 3 lo crea en HU-04. Esta spec **reemplaza** el antiguo contenedor en memoria
+  (`FinishedRun`, `FinishedRunRepository`, `publish`/`clear`) por este almacén y ya no define ni
+  escribe ese modelo.
 - Contrato asumido (nombre y firma **a confirmar** con Persona 3):
 
 ```kotlin
-interface FinishedRunsRepository {
-    suspend fun get(runId: String): FrozenRunSummary?   // null = id desconocido
+interface FinishedRunStore {
+    fun put(runId: String, summary: FrozenRunSummary)
+    fun get(runId: String): FrozenRunSummary?   // null = id desconocido
+    fun remove(runId: String)
 }
 ```
 
-- `FrozenRunSummary` ya trae distancia, tiempo, velocidad promedio, meta, `goalReached` y
-  `startedAt` (y la traza). Esta spec solo los lee y los formatea: no recalcula (5.5).
-- Quién limpia un recorrido del repositorio (al guardar o descartar) lo define Persona 3 con
-  `save-run`; esta spec no lo hace.
+- Esta spec **solo usa `get`**: `ResultViewModel` lo llama para mostrar el resultado y **no** llama a
+  `remove`, porque desde la pantalla de resultado no hay descarte. `remove` lo llama `save-run` (al
+  guardar o descartar). `CloseRunUseCase` tampoco escribe: el `put` lo hace HU-04 al finalizar.
+- `FrozenRunSummary` trae distancia, tiempo, velocidad promedio, meta, `goalReached` y `startedAt`
+  (y la traza). Esta spec solo los lee y los formatea: no recalcula (5.5).
 - Faltan dos datos en `FrozenRunSummary`, que esta spec **supone** y no define:
-  - **Modo demo**: lo definen Persona 2 y Persona 3 desde HU-03. *Supuesto a confirmar.*
-  - **Frenadas**: las aporta `stop-detection`; falta confirmar cómo llegan a `save-run` (en el
-    `FrozenRunSummary` o por consulta a `stop-detection` por id). *Supuesto a confirmar.* La pantalla
-    de resultado no las muestra (5.1), así que no bloquea esta spec.
-- **Regularidad**: queda como «sin dato» hasta que HU-05.2 tenga responsable. No hay puerto ni
+  - **Modo demo**: viene de HU-03 (Alirag). *Supuesto a confirmar.*
+  - **Frenadas**: vienen de `stop-detection`; falta confirmar cómo llegan a `save-run`. *Supuesto a
+    confirmar.* El resultado no las muestra: se ven después, en la descripción del recorrido.
+- **Regularidad**: se muestra «sin dato» hasta que HU-05.2 tenga responsable. No hay puerto ni
   fuente: `ResultViewModel` deja `regularityText = null` y la pantalla muestra «No disponible»
   (5.1, 6.2). Cuando exista el dato, se suma al `FrozenRunSummary` y al formateo.
 
@@ -439,8 +447,9 @@ class CloseRunUseCase @Inject constructor(
   `totalDistanceKm * 1000 < 200` → devuelve `FinishError.TooShort` (guarda de 4.6; el registro ya se
   detuvo, caso imposible desde la UI pero invariante del dominio). (3) `runSessions.resetToIdle()`.
   (4) Devuelve el id del `FrozenRunSummary`.
-- Precondiciones: sesión `ACTIVE` o `PAUSED`. Postcondición: el registro está detenido y el
-  `FrozenRunSummary` queda en el repositorio de recorridos finalizados (lo escribe HU-04, supuesto).
+- Precondiciones: sesión `ACTIVE`, `STOPPED`, `PERSONAL_PAUSED` o `PAUSED` (supuesto a confirmar con
+  el líder). Postcondición: el registro está detenido y el `FrozenRunSummary` queda en el almacén de
+  recorridos finalizados (lo escribe HU-04 con `put`, supuesto).
 - No arma ni copia valores del recorrido: el título del resultado sale de `goalReached` del
   `FrozenRunSummary`, calculado por HU-04 sobre la distancia congelada.
 
@@ -453,8 +462,8 @@ class DiscardRunUseCase @Inject constructor(private val runSessions: RunSessionR
 ```
 
 - Postcondición: sin sesión en curso (`IDLE`). El descarte no entrega nada a la pantalla de resultado
-  ni a `save-run`; si `finishSession()` deja el resumen en el repositorio de recorridos finalizados,
-  su limpieza queda a cargo de Persona 3 (a confirmar).
+  ni a `save-run`; si `finishSession()` deja el resumen en el almacén de recorridos finalizados,
+  quién llama a `remove` en este caso lo define Persona 3 (a confirmar).
 
 ### UI (Mapa)
 
@@ -498,7 +507,7 @@ class FinishRunViewModel @Inject constructor(
 }
 ```
 
-- `isGoalNoticeVisible` se deriva de `activeSession`: sesión `ACTIVE` o `PAUSED` con
+- `isGoalNoticeVisible` se deriva de `activeSession`: sesión en `ACTIVE`, `STOPPED`, `PERSONAL_PAUSED` o `PAUSED` con
   `FinishPolicy.isGoalReached(...)`. No hay estado propio que sincronizar.
 - `onFinishRequested` ignora el toque si ya hay un diálogo o `isFinishing`; si no, fija
   `prompt = FinishPolicy.decide(distancia actual, meta)`. Si no hay sesión en curso, no hace nada.
@@ -554,7 +563,7 @@ sealed interface ResultEffect { data object LeaveToMap : ResultEffect }
 @HiltViewModel
 class ResultViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,          // runId de la ruta result/{runId}
-    finishedRuns: FinishedRunsRepository,        // de Persona 3
+    finishedRuns: FinishedRunStore,              // de Persona 3; solo se usa get
     formatter: ResultFormatter,
 ) : ViewModel() {
     val uiState: StateFlow<ResultUiState>
@@ -562,9 +571,9 @@ class ResultViewModel @Inject constructor(
 }
 ```
 
-- Lee el `runId` de la ruta, obtiene el `FrozenRunSummary` del repositorio de recorridos finalizados
-  y lo mapea a `ResultUiState` vía `ResultFormatter`; no recalcula (5.5). `regularityText` queda en
-  `null` («sin dato») hasta que HU-05.2 tenga responsable. Si el repositorio devuelve `null` para ese
+- Lee el `runId` de la ruta, obtiene el `FrozenRunSummary` con `finishedRuns.get(runId)` (nunca
+  llama a `remove`) y lo mapea a `ResultUiState` vía `ResultFormatter`; no recalcula (5.5). `regularityText` queda en
+  `null` («sin dato») hasta que HU-05.2 tenga responsable. Si el almacén devuelve `null` para ese
   id (por ejemplo, la app se recreó sin datos) emite `LeaveToMap`.
 - `ResultFormatter` (puro, `es-AR`): distancia con coma decimal y «km» (`5,2 km`), tiempo
   `HH:MM:SS`, regularidad `80 %` (espacio, sin decimales). Candidato a unificarse con
@@ -583,10 +592,10 @@ class ResultViewModel @Inject constructor(
   «Incompleto» (5.3). Con `rememberReduceMotion()` el check se dibuja estático y el contenido es el
   mismo (5.4).
 - Recuadros de métricas (fondo Neutral100, forma `medium`, `headlineMedium.tabular()`): Distancia,
-  Tiempo y Regularidad. Sin acelerómetro, el recuadro de regularidad muestra «No disponible» en
+  Tiempo y Regularidad (3 métricas). Sin dato de regularidad, su recuadro muestra «No disponible» en
   texto (5.1). **Frenadas no se muestra**: el requisito 5.1 no la incluye aunque la guía visual 6.13
-  tenga una grilla 2 × 2; `save-run` la obtiene por su lado (supuesto a confirmar, ver Repositorio de
-  recorridos finalizados) (6.2).
+  tenga una grilla 2 × 2; las frenadas se ven después, en la descripción del recorrido (supuesto a
+  confirmar, ver Almacén de recorridos finalizados) (6.2).
 - El título lleva `heading()` y la celebración no se lee dos veces con TalkBack.
 
 ### Navegación
@@ -595,24 +604,25 @@ class ResultViewModel @Inject constructor(
   `"$RESULT_ROUTE/{runId}"` (un único argumento `String`). `MapScreen` recibe
   `onNavigateToResult = { runId -> navController.navigate("$RESULT_ROUTE/$runId") { launchSingleTop = true } }`.
 - La barra inferior se oculta cuando la ruta actual es `result/{runId}`.
-- `onContinue(runId)` navega a la ruta de `save-run` con el mismo id (6.1). Mientras esa ruta no
-  exista, el botón queda conectado a un callback vacío y la tarea de integración lo cierra (ver Open
-  Questions).
+- `onContinue(runId)` navega a la ruta `saverun` con el mismo id (6.1):
+  `navController.navigate("saverun/$runId")`. La ruta es de `save-run` (Persona 1); si todavía no
+  existe al integrar, el botón queda conectado a un callback vacío hasta que se cierre la integración
+  (ver Open Questions).
 
 ### Contrato pedido a otras specs
 
 | Spec | Lo que este diseño necesita |
 |------|-----------------------------|
-| HU-04 (Persona 3) | Repositorio de recorridos finalizados que conserva el `FrozenRunSummary` por id, separado del de la sesión activa. `FrozenRunSummary` con id, distancia, tiempo, velocidad promedio, meta, `goalReached`, `startedAt` y traza (ya los tiene). `finishSession()` y `resetToIdle()` como en su diseño. Implementa `FinishConfirmDialog` (elige el texto según `goalReached`, textos `map_` en `strings.xml`, incluidos «Finalizar recorrido» y «Cancelar»). `RunControls` llama a `onFinishRequested`. Pasa `suppressed = true` a la alerta de frenada (ver abajo). |
-| HU-03 (Persona 2 y Persona 3) | Definir el modo demo y cómo se refleja en el recorrido finalizado. *Supuesto a confirmar.* |
+| HU-04 (Persona 3) | Almacén en memoria de recorridos finalizados con `put`/`get`/`remove` por id, separado del repositorio de la sesión activa; `finishSession()` hace el `put`. `FrozenRunSummary` con id, distancia, tiempo, velocidad promedio, meta, `goalReached`, `startedAt` y traza (ya los tiene). `finishSession()` acepta `ACTIVE`, `STOPPED`, `PERSONAL_PAUSED` y `PAUSED`. `finishSession()` y `resetToIdle()` como en su diseño. Implementa `FinishConfirmDialog` (elige el texto según `goalReached`, textos `map_` en `strings.xml`, incluidos «Finalizar recorrido» y «Cancelar»). `RunControls` llama a `onFinishRequested`. Pasa `suppressed = true` a la alerta de frenada (ver abajo). |
+| HU-03 (Alirag) | Aportar el modo demo y cómo se refleja en el recorrido finalizado. *Supuesto a confirmar.* |
 | `stop-detection` (Persona 4) | Alerta de frenada con parámetro `suppressed: Boolean`: con `true` oculta alerta y consulta de 20 s sin pausar la detección. Aportar las frenadas del recorrido (forma a confirmar). `RunningRunSource` pasa a `RunState.ACTIVE` (hoy usa `RUNNING`). |
-| `save-run` (Persona 1) | Lee el recorrido por id del repositorio de recorridos finalizados y define la ruta `saverun`. |
+| `save-run` (Persona 1) | Define la ruta `saverun` (recibe el id), lee el recorrido por id con `get` y llama a `remove` al guardar o descartar. |
 
 ## Data Models
 
 ### Domain Model
 
-- Esta spec no define modelos de recorrido: usa el `FrozenRunSummary` de HU-04, leído por id.
+- Esta spec no define modelos de recorrido: usa el `FrozenRunSummary` de HU-04, leído por id con `get`.
 - Regla de negocio: un recorrido de menos de 200 m nunca llega a la pantalla de resultado (4.6).
 - `goalReached` lo trae el `FrozenRunSummary` (calculado sobre la distancia congelada) y es la única
   fuente del título del resultado y del indicador «meta cumplida / incompleto» de `save-run`.
@@ -620,10 +630,10 @@ class ResultViewModel @Inject constructor(
 ### Data Contracts & Integration
 
 - Intercambio con `save-run` y con la pantalla de resultado: por id. Por navegación viaja solo el
-  `runId`; el `FrozenRunSummary` se lee del repositorio de recorridos finalizados de Persona 3 (la
-  traza es grande y no va por argumentos).
-- Ciclo de vida del dato: lo define Persona 3 (repositorio de recorridos finalizados). Esta spec no
-  escribe ni limpia.
+  `runId`; el `FrozenRunSummary` se lee del almacén en memoria de Persona 3 (la traza es grande y no
+  va por argumentos).
+- Ciclo de vida del dato: `put` lo hace HU-04 al finalizar; `remove` lo llama `save-run`. Esta spec
+  solo usa `get`.
 
 ## Error Handling
 
@@ -636,10 +646,10 @@ recorrido sin perder datos.
 
 | Escenario | Respuesta | UI |
 |-----------|-----------|----|
-| `finishSession()` falla (por ejemplo, la sesión ya terminó) | `FinishError.Failed`; no se publica nada | Cierra el diálogo, snackbar «No pudimos finalizar el recorrido. Intentá de nuevo.» |
+| `finishSession()` falla (por ejemplo, la sesión ya terminó) | `FinishError.Failed` | Cierra el diálogo, snackbar «No pudimos finalizar el recorrido. Intentá de nuevo.» |
 | Doble toque en «Finalizar recorrido» | `isFinishing` ignora el segundo toque | Botón sin efecto repetido |
 | Sin sesión al tocar «Finalizar» (`IDLE`) | `onFinishRequested` no hace nada | Los controles ya están deshabilitados en `IDLE` (HU-04) |
-| Resultado sin datos (el repositorio no tiene ese `runId`) | `LeaveToMap` | Vuelve al Mapa |
+| Resultado sin datos (el almacén no tiene ese `runId`) | `LeaveToMap` | Vuelve al Mapa |
 | Distancia cruza la meta con el diálogo abierto | El título final sale de `goalReached` del `FrozenRunSummary` | Resultado «¡Meta cumplida!» aunque el mensaje decía otra cosa |
 | Regularidad sin responsable (HU-05.2) | `regularityText = null` | «No disponible» |
 
@@ -659,17 +669,17 @@ recorrido sin perder datos.
   `finishSession()` (1.1, 1.2, 1.4); `onFinishRequested` abre cada diálogo según la distancia
   (2.1, 3.1, 4.1); cancelar o cerrar conserva la sesión (2.4, 3.4, 4.4); confirmar emite
   `NavigateToResult(runId)`; fallo emite `ShowFinishError`; `isClosureVisible` y una sola llamada a
-  `classifyCurrentStop(BRAKE)` en la transición (7.1, 7.3); desde `PAUSED` funciona igual.
-- `ResultViewModelTest` y `ResultFormatterTest` con un fake de `FinishedRunsRepository`:
+  `classifyCurrentStop(BRAKE)` en la transición (7.1, 7.3); desde `ACTIVE`, `STOPPED`, `PERSONAL_PAUSED` y `PAUSED` funciona igual.
+- `ResultViewModelTest` y `ResultFormatterTest` con un fake de `FinishedRunStore`:
   `FrozenRunSummary` → texto (`5,2 km`, `00:32:10`); regularidad siempre «No disponible»; id
   desconocido (`null`) → `LeaveToMap` (5.1, 5.5).
 
 ### Integration Tests
 
 - Flujo `FinishRunViewModel` + `CloseRunUseCase` + `ResultViewModel` con fakes: finalizar con meta →
-  el resultado lee el resumen por id y muestra «¡Meta cumplida!»; sin meta → «Recorrido finalizado»
+  el resultado lee el resumen con `get` (sin llamar a `remove`) y muestra «¡Meta cumplida!»; sin meta → «Recorrido finalizado»
   (2.3, 3.3, 6.4).
-- El test del repositorio de recorridos finalizados es de Persona 3.
+- El test del almacén de recorridos finalizados es de Persona 3.
 
 ### UI Tests (`app/src/androidTest`, `createComposeRule` + `TrazoTheme`)
 
@@ -682,13 +692,13 @@ recorrido sin perder datos.
 
 ## Security Considerations
 
-Sin cuentas ni red. Por navegación viaja solo el id del recorrido; la traza vive en el repositorio de
-recorridos finalizados (Persona 3). No se registra la ubicación en logs.
+Sin cuentas ni red. Por navegación viaja solo el id del recorrido; la traza vive en el almacén en
+memoria de recorridos finalizados (Persona 3). No se registra la ubicación en logs.
 
 ## Performance & Scalability
 
 - La traza (miles de puntos) no viaja por navegación: por argumento va solo el id y el resumen se
-  lee del repositorio de recorridos finalizados.
+  lee del almacén de recorridos finalizados.
 - `FinishRunViewModel` deriva el aviso con `map` + `distinctUntilChanged` sobre `activeSession`
   para no recomponer en cada punto GPS.
 
@@ -701,19 +711,24 @@ recorridos finalizados (Persona 3). No se registra la ubicación en logs.
   achique a un botón «Finalizar» después de unos segundos (requiere cambiar 1.3).
 - **Resuelto: dueño del diálogo de «Finalizar»**: `FinishConfirmDialog` es de Persona 3. Queda por
   confirmar con ella cómo se inyecta (parámetro composable `confirmDialog` en `FinishRunOverlay`) y
-  que use `FinishPolicy.decide` para saber qué diálogo abrir.
-- **Supuesto a confirmar: modo demo.** `FrozenRunSummary` no lo tiene; se define entre Persona 2 y
-  Persona 3 desde HU-03. Esta spec no lo usa en pantalla.
-- **Supuesto a confirmar: frenadas.** `FrozenRunSummary` no las tiene; las aporta `stop-detection`.
-  Falta definir cómo llegan a `save-run`. No bloquea esta spec (el resultado no las muestra).
-- **Supuesto a confirmar: repositorio de recorridos finalizados.** Se asume `get(runId):
-  FrozenRunSummary?` y que `finishSession()` deja el resumen ahí. Nombre y firma son de Persona 3.
+  que use `FinishPolicy.decide` para saber qué diálogo abrir. Persona 3 pasa `suppressed = true` a la
+  alerta de frenada durante la celebración de meta, el diálogo de confirmación o el aviso de
+  recorrido demasiado corto.
+- **Supuesto a confirmar: modo demo.** `FrozenRunSummary` no lo tiene; viene de HU-03 (Alirag).
+  Esta spec no lo usa en pantalla.
+- **Supuesto a confirmar: frenadas.** `FrozenRunSummary` no las tiene; vienen de `stop-detection`.
+  Falta definir cómo llegan a `save-run`. No bloquea esta spec (el resultado muestra 3 métricas y las
+  frenadas se ven después, en la descripción del recorrido).
+- **Supuesto a confirmar: almacén de recorridos finalizados.** Se asume `put`/`get`/`remove` por id y
+  que `finishSession()` deja el resumen ahí. Nombre y firma son de Persona 3. Esta spec solo usa `get`.
+- **Supuesto a confirmar con el líder: «Finalizar» desde cualquier estado de pausa.** Funciona igual
+  desde `ACTIVE`, `STOPPED`, `PERSONAL_PAUSED` y `PAUSED`.
 - **Regularidad (HU-05.2) sin responsable**: queda como «sin dato» y la pantalla muestra «No
   disponible». Sin puerto ni fuente en esta spec.
 - **«Atrás» sin acción en el resultado** y barra inferior oculta: decisión de UX para no perder el
   recorrido; validar con el equipo de diseño.
-- **La ruta `saverun` no existe todavía**: «Continuar» queda conectado a un callback vacío hasta que
-  `save-run` la defina.
+- **La ruta `saverun` es de `save-run` (Persona 1)**: «Continuar» navega a `saverun` con el id; si la
+  ruta todavía no existe al integrar, queda un callback vacío hasta que `save-run` la defina.
 - **Orden de integración**: si HU-04 no entra a `develop` antes, las tareas de dominio y de UI
   stateless avanzan contra fakes; la integración con `MapScreen` espera a HU-04.
 - **`rememberReduceMotion()`** la usan esta spec y `stop-detection`: la crea quien llegue primero.

@@ -1,0 +1,122 @@
+# Implementation Plan
+
+> Contratos de otras specs (HU-04, `stop-detection`): si todavía no están integrados en la rama, las
+> tareas de dominio y de UI sin estado avanzan contra copias provisorias de las interfaces del
+> diseño y contra fakes. La integración con el Mapa (5.2) espera a HU-04.
+
+- [ ] 1. Fundación: infraestructura de pruebas y recursos compartidos
+- [ ] 1.1 Preparar dependencias de prueba y fakes de los contratos externos
+  - Verificar que `kotlinx-coroutines-test` esté disponible; si falta, sumarla al catálogo de versiones y avisar al equipo
+  - Crear fakes a mano del repositorio de la sesión, de la detección de frenadas y del almacén en memoria de recorridos finalizados (con `put`, `get` y `remove` por id, y registro de las llamadas), con distancia, meta y estado de sesión controlables
+  - Si una interfaz de HU-04 o `stop-detection` no está integrada, declarar una copia provisoria marcada para reemplazar en la integración
+  - Los tests de la spec compilan y corren en JVM usando los fakes
+  - _Requirements: 1.2, 5.6_
+- [ ] 1.2 (P) Utilidad compartida para detectar «Quitar animaciones»
+  - Crear `rememberReduceMotion()` si todavía no existe (se comparte con `stop-detection`); si ya existe, reutilizarla sin duplicarla
+  - Devuelve `true` cuando el sistema tiene las animaciones desactivadas
+  - Las pantallas de esta spec pueden consultarla y un test de UI puede fijar su valor
+  - _Boundary: ReduceMotion_
+  - _Requirements: 1.5, 5.4_
+- [ ] 1.3 (P) Textos e ícono de la spec
+  - Agregar en `strings_finish_run.xml` los textos `finish_*` (aviso de meta, recorrido demasiado corto, error al finalizar) y `result_*` (títulos, métricas, «Continuar», «No disponible», «Incompleto»), con voseo rioplatense
+  - No incluir los textos del diálogo de confirmación: son de Persona 3 (prefijo `map_`)
+  - Agregar el ícono `ic_goal_check`
+  - Los textos y el ícono se pueden referenciar desde Compose y no hay textos fijos en el código
+  - _Boundary: strings_finish_run.xml, ic_goal_check_
+  - _Requirements: 1.1, 4.1, 5.1, 5.2, 5.3_
+
+- [ ] 2. Dominio: regla de cierre y casos de uso
+- [ ] 2.1 (P) Regla pura de cierre
+  - Implementar la decisión de meta alcanzada (distancia mayor o igual a la meta) y el umbral de 200 m, con los tres desenlaces y prioridad del aviso corto
+  - Convertir kilómetros a metros en un solo lugar
+  - Tests: 199,9 m → demasiado corto; 200,0 m con meta no alcanzada → confirmación sin meta; distancia igual a la meta → confirmación con meta; el aviso corto gana siempre
+  - Los tests de la regla pasan en JVM
+  - _Boundary: FinishPolicy_
+  - _Requirements: 1.1, 1.4, 2.1, 3.1, 4.1, 4.2_
+- [ ] 2.2 Caso de uso de cierre del recorrido
+  - Finalizar la sesión, aplicar la guarda de 200 m con el umbral de la regla, reiniciar la sesión y devolver el id del recorrido
+  - Error de finalización → fallo sin reiniciar la sesión; menos de 200 m → fallo «demasiado corto» sin entregar id
+  - Tests con fakes: orden de llamadas, id devuelto, ambos fallos
+  - Tras cerrar, el registro queda detenido y el id permite leer el resumen del almacén de recorridos finalizados
+  - _Depends: 2.1_
+  - _Requirements: 2.3, 3.3, 4.6, 5.6_
+- [ ] 2.3 (P) Caso de uso de descarte
+  - Detener la sesión ignorando el resumen y dejarla sin recorrido en curso
+  - Test con fake: la sesión termina en reposo y no se entrega nada al resultado
+  - Tras descartar no queda recorrido en curso
+  - _Boundary: DiscardRunUseCase_
+  - _Requirements: 4.5_
+
+- [ ] 3. Mapa: aviso, diálogo corto y estado del cierre
+- [ ] 3.1 (P) Aviso de meta alcanzada
+  - Componente suelto con ícono, texto «¡Llegaste a tu meta!» y botón «Finalizar» de 56 dp, con entrada animada una sola vez
+  - Con «Quitar animaciones» aparece sin animación; estado comunicado por texto e ícono, no solo color; anuncio de lectura cortés
+  - UI test: muestra texto y «Finalizar», el botón invoca el callback, sin animación con el valor fijado
+  - El aviso se ve en el preview y en el test de UI con fuente al 200 % sin recortes
+  - _Boundary: GoalReachedNotice_
+  - _Requirements: 1.1, 1.3, 1.5_
+- [ ] 3.2 (P) Aviso de recorrido demasiado corto
+  - Diálogo con título «Recorrido demasiado corto», texto de 200 m, botón destructivo «Descartar» y «Volver al recorrido»; cerrar o atrás equivale a volver
+  - UI test: textos exactos, «Descartar» invoca descartar, cerrar y volver invocan volver
+  - El diálogo se ve correctamente con fuente al 200 % y objetivos táctiles de 48 dp
+  - _Boundary: TooShortRunDialog_
+  - _Requirements: 4.1, 4.4_
+- [ ] 3.3 Estado y acciones del cierre en el Mapa
+  - ViewModel que deriva el aviso de meta de la sesión (en curso, detenida, en pausa personal o en pausa) sin guardar estado propio, y abre el diálogo que corresponde al tocar «Finalizar»
+  - Ignorar el toque si ya hay un diálogo, si se está cerrando o si no hay sesión; confirmar emite navegar al resultado con el id; error emite aviso de error y el recorrido sigue; cancelar y volver conservan la sesión
+  - Mientras haya aviso o diálogo visible, exponer «cierre visible»; en la transición a visible, resolver una consulta pendiente como frenada una sola vez; no pausar ni detener el registro hasta confirmar o descartar
+  - Tests con tiempo virtual: aparición del aviso sin finalizar la sesión, cada diálogo según distancia, cancelar, confirmar, fallo, una sola resolución de consulta, y que «Finalizar» funciona igual desde cada estado (en curso, detenida, pausa personal y pausa)
+  - Los tests del ViewModel pasan y cubren los tres desenlaces
+  - _Depends: 2.1, 2.2, 2.3_
+  - _Requirements: 1.1, 1.2, 1.4, 2.1, 2.2, 2.4, 3.1, 3.2, 3.4, 4.1, 4.2, 4.3, 4.4, 4.5, 7.1, 7.2, 7.3_
+- [ ] 3.4 Montaje del cierre sobre el Mapa
+  - Componente que conecta el ViewModel, muestra el aviso de meta y el aviso corto, y delega las confirmaciones en un diálogo recibido por parámetro (el de Persona 3)
+  - Navegar al resultado con el id al recibir el efecto, mostrar el snackbar de error, y avisar hacia arriba si hay cierre visible
+  - Con un diálogo de confirmación de prueba, el flujo completo abre, cancela y confirma
+  - _Depends: 3.1, 3.2, 3.3_
+  - _Requirements: 1.1, 1.3, 2.1, 2.4, 3.1, 3.4, 4.1, 4.5, 7.1_
+
+- [ ] 4. Pantalla de resultado
+- [ ] 4.1 (P) Formateo de los valores del resultado
+  - Distancia con coma decimal y «km», tiempo `HH:MM:SS` y regularidad con espacio y sin decimales, en `es-AR`; solo formatea, no recalcula
+  - Tests: `5,2 km`, `00:32:10`, `80 %`
+  - Los tests del formateador pasan
+  - _Boundary: ResultFormatter_
+  - _Requirements: 5.1, 5.5_
+- [ ] 4.2 Estado de la pantalla de resultado
+  - ViewModel que lee el id de la ruta, obtiene el resumen con `get` del almacén de recorridos finalizados (sin llamar nunca a `remove`: lo hace `save-run`) y arma el estado con el formateo; la regularidad queda «sin dato»
+  - Si el id no existe, emitir salida al Mapa
+  - Tests con fake del almacén: con meta, sin meta, regularidad ausente, id desconocido; verifican que no se llama a `remove`
+  - Dado un id, el estado refleja título, distancia y tiempo del resumen sin recalcular
+  - _Depends: 4.1_
+  - _Requirements: 5.1, 5.2, 5.3, 5.5, 6.2, 6.3, 6.4_
+- [ ] 4.3 Pantalla y tarjeta de resultado
+  - Fondo primario, tarjeta con título «¡Meta cumplida!» con check animado y halo, o «Recorrido finalizado» sin animación con marca «Incompleto»; recuadros de distancia, tiempo y regularidad («No disponible» sin dato); botón «Continuar» a todo el ancho
+  - Con «Quitar animaciones» la tarjeta de meta cumplida se ve estática con el mismo contenido; sin botón de volver y con «atrás» sin efecto; título como encabezado accesible
+  - UI tests: ambos títulos, métricas, «No disponible», sin check en «Recorrido finalizado», «Continuar» invoca el callback con el id
+  - La pantalla se ve completa con fuente al 200 % y no depende solo del color
+  - _Depends: 1.2, 1.3, 4.2_
+  - _Requirements: 5.1, 5.2, 5.3, 5.4, 6.1, 6.5_
+
+- [ ] 5. Integración
+- [ ] 5.1 Ruta del resultado y paso a «Guardar recorrido»
+  - Agregar la ruta del resultado con un único argumento de texto (el id), ocultar la barra inferior en ella y conectar «Continuar» para navegar a la ruta `saverun` con el mismo id
+  - Si la ruta `saverun` (de Persona 1) todavía no existe al integrar, «Continuar» queda conectado a un callback vacío
+  - Navegar con un id abre el resultado y la barra inferior no se ve
+  - _Boundary: TrazoApp navigation_
+  - _Depends: 4.3_
+  - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+- [ ] 5.2 Montaje en el Mapa de HU-04
+  - Archivo de Persona 3: montar el cierre con su diálogo de confirmación, conectar «Finalizar» de los controles, y pasar `suppressed = true` a la alerta de frenada mientras haya celebración, confirmación o aviso corto
+  - Requiere HU-04 integrada y las decisiones abiertas con Persona 3 (inyección del diálogo, almacén de recorridos finalizados con `put`/`get`/`remove`, «Finalizar» desde los cuatro estados)
+  - Con una meta alcanzada se ve el aviso sin alertas de frenada, «Finalizar» abre la confirmación y confirmar lleva al resultado
+  - _Depends: 3.4, 5.1_
+  - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.3, 3.1, 3.3, 4.5, 7.1, 7.2, 7.3_
+
+- [ ] 6. Validación
+- [ ] 6.1 Prueba de flujo de punta a punta con fakes
+  - Recorrer: ViewModel de cierre, caso de uso y ViewModel de resultado con fakes
+  - Finalizar con meta → el resultado muestra «¡Meta cumplida!»; sin meta → «Recorrido finalizado»; menos de 200 m → no se llega al resultado
+  - El flujo pasa con los tres desenlaces
+  - _Depends: 3.3, 4.2_
+  - _Requirements: 2.3, 3.3, 4.6, 5.2, 5.3, 6.4_
