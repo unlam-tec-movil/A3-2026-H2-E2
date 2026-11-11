@@ -1,16 +1,16 @@
 {
   "feature_name": "finish-run-result",
   "created_at": "2026-11-04T23:26:23Z",
-  "updated_at": "2026-11-04T23:40:00Z",
+  "updated_at": "2026-11-11T00:00:00Z",
   "language": "es",
-  "phase": "requirements-generated",
+  "phase": "design-generated",
   "approvals": {
     "requirements": {
       "generated": true,
-      "approved": false
+      "approved": true
     },
     "design": {
-      "generated": false,
+      "generated": true,
       "approved": false
     },
     "tasks": {

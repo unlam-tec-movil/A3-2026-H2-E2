@@ -264,3 +264,67 @@ requisitos**:
   finalización de HU-04 (sin aprobar) y la regularidad de HU-05.2 (sin documentación).
 - **Posible ajuste de requisitos:** agregar criterios para el caso «regularidad no disponible» en
   los Req. 5 y 6 antes de pasar al diseño. No modifiqué `requirements.md`.
+---
+
+## Discovery del diseño (`/kiro-spec-design`)
+
+_Fecha: 2026-11-11 · Tipo: **extensión (discovery liviano)**, sin búsqueda web: no se agrega ninguna
+librería. Fuentes leídas: `requirements.md` vigente, steering (`product`, `tech`, `structure`,
+`design-system`, `ui-components`), skill `trazo-design-system` y su referencia (secciones 6.13 y 7),
+`team-notes/README.md` y `persona-4-…md`, diseños de `live-route-tracking` y `stop-detection`,
+requisitos de `save-run`, y el código de esta rama._
+
+### Hallazgos que dieron forma al diseño
+
+1. **Las decisiones de la reunión cierran los Unknown del análisis anterior.** Llegar a la meta no
+   detiene el registro, así que desaparece el «estado intermedio meta alcanzada, registro detenido»
+   y el problema de llamar dos veces a `finishSession()`. El aviso de meta es un valor derivado de
+   `activeSession` (`distancia ≥ meta`).
+2. **`finishSession()` solo acepta `ACTIVE` o `PAUSED`.** Por eso descartar usa `finishSession()` +
+   `resetToIdle()`: no se asume que `resetToIdle()` detenga el seguimiento.
+3. **`FrozenRunSummary` de HU-04 no trae** fecha de inicio real ni modo demo; las frenadas salen de
+   `StopDetectionRepository.state.brakes` (contrato estable tras el fin del recorrido) y la
+   regularidad no tiene dueño. Se definió `FinishedRun` como contrato propio y el puerto
+   `FloorRegularitySource` con un binding provisorio `NoRegularitySource` (siempre «sin dato»).
+4. **`stop-detection` ya expone `classifyCurrentStop(StopKind)`**: alcanza para resolver como
+   frenada la consulta pendiente (7.3) sin agregar API. Solo falta que su overlay acepte
+   `hideAlerts` (7.1).
+5. **La guía visual 6.13 muestra 4 métricas (con Frenadas)**; el requisito 5.1 pide 3. Se siguió el
+   requisito.
+6. **`RunGoal` difiere entre ramas** (`kilometers: Int` aquí; `distanceKm: Float` en HU-04). El
+   diseño usa `kilometers` y lo deja como punto de revalidación.
+
+### Decisiones de diseño
+
+| Decisión | Alternativa descartada | Motivo |
+|----------|------------------------|--------|
+| `FinishPolicy` puro en `domain/usecases/` | Lógica dentro de `MapViewModel` | Testeable sin Android; HU-04 no duplica la regla |
+| `FinishedRunRepository` `@Singleton` en memoria | Argumentos de navegación / ViewModel de grafo | La traza es grande; mismo patrón que `RunSessionRepository` |
+| `FinishRunViewModel` propio, montado por `FinishRunOverlay` | Extender `MapViewModel` | `MapScreen` es de Persona 3; mismo patrón que `StopDetectionOverlay` |
+| `resetToIdle()` justo después de publicar | Dejar la sesión `FINISHED` | Nadie más la limpia; los datos ya están en `FinishedRunRepository` |
+| «Atrás» sin acción y barra inferior oculta en el resultado | Volver al Mapa | El recorrido no está guardado y se perdería |
+| Animaciones nativas de Compose | Lottie | `tech.md` pide avisar antes de sumar librerías; alcanza con `Animatable` |
+| `ResultFormatter` propio | Esperar a `MetricFormatter` de HU-04 | Evita dependencia oculta; se unifica cuando ambos estén integrados |
+
+### Síntesis (generalización, adoptar vs. construir, simplificación)
+
+- **Generalización:** `FinishRunDialog` recibe el mensaje por parámetro y sirve a los dos casos de
+  confirmación (2.1 y 3.1); `FinishPolicy.isGoalReached` es la única definición de «meta alcanzada»
+  para aviso, diálogo y resultado.
+- **Adoptar:** `AlertDialog`, `AnimatedVisibility`, `Animatable`, `BackHandler` y Hilt de la
+  plataforma y del stack actual. No se construye nada que ya exista.
+- **Simplificación:** sin estado guardado de «meta alcanzada» (derivado), sin capa de eventos
+  propia, sin librería de animación, y un solo contenedor en memoria en lugar de varios traspasos.
+
+### Skills y guía consultadas
+
+- `trazo-design-system` (steering y referencia): tarjeta de celebración y variante «Recorrido
+  finalizado» (6.13), modal con «Cancelar» outlined y un solo botón filled por pantalla, botón
+  destructivo para «Descartar», cifras tabulares, objetivos táctiles de 48 dp, fuente al 200 % y
+  «Quitar animaciones».
+
+### Riesgos y preguntas abiertas
+
+Ver «Open Questions / Risks» en `design.md`. Los más relevantes: el aviso de meta no se descarta y
+oculta las alertas de frenada hasta el final del recorrido; el dueño del diálogo de «Finalizar» entre
+Personas 3 y 4; y los campos de `FrozenRunSummary` que HU-04 todavía no tiene.
