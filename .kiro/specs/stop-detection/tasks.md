@@ -2,7 +2,7 @@
 
 > **Orden de trabajo:** dominio, sensor y UI no dependen de HU-04 (tareas 1 a 3). Las tareas de
 > integración (4.x) requieren el contrato de HU-04 de Persona 3; la 4.3 además espera la respuesta a
-> la pregunta abierta de `design.md` («Riesgos y preguntas abiertas»).
+> los supuestos pendientes con el líder de `design.md` («Riesgos y preguntas abiertas»).
 
 - [ ] 1. Fundaciones: utilidad compartida, pruebas con tiempo virtual y contratos del dominio
 
@@ -14,10 +14,9 @@
   - _Boundary: ReduceMotion_
   - _Requirements: 3.2_
 
-- [ ] 1.2 Habilitar las pruebas con tiempo virtual
-  - Coordinar con Persona 3 antes de tocar el catálogo de versiones: una sola persona agrega la
-    dependencia de pruebas de corrutinas
-  - Agregarla como dependencia solo de test
+- [x] 1.2 Habilitar las pruebas con tiempo virtual
+  - Hecha por Persona 3: ya agregó la dependencia de pruebas de corrutinas (`kotlinx-coroutines-test`)
+    al catálogo de versiones como dependencia solo de test; esta spec no toca Gradle
   - Un test JVM de ejemplo que usa tiempo virtual compila y pasa con las pruebas JVM del proyecto
   - _Boundary: Gradle (catálogo de versiones y módulo app)_
   - _Requirements: 2.1, 4.1_
@@ -156,11 +155,17 @@
   - _Requirements: 1.4, 2.2_
 
 - [ ] 4.2 Implementar la publicación de estado sobre `RunSessionRepository`
-  - **Bloqueada** por la pregunta abierta con Persona 3: nombre y firma de la función de cambio de
-    estado, precondiciones de pausar y finalizar en `STOPPED` y `PERSONAL_PAUSED`, y si esos estados
-    congelan métricas y traza
-  - Cambio condicional: solo aplica si la sesión es la del id y está en un estado de detección
-  - Con la respuesta cerrada, un test con el repositorio real o falso verifica que no pisa `PAUSED`
+  - Usa las transiciones acordadas con Persona 3: `markStopped()` (`ACTIVE` → `STOPPED`),
+    `pausePersonally()` (`ACTIVE` o `STOPPED` → `PERSONAL_PAUSED`, solo se llama desde `STOPPED`) y
+    `markMoving()` (`STOPPED` o `PERSONAL_PAUSED` → `ACTIVE`); cualquier otro origen devuelve
+    `Result.failure`
+  - **Dependiente de los supuestos pendientes con el líder** (temporizador y GPS en `STOPPED` y en
+    `PERSONAL_PAUSED`, finalizar desde los cuatro estados, controles por estado); si cambian, se
+    revisa esta tarea
+  - Si una transición devuelve `Result.failure`, el repositorio la ignora y reevalúa en el siguiente
+    ciclo; la sesión es la del id y la pausa manual (`PAUSED`) nunca se pisa
+  - Un test con el repositorio real o falso verifica que no pisa `PAUSED` y que `Result.failure` se
+    ignora y se reintenta en el siguiente ciclo
   - _Depends: 2.5, 4.1_
   - _Requirements: 2.1, 4.3_
 

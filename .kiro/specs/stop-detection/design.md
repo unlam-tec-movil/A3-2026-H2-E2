@@ -81,9 +81,20 @@ funciona con la pantalla encendida y la app visible.
   | `PERSONAL_PAUSED` | Pausa personal (elegida en la consulta de 20 s)               |
   | `PAUSED`          | Pausa manual del corredor; se mantiene (esta spec no la toca) |
 
+- **Transiciones de `RunSessionRepository` (contrato acordado con Persona 3; supuesto a confirmar)**:
+
+  | Función             | Origen permitido                  | Destino           |
+  |---------------------|-----------------------------------|-------------------|
+  | `markStopped()`     | `ACTIVE`                          | `STOPPED`         |
+  | `pausePersonally()` | `ACTIVE` o `STOPPED`              | `PERSONAL_PAUSED` |
+  | `markMoving()`      | `STOPPED` o `PERSONAL_PAUSED`     | `ACTIVE`          |
+
+  Cualquier otro origen devuelve `Result.failure`. `isRunInProgress` queda en `true` en los tres
+  estados. Este diseño solo llama `pausePersonally()` desde `STOPPED`. La pausa manual sigue por
+  `pauseSession()` / `resumeSession()` y no es parte de esta spec.
 - Android framework: `SensorManager`, `Settings.Global`. Sin dependencias nuevas de producción; en
-  pruebas, `kotlinx-coroutines-test`, que Persona 3 también necesita: **se coordina con ella antes de
-  tocar `gradle/libs.versions.toml`** (una sola persona agrega la entrada).
+  pruebas, `kotlinx-coroutines-test`, que **ya agregó Persona 3** al catálogo (`gradle/libs.versions.toml`):
+  esta spec solo lo usa.
 
 ### Revalidation Triggers
 
@@ -92,8 +103,9 @@ funciona con la pantalla encendida y la app visible.
 - Que HU-05.2 tome la propiedad del registro/baja del acelerómetro o cambie su frecuencia.
 - Que HU-04 cambie `RunSession.id`, la semántica de `ACTIVE` / `STOPPED` / `PERSONAL_PAUSED` /
   `PAUSED`, la forma sellada de `RunSession` o el origen de `routePoints`.
-- Que se defina la función de `RunSessionRepository` para cambiar de estado (ver Riesgos, supuesto
-  a confirmar).
+- Que cambien los nombres, los orígenes permitidos o el `Result` de `markStopped()`,
+  `pausePersonally()` y `markMoving()`, o que no se confirmen los supuestos pendientes con el líder
+  (ver Riesgos).
 - Que cambie la firma de `rememberReduceMotion()` (la usan tres consumidores).
 - Que `save-run` lea las frenadas en un momento distinto a «antes de iniciar el siguiente
   recorrido».
@@ -183,7 +195,7 @@ graph TB
 | Presentación   | `androidx.lifecycle` ViewModel + Hilt 2.60.1                       | `StopDetectionViewModel`                        | `collectAsStateWithLifecycle` ya disponible                  |
 | Dominio        | Kotlin 2.3.21 puro + corrutinas                                    | `StopDetector`, `StillnessEstimator`            | Sin Android                                                  |
 | Datos / Sensor | `SensorManager` (`TYPE_ACCELEROMETER`)                             | `AccelerometerMotionSource` como `callbackFlow` | Sin permiso; `SENSOR_DELAY_UI` (~16 Hz)                      |
-| Pruebas        | JUnit 4.13.2 + `kotlinx-coroutines-test` 1.10.2 (nueva, solo test) | Tiempo virtual para 8 s / 20 s                  | Coordinar con Persona 3 antes de tocar `libs.versions.toml`  |
+| Pruebas        | JUnit 4.13.2 + `kotlinx-coroutines-test` 1.10.2 (solo test)        | Tiempo virtual para 8 s / 20 s                  | Ya agregada al catálogo por Persona 3                        |
 
 ## File Structure Plan
 
@@ -217,7 +229,7 @@ app/src/main/java/com/trazo/app/
 │   │   ├── StopDetectionRepositoryImpl.kt     # orquestación, reloj y StateFlow
 │   │   ├── RunSessionRunningRunSource.kt      # adapta RunSessionRepository (requiere HU-04)
 │   │   ├── RunSessionStopLocationProvider.kt  # último routePoint (requiere HU-04)
-│   │   └── RunSessionStatePublisher.kt        # cambia de estado (función a confirmar con Persona 3)
+│   │   └── RunSessionStatePublisher.kt        # llama markStopped / pausePersonally / markMoving
 │   └── di/StopDetectionModule.kt              # binds + CoroutineScope + MonotonicClock (requiere HU-04)
 └── ui/
     ├── theme/ReduceMotion.kt                  # rememberReduceMotion(): la crea esta spec; la usan
@@ -237,9 +249,8 @@ app/src/test/java/com/trazo/app/... (ver Testing Strategy)
 - `ui/screens/map/MapScreen.kt` — es de Persona 3. Se monta `StopDetectionOverlay` por parámetro
   (con `suppressed`) en la tarea de integración con HU-04, avisando antes para no chocar.
 - `res/values/strings.xml` — textos de alerta y de diálogo, con el prefijo `map_`.
-- `gradle/libs.versions.toml` y `app/build.gradle.kts` — `kotlinx-coroutines-test` como
-  `testImplementation`. **Se coordina con Persona 3 antes de tocar el catálogo**, porque ella también
-  lo necesita (evita dos entradas duplicadas o un conflicto de merge).
+- `gradle/libs.versions.toml` y `app/build.gradle.kts` — sin cambios de esta spec:
+  `kotlinx-coroutines-test` ya fue agregada por Persona 3 (tarea 1.2 hecha).
 
 ## System Flows
 
@@ -472,16 +483,17 @@ interface StopLocationProvider {
     fun lastKnown(): StopLocation?
 }  // null si no hay fix
 interface RunStatePublisher {
-    fun publish(runId: String, state: RunState)
-}  // solo ACTIVE, STOPPED, PERSONAL_PAUSED; no-op si el recorrido cambió o está PAUSED/FINISHED
+    fun publish(runId: String, state: RunState): Result<Unit>
+}  // solo ACTIVE, STOPPED, PERSONAL_PAUSED; Result.failure si el recorrido cambió o el origen no es válido
 fun interface MonotonicClock {
     fun nowMillis(): Long
 }
 ```
 
 `RunStatePublisher` es el puerto de salida con el que el dominio informa el estado agregado por
-esta spec. La función concreta de `RunSessionRepository` que lo implementa **está por definir con
-Persona 3** (ver Riesgos, supuesto a confirmar).
+esta spec. Su adaptador traduce `ACTIVE` → `markMoving()`, `STOPPED` → `markStopped()` y
+`PERSONAL_PAUSED` → `pausePersonally()` de `RunSessionRepository` (contrato acordado con Persona 3,
+supuesto a confirmar; ver Riesgos).
 
 Los puertos viven en `domain/repository/` (misma convención que `LocationClient` en HU-04). Todos
 son P0: sin ellos el repositorio no puede operar.
@@ -502,7 +514,9 @@ son P0: sin ellos el repositorio no puede operar.
   nulo (1.4: no se lee el sensor sin recorrido en curso ni con pausa manual).
 - Tras cada transición de `StopPhase` que cambia de categoría (tabla de «Fases y estados del
   recorrido»), invoca `RunStatePublisher.publish(runId, estado)`. La publicación es condicional: no
-  sobreescribe `PAUSED` ni estados finales.
+  sobreescribe `PAUSED` ni estados finales. Si la transición devuelve `Result.failure`, el repositorio
+  la ignora (no altera la fase del detector) y, como no la registra como publicada, vuelve a
+  intentarla en el siguiente ciclo (tick) mientras la fase siga requiriendo ese estado.
 - Cada muestra pasa por `StillnessEstimator`; el último booleano se reevalúa en cada tick para que
   los 8 s y 20 s se cumplan aunque el sensor no emita muestras nuevas, **salvo que el último dato
   sea viejo**: si pasaron más de `sampleStaleMillis` (2 000 ms) desde la última muestra, el tick
@@ -553,9 +567,10 @@ son P0: sin ellos el repositorio no puede operar.
   al detectar la frenada, se cortaría el sensor y nunca se detectaría el movimiento.
 - `RunSessionStopLocationProvider`: `(activeSession.value as? ActiveSession)?.routePoints?.lastOrNull()`
   convertido a `StopLocation`; `null` si es `Idle` o no hay puntos.
-- `RunSessionStatePublisher`: implementa `RunStatePublisher` sobre la función de `RunSessionRepository`
-  que se defina con Persona 3 (**supuesto a confirmar**). Debe ser condicional: solo aplica si la
-  sesión es `ActiveSession` con ese `runId` y está en un estado de detección.
+- `RunSessionStatePublisher`: implementa `RunStatePublisher` sobre `markStopped()`,
+  `pausePersonally()` y `markMoving()` de `RunSessionRepository` (contrato acordado con Persona 3;
+  **supuesto a confirmar**). Es condicional: solo aplica si la sesión es `ActiveSession` con ese
+  `runId`; los orígenes no permitidos devuelven `Result.failure`, que el repositorio ignora.
 
 ### UI
 
@@ -647,8 +662,9 @@ alerta para que las otras dos puedan depender de ella.
   idempotente.
 - **Recorrido que termina o se pausa a mano con consulta o alerta visibles**: la fase vuelve a
   `Moving`, ambos elementos desaparecen por derivación del estado.
-- **Publicación de estado rechazada** (el recorrido cambió o está en `PAUSED`/`FINISHED`):
-  `RunStatePublisher` es no-op; el estado del recorrido manda sobre el de esta spec.
+- **Publicación de estado rechazada** (`Result.failure`: el recorrido cambió, está en
+  `PAUSED`/`FINISHED` u origen no permitido): el detector la ignora y reevalúa en el siguiente ciclo;
+  el estado del recorrido manda sobre el de esta spec.
 - Errores del sensor/log: solo logging; no hay mensajes al usuario porque los requisitos no los
   definen.
 
@@ -721,20 +737,23 @@ alerta para que las otras dos puedan depender de ella.
   Mitigación (ya parte del diseño): `sampleStaleMillis` en `StopDetectionConfig`; sin muestras
   recientes el repositorio observa «en movimiento» (ver `StopDetectionRepositoryImpl`). Pedir
   detección con pantalla apagada reabriría el tema (Revalidation Triggers).
-- **Función de `RunSessionRepository` para cambiar de estado (supuesto a confirmar con Persona 3)**:
-  el contrato de HU-04 solo muestra `pauseSession` / `resumeSession` entre `ACTIVE` y `PAUSED`; no
-  hay función para pasar a `STOPPED` ni a `PERSONAL_PAUSED`. Se asume una única función que cambia
-  entre los estados de detección (`ACTIVE`, `STOPPED`, `PERSONAL_PAUSED`) de forma condicional (no
-  sobreescribe `PAUSED` ni `FINISHED`), detrás de `RunStatePublisher`. Falta confirmar su nombre, su
-  firma, si es `suspend` y si congela o no el temporizador y la traza en `STOPPED` /
-  `PERSONAL_PAUSED`. Hasta entonces `RunSessionStatePublisher` queda sin implementar.
-- **Pregunta abierta (consultada a Persona 3, sin respuesta aún)**: las precondiciones actuales de
-  HU-04 exigen `ACTIVE` (o `PAUSED`) para `pauseSession` y `finishSession`. Como el corredor puede
-  estar en `STOPPED` o `PERSONAL_PAUSED` al tocar «Pausar» o «Finalizar» (por ejemplo, en un
-  semáforo), hay que confirmar que ambas acciones acepten esos estados, que esos estados no
-  congelen métricas ni traza, y cómo se resuelve la carrera entre una acción manual y
-  `RunStatePublisher.publish` (que es condicional y no sobreescribe `PAUSED`). Bloquea solo las
-  tareas de integración; dominio, sensor y UI no dependen de la respuesta.
+- **Transiciones de `RunSessionRepository` (contrato acordado con Persona 3; supuesto a
+  confirmar)**: `markStopped()` (`ACTIVE` → `STOPPED`), `pausePersonally()` (`ACTIVE` o `STOPPED` →
+  `PERSONAL_PAUSED`; este diseño solo la llama desde `STOPPED`) y `markMoving()` (`STOPPED` o
+  `PERSONAL_PAUSED` → `ACTIVE`). Cualquier otro origen devuelve `Result.failure`; el detector la
+  ignora y reevalúa en el siguiente ciclo. `isRunInProgress` queda `true` en los tres estados. La
+  pausa manual sigue por `pauseSession()` / `resumeSession()` y no es parte de esta spec. Mientras no
+  se confirme, `RunSessionStatePublisher` depende de estos nombres.
+- **Supuestos pendientes con el líder** (bloquean solo las tareas de integración; dominio, sensor y
+  UI no dependen de la respuesta):
+  - En `STOPPED` el temporizador y el GPS siguen corriendo.
+  - En `PERSONAL_PAUSED` el temporizador y el GPS se detienen, igual que en la pausa manual.
+  - Se puede finalizar el recorrido desde los cuatro estados (`ACTIVE`, `STOPPED`,
+    `PERSONAL_PAUSED`, `PAUSED`).
+  - Qué controles de pantalla se muestran en cada estado.
+- **Simplificación conocida (aceptada)**: la pausa personal se descuenta desde que el corredor la
+  elige en la consulta, no desde que empezó la quietud. Por eso el tiempo descontado difiere del real
+  en ~20–30 s (la consulta aparece a los 20 s y el corredor tarda un poco en responder).
 - **Caso borde conocido (aceptado)**: si el corredor reanuda a mano desde `PAUSED` y sigue sin
   moverse, la fase parte de `Moving` y se registra una segunda frenada a los 8 s para la misma
   detención física (2.3 aplica por detención continua dentro de un tramo en curso). Se acepta sin
