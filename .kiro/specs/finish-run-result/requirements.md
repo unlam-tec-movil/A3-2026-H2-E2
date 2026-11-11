@@ -2,6 +2,10 @@
 
 ## Project Description (Input)
 
+> **Nota:** este texto es el pedido original y se conserva sin cambios. Los requisitos vigentes son
+> los de abajo (Introduction, Boundary Context y Requirements), que reflejan las decisiones de la
+> reunión de equipo.
+
 HU-06 · Finalizar y celebrar
 
 **Quién:** corredor que está registrando un recorrido con una meta de distancia seleccionada.
@@ -48,14 +52,16 @@ regularidad es HU-05.)
 Hoy, cuando un corredor registra un recorrido con una meta de distancia en Trazo, la app no le avisa
 cuándo la alcanzó, no le muestra un cierre con los resultados y no evita guardar recorridos
 demasiado cortos. Esta funcionalidad agrega el cierre del recorrido: el aviso de meta alcanzada, la
-confirmación al finalizar antes de la meta, el aviso de recorrido demasiado corto y la pantalla de
+confirmación al finalizar (que existe con y sin la meta cumplida), el aviso de recorrido demasiado
+corto y la pantalla de
 resultado («¡Meta cumplida!» o «Recorrido finalizado»), que termina en el botón «Continuar» hacia
 «Guardar recorrido».
 
 ## Boundary Context
 
 - **In scope**:
-    - El aviso de meta alcanzada en el mapa y la detención del registro al alcanzarla.
+    - El aviso de meta alcanzada en el mapa. Llegar a la meta solo muestra el aviso: el corredor
+      puede seguir corriendo y el registro continúa hasta que finalice.
     - La acción «Finalizar» y sus tres desenlaces: meta cumplida, meta no cumplida y recorrido
       demasiado corto.
     - La pantalla de resultado, con y sin animación.
@@ -72,9 +78,8 @@ resultado («¡Meta cumplida!» o «Recorrido finalizado»), que termina en el b
     - La pantalla «Guardar recorrido» recibe el recorrido finalizado desde esta funcionalidad. Los
       datos que ya espera la spec `save-run` (fecha y hora de inicio, modo demo y traza) también se
       conservan.
-    - La fecha (día del recorrido) y la hora de inicio las registra el sistema al comenzar el
-      recorrido y se especifican en el escenario 1 de HU-02/HU-03, a cargo de otra persona. El modo
-      demo sigue pendiente de definir por el equipo.
+    - La fecha (día del recorrido) y la hora de inicio las guarda HU-04 (Persona 3) al arrancar el
+      recorrido. El modo demo sigue pendiente de definir por el equipo.
 
 ## Requirements
 
@@ -85,10 +90,10 @@ la cumplí sin tener que mirar la distancia.
 
 #### Acceptance Criteria
 
-1. When la distancia recorrida llega a la meta elegida, the Trazo App shall dejar de registrar el
-   recorrido.
-2. When la distancia recorrida llega a la meta elegida, the Trazo App shall mostrar sobre el mapa un
+1. When la distancia recorrida llega a la meta elegida, the Trazo App shall mostrar sobre el mapa un
    aviso que indica que se alcanzó la meta, con una animación breve y el botón «Finalizar».
+2. When la distancia recorrida llega a la meta elegida, the Trazo App shall permitir que el corredor
+   siga corriendo y mantener el registro del recorrido activo hasta que finalice.
 3. While el aviso de meta alcanzada está visible, the Trazo App shall mantener el botón «Finalizar»
    disponible hasta que el corredor lo toque.
 4. While el recorrido no alcanzó la meta, the Trazo App shall no mostrar el aviso de meta alcanzada.
@@ -103,7 +108,14 @@ reconocido.
 #### Acceptance Criteria
 
 1. When el corredor toca «Finalizar» después de haber alcanzado la meta, the Trazo App shall mostrar
-   la pantalla de resultado «¡Meta cumplida!» sin pedir confirmación.
+   un diálogo con el mensaje «¿Estás seguro de que deseás finalizar?» y las opciones «Finalizar
+   recorrido» y «Cancelar».
+2. While el diálogo de confirmación está visible, the Trazo App shall seguir registrando el
+   recorrido.
+3. When el corredor elige «Finalizar recorrido», the Trazo App shall detener el registro y mostrar
+   la pantalla de resultado «¡Meta cumplida!».
+4. When el corredor elige «Cancelar» o cierra el diálogo sin elegir una opción, the Trazo App shall
+   cerrar el diálogo y conservar el recorrido en curso con todos sus datos.
 
 ### Requirement 3: Finalizar antes de alcanzar la meta
 
@@ -113,8 +125,8 @@ so that no termine el recorrido por error.
 #### Acceptance Criteria
 
 1. When el corredor toca «Finalizar» con la meta sin alcanzar y con 200 metros o más recorridos, the
-   Trazo App shall mostrar un diálogo con el mensaje «Todavía no llegaste a tu meta» y las opciones
-   «Finalizar recorrido» y «Cancelar».
+   Trazo App shall mostrar un diálogo con el mensaje «Todavía no llegaste a tu meta. ¿Estás seguro de
+   que deseás finalizar?» y las opciones «Finalizar recorrido» y «Cancelar».
 2. While el diálogo de confirmación está visible, the Trazo App shall seguir registrando el
    recorrido.
 3. When el corredor elige «Finalizar recorrido», the Trazo App shall detener el registro y mostrar
@@ -132,8 +144,9 @@ guardarlo, so that decida si lo descarto o sigo corriendo.
 1. When el corredor toca «Finalizar» con menos de 200 metros recorridos, the Trazo App shall mostrar
    un aviso que indica que el recorrido es demasiado corto para guardarlo, con las opciones de
    descartarlo y de volver al recorrido.
-2. The Trazo App shall mostrar el aviso de recorrido demasiado corto en lugar de la confirmación
-   «Todavía no llegaste a tu meta».
+2. The Trazo App shall mostrar el aviso de recorrido demasiado corto en lugar de las dos
+   confirmaciones de «Finalizar» («Todavía no llegaste a tu meta. ¿Estás seguro de que deseás
+   finalizar?» y «¿Estás seguro de que deseás finalizar?»).
 3. While el aviso de recorrido demasiado corto está visible, the Trazo App shall seguir registrando
    el recorrido.
 4. When el corredor elige volver al recorrido o cierra el aviso sin elegir una opción, the Trazo App
@@ -155,12 +168,14 @@ logro y conozca mis resultados.
    del recorrido, y el botón «Continuar».
     - Where el celular no tiene acelerómetro, no hay regularidad: the Trazo App shall mostrar «No
       disponible» en lugar de la regularidad.
-2. When el recorrido terminó con la meta cumplida, the Trazo App shall mostrar la pantalla de
-   resultado con el título «¡Meta cumplida!» y una animación de celebración.
+2. When el recorrido terminó con la meta cumplida (el corredor alcanzó la meta y confirmó
+   finalizar), the Trazo App shall mostrar la pantalla de resultado con el título «¡Meta cumplida!»
+   y una animación de celebración.
 3. When el recorrido terminó antes de alcanzar la meta, the Trazo App shall mostrar la pantalla de
    resultado con el título «Recorrido finalizado» y sin animación.
 4. Where el corredor tiene activada la opción del sistema para quitar animaciones, the Trazo App
-   shall mostrar la pantalla «¡Meta cumplida!» sin animación y con el mismo contenido.
+   shall mostrar la pantalla «¡Meta cumplida!» (el corredor alcanzó la meta y confirmó finalizar)
+   sin animación y con el mismo contenido.
 5. The Trazo App shall mostrar los valores de la pantalla de resultado tal como los entrega el
    registro del recorrido, sin recalcularlos.
 6. While se muestra la pantalla de resultado, the Trazo App shall no seguir registrando el
@@ -195,8 +210,9 @@ that vea un solo mensaje a la vez.
 #### Acceptance Criteria
 
 1. While hay visible un aviso o diálogo de cierre (el aviso de meta alcanzada, el diálogo «Todavía
-   no llegaste a tu meta» o el aviso de recorrido demasiado corto), the Trazo App shall no mostrar
-   la alerta de frenada ni la consulta de 20 segundos de HU-05.
+   no llegaste a tu meta. ¿Estás seguro de que deseás finalizar?», el diálogo «¿Estás seguro de que
+   deseás finalizar?» o el aviso de recorrido demasiado corto), the Trazo App shall no mostrar la
+   alerta de frenada ni la consulta de 20 segundos de HU-05.
 2. While hay visible un aviso o diálogo de cierre y se produce una frenada, the Trazo App shall
    registrar igualmente la frenada.
 3. If había una consulta de 20 segundos pendiente cuando apareció el aviso o diálogo de cierre, then

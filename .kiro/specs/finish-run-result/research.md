@@ -1,5 +1,16 @@
 # Investigación · finish-run-result
 
+> **Nota (2026-11-11):** esta investigación se hizo con los requisitos originales. Dos supuestos
+> cambiaron por las decisiones de la reunión de equipo (ver `team-notes/README.md`) y los
+> requisitos vigentes están en `requirements.md`:
+>
+> - **El registro ya no se detiene al llegar a la meta.** Se muestra el aviso y el corredor puede
+>   seguir corriendo; el registro se detiene solo al finalizar.
+> - **La confirmación al finalizar es siempre** (con y sin la meta cumplida), con dos mensajes
+>   distintos. Con menos de 200 m se mantiene el aviso «demasiado corto» en lugar de la confirmación.
+>
+> Lo que abajo dependa de esos dos supuestos debe leerse con esta salvedad.
+
 ## Análisis de brechas (gap analysis)
 
 _Fecha: 2026-11-04 · Requisitos analizados: `requirements.md` (generados, sin aprobar) · Rama de
