@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="start_run_title">Iniciar nuevo recorrido</string>
+    <string name="start_run_description">Seleccioná una meta:</string>
+    <string name="start_run_goal_km">%1$d km</string>
+    <string name="start_run_hint">Elegí una meta para continuar</string>
+    <string name="start_run_cancel">Cancelar</string>
+    <string name="start_run_confirm">Comenzar</string>
+</resources>
