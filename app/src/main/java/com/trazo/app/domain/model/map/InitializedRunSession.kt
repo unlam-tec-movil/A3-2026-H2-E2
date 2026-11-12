@@ -7,4 +7,5 @@ data class InitializedRunSession(
     val goal: RunGoal,
     val startMonotonicTimestamp: Long,
     val startedAt: Instant,
+    val isDemoMode: Boolean = false,
 )

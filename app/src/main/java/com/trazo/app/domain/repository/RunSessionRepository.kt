@@ -14,9 +14,17 @@ interface RunSessionRepository {
 
     suspend fun pauseSession(): Result<Unit>
 
+    suspend fun pausePersonally(): Result<Unit>
+
+    suspend fun markStopped(): Result<Unit>
+
+    suspend fun markMoving(): Result<Unit>
+
     suspend fun resumeSession(): Result<Unit>
 
     suspend fun finishSession(): Result<FrozenRunSummary>
 
     fun resetToIdle()
+
+    fun getFinishedSummary(id: String): FrozenRunSummary?
 }

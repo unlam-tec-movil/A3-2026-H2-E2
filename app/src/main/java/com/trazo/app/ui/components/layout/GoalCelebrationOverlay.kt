@@ -20,8 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import com.trazo.app.R
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.ui.theme.Spacing
 
@@ -54,7 +56,7 @@ fun GoalCelebrationOverlay(
                 modifier = Modifier.padding(Spacing.xl),
             ) {
                 Text(
-                    text = "🎉 ¡Felicitaciones! 🎉",
+                    text = stringResource(R.string.map_celebration_title),
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onPrimary,
                     fontWeight = FontWeight.Bold,
@@ -63,14 +65,14 @@ fun GoalCelebrationOverlay(
 
                 val goalText =
                     when (goal) {
-                        RunGoal.THREE_KILOMETERS -> "3 km"
-                        RunGoal.FIVE_KILOMETERS -> "5 km"
-                        RunGoal.TEN_KILOMETERS -> "10 km"
-                        null -> "tu meta"
+                        RunGoal.THREE_KILOMETERS -> stringResource(R.string.map_goal_3km)
+                        RunGoal.FIVE_KILOMETERS -> stringResource(R.string.map_goal_5km)
+                        RunGoal.TEN_KILOMETERS -> stringResource(R.string.map_goal_10km)
+                        null -> stringResource(R.string.map_goal_generic)
                     }
 
                 Text(
-                    text = "Alcanzaste tu meta de $goalText.",
+                    text = stringResource(R.string.map_celebration_reached_goal, goalText),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onPrimary,
                     textAlign = TextAlign.Center,
@@ -78,7 +80,7 @@ fun GoalCelebrationOverlay(
                 )
 
                 Text(
-                    text = "Podés continuar corriendo y finalizar cuando quieras.",
+                    text = stringResource(R.string.map_celebration_keep_running),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                     textAlign = TextAlign.Center,
@@ -89,7 +91,7 @@ fun GoalCelebrationOverlay(
                     onClick = onDismiss,
                     modifier = Modifier.padding(top = Spacing.xl),
                 ) {
-                    Text(text = "Seguir corriendo")
+                    Text(text = stringResource(R.string.map_celebration_button))
                 }
             }
         }

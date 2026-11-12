@@ -10,6 +10,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.trazo.app.R
 import com.trazo.app.ui.screens.map.LiveRouteTrackingUiState
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
@@ -43,7 +45,7 @@ fun RunControls(
                     .height(Sizes.runControl),
         ) {
             Text(
-                text = if (uiState.isPaused) "Reanudar" else "Pausar",
+                text = if (uiState.isPaused) stringResource(R.string.map_resume) else stringResource(R.string.map_pause),
                 style = MaterialTheme.typography.labelLarge,
             )
         }
@@ -58,7 +60,7 @@ fun RunControls(
                     .height(Sizes.runControl),
         ) {
             Text(
-                text = "Finalizar",
+                text = stringResource(R.string.map_finish),
                 color = if (uiState.canFinish) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                 style = MaterialTheme.typography.labelLarge,
             )

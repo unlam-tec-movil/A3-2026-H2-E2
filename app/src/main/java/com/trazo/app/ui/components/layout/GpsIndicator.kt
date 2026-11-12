@@ -7,10 +7,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.trazo.app.R
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.ui.theme.TrazoTheme
 
@@ -22,15 +24,15 @@ fun GpsIndicator(
     val (label, color) =
         when (gpsQuality) {
             GpsQuality.NO_SIGNAL -> {
-                "Sin señal GPS" to TrazoTheme.extendedColors.warning
+                stringResource(R.string.map_gps_no_signal) to TrazoTheme.extendedColors.warning
             }
 
             GpsQuality.WEAK_SIGNAL -> {
-                "Señal GPS débil" to TrazoTheme.extendedColors.warning
+                stringResource(R.string.map_gps_weak_signal) to TrazoTheme.extendedColors.warning
             }
 
             GpsQuality.FULL_SIGNAL -> {
-                "Buena señal GPS" to TrazoTheme.extendedColors.success
+                stringResource(R.string.map_gps_full_signal) to TrazoTheme.extendedColors.success
             }
         }
 

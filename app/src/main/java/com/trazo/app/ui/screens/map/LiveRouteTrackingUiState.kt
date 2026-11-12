@@ -31,7 +31,10 @@ data class LiveRouteTrackingUiState(
         get() = runState == RunState.ACTIVE
 
     val isPaused: Boolean
-        get() = runState == RunState.PAUSED
+        get() = runState == RunState.PAUSED || runState == RunState.PERSONAL_PAUSED
+
+    val isStopped: Boolean
+        get() = runState == RunState.STOPPED
 
     val canPause: Boolean
         get() = isRunning && areControlActionsAllowed
@@ -40,5 +43,8 @@ data class LiveRouteTrackingUiState(
         get() = isPaused && areControlActionsAllowed
 
     val canFinish: Boolean
-        get() = (isRunning || isPaused) && areControlActionsAllowed
+        get() = (isRunning || isPaused || isStopped) && areControlActionsAllowed
+
+    val suppressed: Boolean
+        get() = showGoalCelebration || showFinishConfirmDialog || showShortRunDialog
 }

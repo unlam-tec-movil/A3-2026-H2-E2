@@ -12,8 +12,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.trazo.app.R
 import com.trazo.app.ui.screens.map.LiveRouteTrackingUiState
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoShapes
@@ -45,7 +47,7 @@ fun RunPanel(
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Text(
-                text = "Tu recorrido",
+                text = stringResource(R.string.map_your_run),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -62,21 +64,21 @@ fun RunPanel(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MetricItem(
-                    label = "Distancia",
+                    label = stringResource(R.string.map_distance),
                     value = uiState.formattedDistance,
-                    unit = uiState.distanceUnit,
+                    unit = stringResource(R.string.map_unit_km),
                 )
 
                 MetricItem(
-                    label = "Velocidad actual",
+                    label = stringResource(R.string.map_current_speed),
                     value = uiState.formattedSpeed,
-                    unit = uiState.speedUnit,
+                    unit = stringResource(R.string.map_unit_kmh),
                 )
 
                 MetricItem(
-                    label = "Promedio",
+                    label = stringResource(R.string.map_average_speed),
                     value = uiState.formattedAverageSpeed,
-                    unit = uiState.speedUnit,
+                    unit = stringResource(R.string.map_unit_kmh),
                 )
             }
         }

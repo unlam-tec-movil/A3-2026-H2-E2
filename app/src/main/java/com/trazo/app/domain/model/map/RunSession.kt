@@ -13,6 +13,7 @@ sealed interface RunSession {
         val metrics: RunMetrics = RunMetrics(),
         val startMonotonicTimestamp: Long,
         val startedAt: Instant,
+        val isDemoMode: Boolean = false,
         val lastValidLocationTimestamp: Long? = null,
         val accumulatedElapsedTimeMillis: Long = 0L,
         val resumedAtMonotonicTimestamp: Long? = null,

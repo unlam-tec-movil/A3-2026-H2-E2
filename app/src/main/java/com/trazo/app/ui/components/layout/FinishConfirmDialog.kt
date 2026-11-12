@@ -6,6 +6,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.trazo.app.R
 import com.trazo.app.ui.theme.TrazoShapes
 
 @Composable
@@ -19,9 +21,9 @@ fun FinishConfirmDialog(
 
     val messageText =
         if (goalReached) {
-            "¿Estás seguro de que deseás finalizar?"
+            stringResource(R.string.map_finish_confirm_goal_reached)
         } else {
-            "Todavía no llegaste a tu meta. ¿Estás seguro de que deseás finalizar?"
+            stringResource(R.string.map_finish_confirm_goal_not_reached)
         }
 
     AlertDialog(
@@ -38,7 +40,7 @@ fun FinishConfirmDialog(
                 onClick = onConfirmFinish,
             ) {
                 Text(
-                    text = "Finalizar",
+                    text = stringResource(R.string.map_finish),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.labelLarge,
                 )
@@ -49,7 +51,7 @@ fun FinishConfirmDialog(
                 onClick = onCancelFinish,
             ) {
                 Text(
-                    text = "Cancelar",
+                    text = stringResource(R.string.map_cancel),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }

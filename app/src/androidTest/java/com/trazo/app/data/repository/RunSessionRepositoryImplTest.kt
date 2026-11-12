@@ -143,6 +143,68 @@ class RunSessionRepositoryImplTest {
             assertEquals(RunGoal.THREE_KILOMETERS, result.getOrNull()?.goal)
             assertEquals(RunSession.Idle, repository.activeSession.value)
             assertFalse(repository.isRunInProgress.value)
+
+            val summary = repository.getFinishedSummary("test-session")
+            assertNotNull(summary)
+            assertEquals("test-session", summary?.id)
+        }
+
+    @Test
+    fun markStopped_changesStateToStopped_andResumeSessionCannotReactivateIt() =
+        runBlocking {
+            val initializedSession =
+                InitializedRunSession(
+                    id = "test-session",
+                    goal = RunGoal.THREE_KILOMETERS,
+                    startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
+                )
+
+            repository.attachActiveSession(initializedSession)
+
+            val stopResult = repository.markStopped()
+            assertTrue(stopResult.isSuccess)
+
+            val stoppedSession = repository.activeSession.value as? RunSession.ActiveSession
+            assertEquals(RunState.STOPPED, stoppedSession?.state)
+
+            val resumeResult = repository.resumeSession()
+            assertTrue(resumeResult.isFailure)
+
+            val sessionAfterResume = repository.activeSession.value as? RunSession.ActiveSession
+            assertEquals(RunState.STOPPED, sessionAfterResume?.state)
+
+            val markMovingResult = repository.markMoving()
+            assertTrue(markMovingResult.isSuccess)
+
+            val movingSession = repository.activeSession.value as? RunSession.ActiveSession
+            assertEquals(RunState.ACTIVE, movingSession?.state)
+        }
+
+    @Test
+    fun pausePersonally_changesStateToPersonalPaused_andResumeSessionReactivatesIt() =
+        runBlocking {
+            val initializedSession =
+                InitializedRunSession(
+                    id = "test-session",
+                    goal = RunGoal.THREE_KILOMETERS,
+                    startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
+                )
+
+            repository.attachActiveSession(initializedSession)
+
+            val pauseResult = repository.pausePersonally()
+            assertTrue(pauseResult.isSuccess)
+
+            val pausedSession = repository.activeSession.value as? RunSession.ActiveSession
+            assertEquals(RunState.PERSONAL_PAUSED, pausedSession?.state)
+
+            val resumeResult = repository.resumeSession()
+            assertTrue(resumeResult.isSuccess)
+
+            val activeSession = repository.activeSession.value as? RunSession.ActiveSession
+            assertEquals(RunState.ACTIVE, activeSession?.state)
         }
 
     @Test
