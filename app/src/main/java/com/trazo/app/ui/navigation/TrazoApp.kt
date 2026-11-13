@@ -1,8 +1,6 @@
 package com.trazo.app.ui.navigation
 
 import android.Manifest
-import android.net.http.SslCertificate.restoreState
-import android.net.http.SslCertificate.saveState
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.WindowInsets
@@ -52,6 +50,20 @@ fun TrazoApp() {
             startRunViewModel.onStartRunRequested(readLocationStatus(context))
         }
 
+    val requestStartRun: () -> Unit = {
+        val status = readLocationStatus(context)
+        if (status == LocationStatus.PERMISSION_DENIED) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                ),
+            )
+        } else {
+            startRunViewModel.onStartRunRequested(status)
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         // El inset de la barra de estado no se consume acá: lo maneja cada pantalla
@@ -71,23 +83,18 @@ fun TrazoApp() {
         ) {
             composable(TrazoDestination.HOME.route) {
                 HomeScreen(
-                    onStartRunClick = {
-                        val status = readLocationStatus(context)
-                        if (status == LocationStatus.PERMISSION_DENIED) {
-                            permissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                                ),
-                            )
-                        } else {
-                            startRunViewModel.onStartRunRequested(status)
-                        }
-                    },
+                    onStartRunClick = requestStartRun,
                     onSettingsClick = {},
                 )
             }
-            composable(TrazoDestination.MAP.route) { MapScreen() }
+            composable(TrazoDestination.MAP.route) {
+                MapScreen(
+                    onStartRunClick = requestStartRun,
+                    onNavigateToResults = { _ ->
+                        // TODO (Persona 4): Navegar a la pantalla de Resultados pasando el resumen congelado
+                    },
+                )
+            }
             composable(TrazoDestination.HISTORY.route) { HistoryScreen() }
         }
     }

@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">Trazo</string>
+
+    <!-- Navegación e Inicio (develop) -->
     <string name="nav_home">Inicio</string>
     <string name="nav_map">Mapa</string>
     <string name="nav_history">Historial</string>
@@ -7,4 +9,34 @@
     <string name="home_start_run">Iniciar un recorrido</string>
     <string name="home_start_run_fab_description">Nuevo recorrido</string>
     <string name="home_settings_description">Configuración</string>
+
+    <!-- HU-04 Mapa y Seguimiento del Recorrido -->
+    <string name="map_your_run">Tu recorrido</string>
+    <string name="map_distance">Distancia</string>
+    <string name="map_current_speed">Velocidad actual</string>
+    <string name="map_average_speed">Promedio</string>
+    <string name="map_unit_km">km</string>
+    <string name="map_unit_kmh">km/h</string>
+    <string name="map_pause">Pausar</string>
+    <string name="map_resume">Reanudar</string>
+    <string name="map_finish">Finalizar</string>
+    <string name="map_gps_no_signal">Sin señal GPS</string>
+    <string name="map_gps_weak_signal">Señal GPS débil</string>
+    <string name="map_gps_full_signal">Buena señal GPS</string>
+    <string name="map_recenter">Recentrar mapa</string>
+    <string name="map_finish_confirm_goal_reached">¿Estás seguro de que deseás finalizar?</string>
+    <string name="map_finish_confirm_goal_not_reached">Todavía no llegaste a tu meta. ¿Estás seguro de que deseás finalizar?</string>
+    <string name="map_short_run_title">Recorrido demasiado corto</string>
+    <string name="map_short_run_text">Un recorrido de menos de 200 metros no se puede guardar. ¿Deseás descartarlo?</string>
+    <string name="map_discard">Descartar</string>
+    <string name="map_cancel">Cancelar</string>
+    <string name="map_return_to_run">Volver al recorrido</string>
+    <string name="map_celebration_title">🎉 ¡Felicitaciones! 🎉</string>
+    <string name="map_celebration_reached_goal">Alcanzaste tu meta de %1$s.</string>
+    <string name="map_celebration_keep_running">Podés continuar corriendo y finalizar cuando quieras.</string>
+    <string name="map_celebration_button">Seguir corriendo</string>
+    <string name="map_goal_3km">3 km</string>
+    <string name="map_goal_5km">5 km</string>
+    <string name="map_goal_10km">10 km</string>
+    <string name="map_goal_generic">tu meta</string>
 </resources>

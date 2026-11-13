@@ -1,30 +1,48 @@
 [versions]
-agp = "9.4.0"
-kotlin = "2.3.21"
-coreKtx = "1.16.0"
-junit = "4.13.2"
-junitVersion = "1.2.1"
-espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.8.7"
-activityCompose = "1.10.1"
-composeBom = "2025.04.01"
-navigationCompose = "2.8.9"
+# Versiones de herramientas principales del proyecto
+agp = "9.4.0" # Android Gradle Plugin: compila y configura el proyecto Android.
+kotlin = "2.3.21" # Lenguaje Kotlin y plugins asociados.
+coreKtx = "1.16.0" # Extensiones Kotlin para las APIs principales de Android.
+junit = "4.13.2" # Framework para ejecutar pruebas unitarias.
+junitVersion = "1.2.1" # Integración de JUnit con AndroidX Test.
+espressoCore = "3.6.1" # Herramientas para pruebas de interfaz de usuario.
+lifecycleRuntimeKtx = "2.8.7" # APIs de ciclo de vida de componentes Android con soporte Kotlin.
+activityCompose = "1.10.1" # Integración entre Activity y Jetpack Compose.
+composeBom = "2025.04.01" # BOM que administra versiones compatibles de las bibliotecas Compose.
+navigationCompose = "2.8.9" # Navegación entre pantallas utilizando Compose.
+playServicesLocation = "21.3.0" # Servicios de Google para obtener ubicación y actualizaciones GPS.
 
-coil = "2.7.0"
-dagger = "2.60.1"
-androidXHilt = "1.2.0"
-ksp = "2.3.11"
-kover = "0.9.9"
-ktlint = "14.2.0"
+# Dependencias adicionales
+coil = "2.7.0" # Carga y visualización de imágenes en Compose.
+dagger = "2.60.1" # Inyección de dependencias mediante Dagger Hilt.
+androidXHilt = "1.2.0" # Integración de Hilt con componentes de AndroidX y Navigation Compose.
+ksp = "2.3.11" # Procesamiento de código en tiempo de compilación.
+kover = "0.9.9" # Medición de cobertura de pruebas.
+ktlint = "14.2.0" # Análisis y formato del código Kotlin.
+mapsCompose = "6.4.1" # Integración de Google Maps con Jetpack Compose.
+coroutinesTest = "1.10.1"
 
 [libraries]
+# Iconos de Material Design para Compose
+androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+
+# Funcionalidades y extensiones principales de Android
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+
+# Dependencias para pruebas unitarias y de instrumentación
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+
+# Administración del ciclo de vida de componentes Android
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
+
+# Integración de Activity con Jetpack Compose
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+
+# Bibliotecas de interfaz de usuario de Jetpack Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
@@ -34,21 +52,48 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
+
+# Navegación entre pantallas con Jetpack Compose
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
+# Ejecución de pruebas instrumentadas en dispositivos Android
+androidx-test-runner = { group = "androidx.test", name = "runner", version = "1.6.2" }
+
+# Integración de Hilt con Navigation Compose
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "androidXHilt" }
 
+# Inyección de dependencias con Dagger Hilt
 google-dagger-hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "dagger" }
 google-dagger-hilt-android-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "dagger" }
 google-dagger-hilt-android-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "dagger" }
 
+# Carga de imágenes en interfaces Compose
 coil = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
+# Google Maps integrado con Jetpack Compose
+maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
+
+# Iconos adicionales de Material Design
+material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+
+# Acceso a ubicación y actualizaciones de GPS
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
+
 [plugins]
+# Configuración y compilación de aplicaciones Android
 android-application = { id = "com.android.application", version.ref = "agp" }
+
+# Compatibilidad del compilador de Compose con Kotlin
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 
+# Configuración del plugin de inyección de dependencias Hilt
 daggerHiltAndroid = { id = "com.google.dagger.hilt.android", version.ref = "dagger" }
+
+# Procesamiento de anotaciones y generación de código
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover"}
+
+# Generación de reportes de cobertura de pruebas
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+
+# Verificación de estilo y formato del código Kotlin
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }

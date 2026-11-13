@@ -2,62 +2,60 @@
 
 ## Overview
 
-Este documento especifica la arquitectura técnica y el diseño detallado para la funcionalidad de
-**Seguimiento del Recorrido en Vivo** (`HU-04`), correspondiente a Trazo v0.6. Permite a los
-corredores visualizar su posición en tiempo real sobre la pestaña "Mapa", registrar la ruta
-recorrida, visualizar métricas en vivo (tiempo transcurrido, distancia, velocidad actual y velocidad
-promedio), controlar la sesión mediante pausa/reanudación y finalizar el recorrido con confirmación
-para proceder al flujo de guardado.
+Este documento especifica la arquitectura técnica y el diseño detallado para la funcionalidad de **Seguimiento del Recorrido en Vivo** (`HU-04`), correspondiente a Trazo v0.6.
 
-La solución se inserta dentro de la arquitectura hexagonal de la aplicación Android, garantizando la
-independencia del dominio respecto de los frameworks de plataforma, el uso de Jetpack Compose con
-Material 3 para la UI, inyección de dependencias con Hilt, y un desacoplamiento estricto con las
-funcionalidades adyacentes de inicio (`start-run`) y guardado (`save-run`).
+Permite a los corredores visualizar su posición en tiempo real sobre la pestaña "Mapa", registrar la ruta recorrida, consultar métricas en vivo (tiempo transcurrido, distancia, velocidad actual y velocidad promedio), controlar la sesión mediante pausa y reanudación, y finalizar el recorrido mediante un flujo de confirmación.
+
+La solución se inserta dentro de la arquitectura hexagonal de la aplicación Android, garantizando la independencia del dominio respecto de los frameworks de plataforma, el uso de Jetpack Compose con Material 3 para la UI, inyección de dependencias con Hilt y desacoplamiento con las funcionalidades adyacentes de inicio (`start-run`), resultados y guardado (`save-run`).
+
+El flujo de finalización contempla los siguientes pasos:
+
+1. El corredor solicita finalizar el recorrido.
+2. Si la distancia recorrida es inferior a 200 metros, se informa que el recorrido es demasiado corto y se permite descartarlo o volver al recorrido. No se genera un resumen para guardar.
+3. Si la distancia es igual o superior a 200 metros, se solicita confirmación.
+4. El mensaje de confirmación depende de si se alcanzó la meta.
+5. Una vez confirmada la finalización, se detienen el seguimiento y el temporizador, y se genera un `FrozenRunSummary`.
+6. El resumen se entrega a la pantalla de resultados.
+7. Desde resultados se continúa hacia el flujo de guardado `save-run`.
+
+Al alcanzar la meta seleccionada, se muestra la celebración correspondiente, pero **el recorrido permanece activo**. El corredor puede continuar corriendo y decidir cuándo finalizarlo.
+
+Durante el recorrido se mantiene un indicador `isRunInProgress` (nombre a confirmar con Personas 1 y 2), que permite a otros componentes, como el botón "+", conocer si existe un recorrido en curso, independientemente de que esté activo, en pausa manual, en pausa personal, con frenada detectada o temporalmente sin señal GPS. Solo vuelve a `false` al finalizar o al descartar un recorrido demasiado corto.
 
 ### Goals
 
-- Proveer un estado inicial del mapa centrado en la ubicación actual con métricas en cero
-  (`00:00:00`, `0 km`, `0 km/h`) y controles Reanudar y Finalizar deshabilitados visualmente y
-  bloqueados funcionalmente cuando no hay una carrera activa.
-- Recibir una sesión iniciada desde `start-run` con una meta fija obligatoria (3, 5 o 10 km)mediante
-  un contrato de entrada explícito, sin implementar la lógica de inicio en HU-04.
-- Realizar el seguimiento continuo de la posición del corredor y el trazado de la ruta sobre el mapa
-  mientras la sesión permanezca en estado activo.
-- Filtrar lecturas GPS imprecisas (> 30 metros) impidiendo su incorporación a la traza y al cálculo
-  de distancia.
-- Detectar la pérdida de señal GPS tras 15.000 ms sin lecturas válidas (contados desde el inicio de
-  la sesión si aún no se recibió ningún punto, o desde el último punto válido), mostrando el aviso
-  visual "Sin señal GPS" sin detener el temporizador de la sesión activa y manteniendo el indicador
-  visual de barras independiente.
-- Mantener el temporizador activo en carrera aun si se revoca el permiso de ubicación, sin asumir
-  pausas automáticas no definidas en los requisitos.
-- Proveer controles de pausa y reanudación con detención y reactivación integral de temporizador,
-  distancia y traza.
-- Preservar el estado en memoria de la sesión (activo o pausado) al cambiar de pestaña dentro de la
-  app ("Mapa", "Historial", "Inicio") mientras el proceso de la app permanezca vivo, entendiendo que
-  el avance fuera de Mapa ocurre exclusivamente al dejar de estar visible dicha pestaña en la
-  navegación interna y no como seguimiento en segundo plano con la app minimizada a nivel de sistema
-  operativo.
-- Mostrar una animación de celebración al alcanzar la meta predefinida (3 km, 5 km o 10 km).
-- Ofrecer un flujo de finalización seguro con diálogo de confirmación, detención definitiva de
-  temporizador y GPS, congelamiento de métricas y entrega de una instantánea inmutable
-  (`FrozenRunSummary`) hacia el flujo de guardado local (`save-run`).
+- Proveer un estado inicial del mapa con métricas en cero (`00:00:00`, `0 km`, `0 km/h`).
+- Recibir una sesión iniciada desde `start-run` con una meta fija obligatoria (3, 5 o 10 km), mediante el contrato `InitializedRunSession`.
+- Recibir la sesión únicamente cuando el flujo de inicio haya obtenido señal GPS y esté listo para comenzar el seguimiento.
+- Comenzar el temporizador y el seguimiento al asociar la sesión mediante `attachActiveSession`.
+- Realizar el seguimiento continuo de la posición del corredor y el trazado de la ruta mientras la sesión permanezca activa.
+- Filtrar lecturas GPS imprecisas (`accuracyMeters > 30.0f`), impidiendo su incorporación a la traza y al cálculo de distancia.
+- Detectar la pérdida de señal GPS tras 15.000 ms sin lecturas válidas, contados desde la última referencia válida de seguimiento, sin detener el temporizador de una sesión activa.
+- Mantener el temporizador activo si se revoca el permiso de ubicación, sin asumir pausas automáticas no definidas en los requisitos.
+- Proveer controles de pausa y reanudación que detengan y reactiven el temporizador, la acumulación de distancia y el registro de puntos GPS.
+- Diferenciar los estados de seguimiento activo (ACTIVE), pausa manual (PAUSED), pausa personal (PERSONAL_PAUSED) y frenada detectada automáticamente (STOPPED), según el contrato aprobado por el equipo.
+- Preservar el estado de la sesión en memoria al cambiar de pestaña dentro de la aplicación mientras el proceso permanezca vivo.
+- Exponer `isRunInProgress` para que las funcionalidades que necesiten conocer si existe un recorrido en curso puedan consultar ese estado sin depender de la pestaña visible.
+- Mostrar una animación de celebración al alcanzar la meta seleccionada, respetando la configuración de accesibilidad para reducir animaciones.
+- Mantener el recorrido activo después de alcanzar la meta. La celebración no finaliza automáticamente la sesión.
+- Conservar durante toda la sesión la fecha y hora real de inicio (`startedAt`) recibida mediante `InitializedRunSession`.
+- Registrar si se alcanzó la meta (`goalReached`) y conservar ese dato en el resumen final.
+- Implementar la validación de distancia mínima de 200 metros antes de permitir la finalización y el guardado.
+- Solicitar confirmación para finalizar recorridos de 200 metros o más, con un mensaje diferente según se haya alcanzado la meta.
+- Generar y entregar una instantánea inmutable (`FrozenRunSummary`) a la pantalla de resultados, que posteriormente continuará hacia `save-run`.
+- Mantener la responsabilidad de permisos y del inicio del recorrido fuera de `MapScreen`.
 
 ### Non-Goals
 
-- Gestión del modal de inicio, selección de meta e inicio de carrera (responsabilidad exclusiva de
-  `start-run`).
-- Formulario de guardado, validación de título, selección de destacados, captura de fotos y
-  persistencia en Room (responsabilidad exclusiva de `save-run`).
-- Implementación de la pantalla de resultados intermedia («¡Meta cumplida!» / «Recorrido
-  finalizado»), sujeta a la decisión pendiente del equipo sobre el flujo de navegación.
-- Persistencia intermedia en disco o recuperación de sesión ante la muerte del proceso de la
-  aplicación (process death).
-- Autenticación, perfiles de usuario, rankings, comunidad o sincronización con servidores/APIs
-  remotas.
+- Gestión del modal de inicio, selección de meta, solicitud de permisos e inicio de carrera (responsabilidad de `start-run`).
+- Formulario de guardado, validación de título, selección de destacados, captura de fotos y persistencia en Room (responsabilidad de `save-run`).
+- Implementación interna de la pantalla de resultados y de sus componentes visuales (responsabilidad del módulo de resultados).
+- Implementación de detección de frenadas bruscas o irregularidades del suelo mediante sensores (responsabilidad de las historias de sensores).
+- Persistencia intermedia en disco o recuperación de sesión ante la muerte del proceso de la aplicación (*process death*).
+- Autenticación, perfiles de usuario, rankings, comunidad o sincronización con servidores/APIs remotas.
 - Metas personalizadas (únicamente se admiten metas fijas de 3, 5 y 10 km).
 - Integración con wearables, pulsómetros, conteo de calorías o planes de entrenamiento.
-- Soporte para grabación de videos (solo fotos en `save-run`).
+- Grabación de videos (el flujo de guardado contempla fotos).
 - Soporte multidioma o internacionalización (exclusivamente español rioplatense).
 
 ---
@@ -66,49 +64,49 @@ funcionalidades adyacentes de inicio (`start-run`) y guardado (`save-run`).
 
 ### This Spec Owns
 
-- Lógica de negocio y modelos del dominio del recorrido en curso (`RunSession`, `RunState`,
-  `RunMetrics`, `RoutePoint`, `RunGoal`).
-- Contrato de recepción de una sesión iniciada
-  (`attachActiveSession(session: InitializedRunSession)`).
-- Casos de uso de control del ciclo de vida del seguimiento: `GetActiveRunSessionUseCase`,
-  `PauseRunUseCase`, `ResumeRunUseCase`, `FinishRunUseCase`.
-- Política de filtrado de calidad GPS y detección de pérdida de señal a los 15.000 ms
-  (`GpsPointFilterPolicy`).
-- Orquestación del estado de la pantalla "Mapa" (`MapViewModel`, `MapUiState`).
-- Componentes UI de la pestaña "Mapa": `MapScreen`, `RunPanel`, `RunControls`, `GpsIndicator`,
-  `MapLayer`, `FinishConfirmDialog`, `GoalCelebrationOverlay`.
-- Generación y entrega de la instantánea inmutable no modificable (`FrozenRunSummary`) al finalizar.
+- Lógica de negocio y modelos del dominio del recorrido en curso (`RunSession`, `RunState`, `RunMetrics`, `RoutePoint`, `RunGoal`).
+- Contrato de recepción de una sesión iniciada (`attachActiveSession(session: InitializedRunSession)`).
+- Conservación de la fecha y hora real de inicio de la sesión (`startedAt`) recibida desde `start-run`.
+- Exposición del estado `isRunInProgress`, que indica si existe un recorrido en curso.
+- Casos de uso de control del ciclo de vida del seguimiento: `GetActiveRunSessionUseCase`, `AttachActiveRunSessionUseCase`, `PauseRunUseCase`, `ResumeRunUseCase` y `FinishRunUseCase`.
+- Política de filtrado de calidad GPS y detección de pérdida de señal a los 15.000 ms (`GpsPointFilterPolicy`).
+- Actualización de métricas y determinación de si se alcanzó la meta (`goalReached`).
+- Orquestación del estado de la pantalla "Mapa" (`LiveRouteTrackingViewModel`, `LiveRouteTrackingUiState`).
+- Componentes UI de la pestaña "Mapa": `MapScreen`, `RunPanel`, `RunControls`, `GpsIndicator`, `MapLayer`, `FinishConfirmDialog` y `GoalCelebrationOverlay`.
+- Validación del umbral mínimo de distancia para finalizar el recorrido.
+- Generación y entrega de la instantánea inmutable `FrozenRunSummary` a la pantalla de resultados.
+- Liberación de recursos de seguimiento al finalizar o descartar el recorrido.
 
 ### Out of Boundary
 
-- Modal "Iniciar nuevo recorrido", chips de selección de meta y validación previa al inicio
-  (pertenecen a `start-run`).
-- Pantalla "Guardar recorrido", componentes `HighlightChip`, `PhotoPicker`, validación de título,
-  DAOs y entidades Room (pertenecen a `save-run`).
-- Pantalla de resultados (`GoalReachedCard`) (pertenece al módulo de resultados).
+- Modal "Iniciar nuevo recorrido", selección de meta, solicitud de permisos y validación previa al inicio (pertenecen a `start-run`).
+- Pantalla "Guardar recorrido", componentes `HighlightChip`, `PhotoPicker`, validación de título, DAOs y entidades Room (pertenecen a `save-run`).
+- Implementación visual e interna de la pantalla de resultados (pertenece al módulo de resultados).
+- Implementación de la detección automática de frenadas y de irregularidades del suelo (pertenece a las historias de sensores).
 - Recuperación ante la muerte del proceso del sistema operativo (no contemplada en Trazo v0.6).
-- Detección de frenadas bruscas o irregularidades del suelo mediante acelerómetro (pertenecen a
-  historias de sensores).
+- Persistencia remota, autenticación o sincronización con servidores.
 
 ### Allowed Dependencies
 
-- `domain` depende únicamente de Kotlin estándar y corrutinas; no depende de Android SDK, Room ni
-  Compose.
-- `data/location` implementa los puertos de dominio utilizando Android LocationManager o Fused
-  Location APIs.
-- `ui` depende de `domain` (modelos y casos de uso), Jetpack Compose, Material 3 y `ui/theme`. La UI
-  nunca importa paquetes de `data/`.
-- Hilt `@Singleton` para la retención en memoria de `RunSessionRepository` mientras el proceso esté
-  vivo.
+- `domain` depende únicamente de Kotlin estándar y corrutinas; no depende de Android SDK, Room ni Compose.
+- `data/location` implementa los puertos de dominio utilizando Android LocationManager o Fused Location APIs.
+- `ui` depende de `domain` (modelos y casos de uso), Jetpack Compose, Material 3 y `ui/theme`. La UI nunca importa paquetes de `data/`.
+- Hilt `@Singleton` para la retención en memoria de `RunSessionRepository` mientras el proceso esté vivo.
+- El flujo `start-run` entrega la sesión inicializada a través del contrato compartido.
+- El flujo `save-run` recibe el resumen desde resultados y se encarga de su propio formulario y persistencia.
+- El módulo de resultados recibe `FrozenRunSummary` después de la finalización confirmada.
 
 ### Revalidation Triggers
 
-- Alteraciones en la firma del contrato `FrozenRunSummary` compartido con `save-run`.
+- Alteraciones en la firma del contrato `FrozenRunSummary` compartido con resultados y `save-run`.
 - Modificación en el contrato `InitializedRunSession` provisto por `start-run`.
-- Decisión de equipo que defina navegación obligatoria a través de una pantalla de resultados previa
-  a `save-run`.
-- Decisión de equipo sobre finalización automática o manual al alcanzar la meta.
-- Cambio en la política de retención ante process death o adopción de un Foreground Service.
+- Cambios en el contrato de `RunSessionRepository`, especialmente en `isRunInProgress`. 
+- `RunState` define `IDLE`, `ACTIVE`, `PAUSED`, `PERSONAL_PAUSED` y `STOPPED`, según el contrato aprobado por el equipo. Cambios en estos estados o en sus transiciones requieren revalidar el diseño.
+- Modificación del umbral mínimo de 200 metros.
+- Cambios en la política de retención ante *process death* o adopción de un Foreground Service.
+- Cambio del nombre del booleano `isRunInProgress` acordado con Personas 1 y 2.
+- Decisión sobre cómo se entrega `FrozenRunSummary` a resultados (navegación o contenedor compartido).
+- Elección final de las librerías de mapa y de ubicación.
 
 ---
 
@@ -116,23 +114,23 @@ funcionalidades adyacentes de inicio (`start-run`) y guardado (`save-run`).
 
 ### Existing Architecture Analysis
 
-La aplicación Trazo cuenta con una estructura de paquete base `com.trazo.app` dividida en tres
-capas: `domain`, `data` y `ui`. La navegación utiliza Jetpack Compose Navigation con una barra
-inferior de tres destinos (`Home`, `Map`, `History`). La pantalla actual `MapScreen` es un
-placeholder que debe sustituirse por la pantalla interactiva de seguimiento.
+La aplicación Trazo cuenta con una estructura de paquete base `com.trazo.app` dividida en tres capas: `domain`, `data` y `ui`.
+
+La navegación utiliza Jetpack Compose Navigation con una barra inferior de tres destinos (`Home`, `Map`, `History`). La pantalla actual `MapScreen` se utiliza como punto de integración para la funcionalidad de seguimiento.
+
+El inicio del recorrido es responsabilidad de `start-run`. Cuando ese flujo obtiene señal GPS y completa el inicio, entrega una instancia de `InitializedRunSession` al repositorio de seguimiento.
+
+La pantalla Mapa observa el estado de la sesión y permite controlar su ciclo de vida. La finalización confirmada produce un resumen congelado que se entrega a resultados. La navegación posterior hacia `save-run` se realiza desde el flujo de resultados.
 
 ### Architecture Pattern & Boundary Map
 
-Se implementa una **Arquitectura Hexagonal (Ports & Adapters)**. El núcleo de dominio encapsula el
-estado de la sesión, la acumulación métrica y las reglas de filtrado GPS mediante interfaces
-(puertos). Los adaptadores de datos obtienen las coordenadas del sensor de ubicación, y la capa UI
-reacciona al estado expuesto mediante `StateFlow`.
+Se implementa una **Arquitectura Hexagonal (Ports & Adapters)**. El núcleo de dominio encapsula el estado de la sesión, la acumulación métrica y las reglas de filtrado GPS mediante interfaces (puertos). Los adaptadores de datos obtienen las coordenadas del sensor de ubicación, y la capa UI reacciona al estado expuesto mediante `StateFlow`.
 
 ```mermaid
 graph TD
     subgraph UI ["Capa UI (ui/)"]
         MapScreen["MapScreen (Composable)"]
-        MapViewModel["MapViewModel"]
+        MapViewModel["LiveRouteTrackingViewModel"]
         RunPanelComp["RunPanel / RunControls"]
         GpsIndicatorComp["GpsIndicator"]
         FinishDialogComp["FinishConfirmDialog"]
@@ -157,7 +155,8 @@ graph TD
 
     subgraph ExternalInteractions ["Integraciones Adyacentes"]
         StartRunFlow["start-run (Entrega InitializedRunSession)"]
-        SaveRunFlow["save-run (Recibe FrozenRunSummary inmutable)"]
+        ResultsFlow["Pantalla de resultados (Recibe FrozenRunSummary)"]
+        SaveRunFlow["save-run (Recibe resumen desde resultados)"]
     end
 
     MapScreen --> MapViewModel
@@ -165,45 +164,54 @@ graph TD
     MapViewModel --> GpsIndicatorComp
     MapViewModel --> FinishDialogComp
     MapViewModel --> CelebrationComp
+
     MapViewModel --> GetSessionUC
     MapViewModel --> PauseUC
     MapViewModel --> ResumeUC
     MapViewModel --> FinishUC
+
     GetSessionUC --> RunSessionRepoPort
     PauseUC --> RunSessionRepoPort
     ResumeUC --> RunSessionRepoPort
     FinishUC --> RunSessionRepoPort
+
     RunSessionRepoImpl -.->|implements| RunSessionRepoPort
     LocationClientImpl -.->|implements| LocationPort
+
     RunSessionRepoImpl --> LocationPort
     RunSessionRepoImpl --> GpsFilter
+
     StartRunFlow -.->|attachActiveSession| RunSessionRepoPort
-    MapViewModel -.->|Disparo FAB '+'| StartRunFlow
-    MapViewModel -.->|Entrega resumen| SaveRunFlow
+    RunSessionRepoPort -.->|isRunInProgress| StartRunFlow
+    MapViewModel -.->|FrozenRunSummary| ResultsFlow
+    ResultsFlow -.->|Continuar al guardado| SaveRunFlow
 ```
 
 ### Dependency Direction
 
 `domain` (puro) ← `data` (implementa puertos de dominio)
+
 `domain` (puro) ← `ui` (consume casos de uso y modelos de dominio)
-**Regla estricta:** La capa `ui` **nunca** importa ni accede a clases de la capa `data`.
+
+**Regla estricta:** La capa `ui` nunca importa ni accede a clases de la capa `data`.
 
 ### Technology Stack
 
-Las dependencias y versiones corresponden estrictamente a las declaradas en
-`gradle/libs.versions.toml`:
+Las dependencias y versiones deben corresponder estrictamente a las declaradas en `gradle/libs.versions.toml`. Las versiones que no estén presentes en el catálogo no deben incorporarse como dependencias nuevas sin una decisión explícita.
 
-| Capa                            | Elección / Librería              | Versión           | Rol en la Funcionalidad                                  | Notas                          |
-|---------------------------------|----------------------------------|-------------------|----------------------------------------------------------|--------------------------------|
-| **Lenguaje y runtime**          | Kotlin                           | `2.3.21`          | Base del sistema, tipos inmutables y corrutinas          | Bytecode JVM 17                |
-| **UI**                          | Jetpack Compose / Material 3     | BOM `2025.04.01`  | Composición declarativa de pantalla, controles y paneles | Tema definido en `ui/theme/`   |
-| **Navegación UI**               | Navigation Compose               | `2.8.9`           | Navegación entre pestañas y transiciones                 | Gestión de back stack          |
-| **Arquitectura UI**             | AndroidX Lifecycle & ViewModel   | `2.8.7`           | Gestión de estado reactivo con `StateFlow`               | ViewModel inyectado con Hilt   |
-| **Inyección de Dependencias**   | Dagger Hilt Android              | `2.60.1`          | Inyección de dependencias y singleton en memoria         | `@Singleton`, `@HiltViewModel` |
-| **Integración Hilt Navigation** | AndroidX Hilt Navigation Compose | `1.2.0`           | Obtención de ViewModels con scope de navegación          | `hiltViewModel()`              |
-| **Ubicación / Hardware**        | Android Core KTX                 | `1.16.0`          | Acceso a LocationManager / APIs de sistema               | Permiso `ACCESS_FINE_LOCATION` |
-| **Pruebas Unitarias**           | JUnit 4                          | `4.13.2`          | Ejecución de pruebas unitarias en JVM                    | Pruebas de lógica y contratos  |
-| **Pruebas de Instrumentación**  | AndroidX JUnit / Espresso        | `1.2.1` / `3.6.1` | Pruebas de integración y componentes Compose             | Verificación en dispositivo    |
+| Capa                            | Elección / Librería              | Versión          | Rol en la Funcionalidad                                                    | Notas                                   |
+|---------------------------------|----------------------------------|------------------|----------------------------------------------------------------------------|-----------------------------------------|
+| **Lenguaje y runtime**          | Kotlin                           | `2.3.21`         | Base del sistema, tipos inmutables y corrutinas                            | Bytecode JVM 17                         |
+| **UI**                          | Jetpack Compose / Material 3     | BOM `2025.04.01` | Composición declarativa de pantalla, controles y paneles                   | Tema definido en `ui/theme/`            |
+| **Navegación UI**               | Navigation Compose               | `2.8.9`          | Navegación entre pestañas                                                  | Gestión de back stack                   |
+| **Arquitectura UI**             | AndroidX Lifecycle & ViewModel   | `2.8.7`          | Gestión de estado reactivo con `StateFlow`                                 | ViewModel inyectado con Hilt            |
+| **Inyección de Dependencias**   | Dagger Hilt Android              | `2.60.1`         | Inyección de dependencias y singleton en memoria                           | `@Singleton`, `@HiltViewModel`          |
+| **Integración Hilt Navigation** | AndroidX Hilt Navigation Compose | `1.2.0`          | Obtención de ViewModels con scope de navegación                            | `hiltViewModel()`                       |
+| **Ubicación / Hardware**        | Android Core KTX                 | `1.16.0`         | Acceso a APIs de sistema                                                   | Permiso gestionado por `start-run`      |
+| **Mapa**                        | Maps Compose                     | Según catálogo   | Renderizado del mapa y traza                                               | No gestionar permisos desde `MapScreen` |
+| **Ubicación**                   | Play Services Location           | Según catálogo   | Proveedor de actualizaciones de ubicación, si está incorporado al proyecto | Implementación en `data/location`       |
+| **Pruebas Unitarias**           | JUnit 4                          | `4.13.2`         | Ejecución de pruebas unitarias en JVM                                      | Pruebas de lógica y contratos           |
+| **Pruebas de Instrumentación**  | AndroidX JUnit / Espresso        | Según catálogo   | Pruebas de integración y componentes Compose                               | Verificación en dispositivo             |
 
 ---
 
@@ -211,294 +219,389 @@ Las dependencias y versiones corresponden estrictamente a las declaradas en
 
 ### Directory Structure
 
-```
+```text
 app/src/main/java/com/trazo/app/
 ├── domain/
 │   ├── model/
-│   │   ├── RoutePoint.kt                 # Entidad de punto geográfico inmutable con timestamp monotónico
-│   │   ├── RunGoal.kt                    # Enum de meta fija obligatoria (KM_3, KM_5, KM_10)
-│   │   ├── RunMetrics.kt                 # Métricas en vivo (tiempo monotónico, distancia, velocidades)
-│   │   ├── RunSession.kt                 # Sealed interface: Idle vs ActiveSession
-│   │   ├── RunState.kt                   # Enum del estado: IDLE, ACTIVE, PAUSED, FINISHED
-│   │   ├── GpsQuality.kt                 # Calidad de señal visual: FULL_SIGNAL, WEAK_SIGNAL, NO_SIGNAL
-│   │   ├── InitializedRunSession.kt      # Contrato de entrada provisto por start-run
-│   │   └── FrozenRunSummary.kt           # Instantánea inmutable exportada al finalizar para save-run
+│   │   └── map/
+│   │       ├── RoutePoint.kt
+│   │       ├── RunGoal.kt
+│   │       ├── RunMetrics.kt
+│   │       ├── RunSession.kt
+│   │       ├── RunState.kt
+│   │       ├── GpsQuality.kt
+│   │       ├── InitializedRunSession.kt
+│   │       └── FrozenRunSummary.kt
 │   ├── repository/
-│   │   ├── LocationClient.kt             # Puerto de entrada para el flujo de ubicaciones
-│   │   └── RunSessionRepository.kt       # Puerto para control y observación del seguimiento activo
+│   │   ├── LocationClient.kt
+│   │   └── RunSessionRepository.kt
 │   └── usecases/
-│       ├── GetActiveRunSessionUseCase.kt # Observa el StateFlow de la sesión y métricas
-│       ├── PauseRunUseCase.kt            # Pausa temporizador y registro de distancia/traza
-│       ├── ResumeRunUseCase.kt           # Reanuda temporizador y registro de distancia/traza
-│       ├── FinishRunUseCase.kt           # Detiene definitivamente y genera FrozenRunSummary
-│       └── GpsPointFilterPolicy.kt       # Reglas de negocio: umbral 30m y timeout 15.000 ms
+│       ├── GetActiveRunSessionUseCase.kt
+│       ├── AttachActiveRunSessionUseCase.kt
+│       ├── PauseRunUseCase.kt
+│       ├── ResumeRunUseCase.kt
+│       ├── FinishRunUseCase.kt
+│       └── GpsPointFilterPolicy.kt
 ├── data/
 │   ├── di/
-│   │   └── LocationModule.kt             # Módulo Hilt que vincula LocationClient y RunSessionRepository
+│   │   └── LocationModule.kt
 │   ├── location/
-│   │   └── AndroidLocationClient.kt      # Adaptador de hardware que emite Flow<RawLocationPoint>
+│   │   └── AndroidLocationClient.kt
 │   └── repository/
-│       └── RunSessionRepositoryImpl.kt   # Implementación en memoria (@Singleton) del seguimiento
+│       └── RunSessionRepositoryImpl.kt
 └── ui/
     └── screens/
         └── map/
-            ├── MapScreen.kt              # Pantalla principal (observa ViewModel, gestiona permisos y KeepScreenOn)
-            ├── MapViewModel.kt           # Orquestador UI (UiState, UiEvent, UiEffect)
-            ├── MapUiState.kt             # Estado inmutable de la pantalla de mapa
+            ├── MapScreen.kt
+            ├── LiveRouteTrackingViewModel.kt
+            ├── LiveRouteTrackingUiState.kt
             └── components/
-                ├── RunPanel.kt           # Panel flotante con métricas tabulares y controles
-                ├── RunControls.kt        # Botones Pausar, Reanudar y Finalizar (56x56 dp, deshabilitados visual y funcionalmente en IDLE)
-                ├── GpsIndicator.kt       # Indicador visual independiente (barras de señal)
-                ├── FinishConfirmDialog.kt# Diálogo modal de confirmación antes de finalizar
-                ├── GoalCelebrationOverlay.kt # Animación de celebración al alcanzar la meta
-                └── MapLayer.kt           # Renderizado de mapa, marcador y traza en vivo
+                ├── RunPanel.kt
+                ├── RunControls.kt
+                ├── GpsIndicator.kt
+                ├── FinishConfirmDialog.kt
+                ├── GoalCelebrationOverlay.kt
+                └── MapLayer.kt
 ```
+
+**Notas sobre los modelos:**
+
+- `RunSession` es una interfaz sellada (no nula) con dos variantes: `RunSession.Idle` (sin recorrido) y `RunSession.ActiveSession` (recorrido en curso, con meta, estado, traza, métricas, referencias temporales, calidad GPS y `goalReached`). La ausencia de recorrido ya no se representa con `null`.
+- `RunState` define `IDLE` (sin recorrido, usado en el estado de UI), `ACTIVE`, `PAUSED` (pausa manual), `PERSONAL_PAUSED` (pausa personal) y `STOPPED` (frenada detectada automáticamente). Una `ActiveSession` nunca tiene estado `IDLE`: la ausencia de recorrido en el dominio la representa `RunSession.Idle`.
+- `InitializedRunSession` incluye la fecha y hora real de inicio.
+- `FrozenRunSummary` conserva la fecha y hora real de inicio y el indicador de meta alcanzada.
+- `RunGoal` utiliza los nombres definidos en el contrato compartido del proyecto. No se deben renombrar sus valores por motivos de este diseño.
 
 ### Modified Files
 
-- `app/src/main/java/com/trazo/app/ui/screens/map/MapScreen.kt`: Sustitución del placeholder simple
-  por la pantalla completa que acopla `MapViewModel`, `MapLayer`, `RunPanel` y diálogos.
-- `app/src/main/java/com/trazo/app/ui/navigation/TrazoApp.kt`: Integración del efecto de navegación
-  desacoplado al finalizar el recorrido hacia el flujo de guardado (`save-run`).
+- `app/src/main/java/com/trazo/app/ui/screens/map/MapScreen.kt`: Sustitución del placeholder por la pantalla completa que integra `LiveRouteTrackingViewModel`, `MapLayer`, `RunPanel` y los diálogos. No solicita permisos de ubicación. Gestiona la bandera `FLAG_KEEP_SCREEN_ON` únicamente mientras la pestaña Mapa está visible y corresponde mantener la pantalla activa. Expone parámetros para integrar el botón "+" de `start-run` (Persona 2) y el aviso de recorrido demasiado corto (Persona 4).
+- `app/src/main/java/com/trazo/app/ui/screens/map/LiveRouteTrackingViewModel.kt`: Orquestación del estado de UI, eventos del usuario y efectos de finalización.
+- `app/src/main/java/com/trazo/app/domain/repository/RunSessionRepository.kt`: Contrato compartido de sesión, estado de recorrido en curso y operaciones de ciclo de vida.
+- `app/src/main/java/com/trazo/app/data/repository/RunSessionRepositoryImpl.kt`: Implementación en memoria del seguimiento, temporizador, GPS, métricas y finalización.
+- `app/src/main/java/com/trazo/app/ui/navigation/TrazoApp.kt`: Integración de la navegación hacia el flujo de resultados después de finalizar. La navegación desde resultados hacia `save-run` corresponde al módulo de resultados.
 
 ---
 
 ## System Flows
 
-### Sequence Flow: Seguimiento GPS, Filtrado, Pérdida de Señal y Permisos
+### Sequence Flow: Inicio recibido, Seguimiento GPS, Filtrado y Pérdida de Señal
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Corredor
+    participant Start as start-run
+    participant UI as MapScreen / ViewModel
+    participant Repo as RunSessionRepositoryImpl
+    participant GPS as LocationClient
+    participant Filter as GpsPointFilterPolicy
+
+    Note over Start,GPS: start-run gestiona permisos y espera señal GPS
+    Start->>Repo: attachActiveSession(InitializedRunSession)
+    Repo->>Repo: Conservar session.startedAt y comenzar temporizador
+    Repo->>Repo: isRunInProgress = true
+    Repo->>GPS: Iniciar actualizaciones de ubicación
+
+    Note over Corredor,GPS: Recorrido activo (ACTIVE)
+    GPS->>Repo: Nueva lectura GPS
+    Repo->>Filter: isPointAccurate(accuracy)
+
+    alt Precisión > 30 metros
+        Filter-->>Repo: false
+        Repo->>Repo: Descartar punto
+        Note over Repo: No actualiza traza, distancia ni referencia válida
+    else Precisión <= 30 metros
+        Filter-->>Repo: true
+        Repo->>Repo: Incorporar punto y actualizar métricas
+        Repo->>Repo: Actualizar referencia de última lectura válida
+        Repo-->>UI: Emitir sesión actualizada
+        UI->>Corredor: Actualizar posición, traza y métricas
+    end
+
+    opt Transcurren 15.000 ms sin lecturas válidas
+        Repo->>Filter: isSignalLost(lastValidTimestamp, currentTimestamp)
+        Filter-->>Repo: true
+        Repo->>Repo: gpsQuality = NO_SIGNAL
+        Note over Repo: El temporizador sigue activo si RunState es ACTIVE
+        Repo-->>UI: Emitir calidad NO_SIGNAL
+        UI->>Corredor: Mostrar "Sin señal GPS"
+    end
+
+    opt Permiso revocado durante el recorrido
+        GPS-->>Repo: Interrupción de actualizaciones
+        Note over Repo: No se realiza pausa automática
+        Note over Repo: El temporizador continúa en ACTIVE
+    end
+
+    Corredor->>UI: Toca "Pausar"
+    UI->>Repo: pauseSession()
+    Repo->>Repo: Detener temporizador y recolección GPS
+    Repo-->>UI: Estado de pausa
+    UI->>Corredor: Reflejar estado pausado
+```
+
+**Reglas del flujo GPS:**
+
+- La solicitud de permisos y la espera de señal inicial pertenecen a `start-run`.
+- `attachActiveSession` se invoca cuando el flujo de inicio ya está listo para entregar la sesión.
+- El temporizador comienza al asociar la sesión.
+- No se implementa una espera inicial de 15 segundos para obtener la primera señal antes de iniciar. Esa responsabilidad ya fue resuelta por `start-run`.
+- Durante el seguimiento, la pérdida de señal se determina por la ausencia de lecturas válidas durante 15.000 ms.
+- Al reanudar, se inicia una nueva referencia temporal para evaluar la pérdida de señal. El tiempo que transcurrió durante la pausa no se contabiliza.
+- Las lecturas imprecisas no actualizan la referencia de última lectura válida.
+
+### State Lifecycle Flow: Ciclo de Vida de la Sesión
+
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE : Entrada a Mapa sin recorrido
+
+    note right of IDLE
+        Métricas en cero
+        Controles sin acciones disponibles
+        FAB "+" disponible
+        isRunInProgress = false
+    end note
+
+    IDLE --> ACTIVE : start-run entrega InitializedRunSession
+
+    note right of ACTIVE
+        Temporizador y GPS activos
+        isRunInProgress = true
+    end note
+
+    state ACTIVE {
+        [*] --> Tracking
+        Tracking --> GoalReached : Distancia >= meta
+        GoalReached --> Tracking : Celebración sin finalizar
+    }
+
+    ACTIVE --> PAUSED : Pausa manual
+    PAUSED --> ACTIVE : Reanudar
+
+    ACTIVE --> STOPPED : HU-05.1 detecta frenada
+    ACTIVE --> PERSONAL_PAUSED : Corredor elige pausa personal en aviso de 20 s
+
+    ACTIVE --> ConfirmingFinish : Finalizar
+    PAUSED --> ConfirmingFinish : Finalizar
+
+    state ConfirmingFinish {
+        [*] --> CheckMinimumDistance
+        CheckMinimumDistance --> TooShort : Distancia < 200 m
+        CheckMinimumDistance --> DialogVisible : Distancia >= 200 m
+
+        TooShort --> Discarded : Descartar
+        TooShort --> ReturnToRun : Volver
+
+        DialogVisible --> Cancelled : Cancelar
+        DialogVisible --> Confirmed : Confirmar
+    }
+
+    ReturnToRun --> ACTIVE : Retomar seguimiento
+    ReturnToRun --> PAUSED : Si estaba pausado
+
+    Cancelled --> ACTIVE : Si estaba activo
+    Cancelled --> PAUSED : Si estaba pausado
+
+    Confirmed --> IDLE : Detener GPS y temporizador; sesión a RunSession.Idle
+    Discarded --> IDLE : resetToIdle()
+
+    IDLE --> [*]
+```
+
+**Reglas de transición:**
+
+- `isRunInProgress` pasa a `true` al asociar una sesión.
+- Se mantiene en `true` durante estados activos, pausa manual, pausa personal, frenada detectada y pérdida de señal.
+- Pasa a `false` únicamente al finalizar o descartar el recorrido y restablecer el repositorio.
+- Alcanzar la meta no finaliza el recorrido.
+- Una sesión de menos de 200 metros no se guarda.
+- Una sesión de 200 metros o más requiere confirmación explícita antes de finalizar.
+- Cancelar la confirmación conserva el estado anterior.
+- Confirmar finalización detiene el seguimiento y entrega el resumen a resultados.
+
+### Sequence Flow: Finalización y Entrega del Resumen
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Corredor
     participant UI as MapScreen / ViewModel
-    participant Repo as RunSessionRepositoryImpl
-    participant GPS as LocationClient
-    participant Filter as GpsPointFilterPolicy
-    Note over Corredor, GPS: Recorrido activo (ACTIVE) iniciado desde start-run
-    GPS ->> Repo: Nueva lectura GPS (lat, lon, precisión, speed, timestampMonotonic)
-    Repo ->> Filter: isPointAccurate(accuracy)
-    alt Precisión > 30 metros
-        Filter -->> Repo: false (Impreciso)
-        Repo ->> Repo: Descartar punto (no actualiza distancia ni traza ni timestamp de señal)
-    else Precisión <= 30 metros
-        Filter -->> Repo: true (Válido)
-        Repo ->> Repo: Incorporar a traza, sumar distancia, actualizar velocidades
-        Repo ->> Repo: lastValidMonotonicTimestamp = timestampMonotonic
-        Repo ->> Repo: Restablecer timer de pérdida de señal
-        Repo -->> UI: Emitir RunSession actualizado
-        UI ->> Corredor: Actualizar posición, traza y métricas
+    participant Repo as RunSessionRepository
+    participant Results as Resultados
+    participant Save as save-run
+
+    Corredor->>UI: Toca "Finalizar"
+    UI->>Repo: Consultar sesión y distancia
+
+    alt Distancia < 200 metros
+        UI->>Corredor: Mostrar aviso "Recorrido demasiado corto"
+        alt Descartar
+            Corredor->>UI: Confirmar descarte
+            UI->>Repo: resetToIdle()
+            Repo->>Repo: Detener GPS y temporizador
+            Repo->>Repo: isRunInProgress = false
+            UI->>Corredor: Volver a Mapa sin recorrido
+        else Volver
+            Corredor->>UI: Volver al recorrido
+            UI->>UI: Restaurar estado anterior
+        end
+    else Distancia >= 200 metros
+        alt Meta alcanzada
+            UI->>Corredor: "¿Estás seguro de que deseás finalizar?"
+        else Meta no alcanzada
+            UI->>Corredor: "Todavía no llegaste a tu meta. ¿Estás seguro de que deseás finalizar?"
+        end
+
+        alt Cancelar
+            Corredor->>UI: Cancelar
+            UI->>UI: Conservar estado anterior
+        else Confirmar
+            Corredor->>UI: Confirmar
+            UI->>Repo: finishSession()
+            Repo->>Repo: Detener GPS y temporizador
+            Repo->>Repo: Congelar métricas y ruta
+            Repo->>Repo: isRunInProgress = false
+            Repo-->>UI: FrozenRunSummary
+            UI->>Results: Entregar resumen
+            Results->>Save: Continuar al flujo de guardado
+        end
     end
-
-    opt Transcurren 15.000 ms sin lecturas válidas (inicial o en carrera)
-        Repo ->> Filter: isSignalLost(lastValidTimestamp, currentMonotonic)
-        Filter -->> Repo: true (15.000 ms cumplidos)
-        Repo ->> Repo: gpsQuality = NO_SIGNAL (Temporizador de sesión NO se detiene)
-        Repo -->> UI: Emitir calidad NO_SIGNAL
-        UI ->> Corredor: Mostrar aviso "Sin señal GPS" (traza y distancia congeladas, tiempo avanza)
-    end
-
-    opt Permiso de ubicación revocado en carrera
-        GPS -->> Repo: Emisión interrumpida por falta de permiso
-        Note over Repo: NO se pausa la sesión automáticamente.<br/>El temporizador sigue activo mientras el estado sea ACTIVE.<br/>A los 15.000 ms se dispara "Sin señal GPS".
-        Repo -->> UI: Notificar advertencia de permiso en UI (sesión continúa activa)
-    end
-
-    Note over Corredor, GPS: Pausa del recorrido
-    Corredor ->> UI: Toca botón "Pausar"
-    UI ->> Repo: pauseSession()
-    Repo ->> Repo: Detener temporizador monotónico, suspender GPS y cálculo
-    Repo -->> UI: Estado PAUSED (Botón cambia a "Reanudar")
-    UI ->> Corredor: Reflejar estado pausado
-```
-
-### State Lifecycle Flow: Ciclo de Vida de la Sesión de Recorrido
-
-```mermaid
-stateDiagram-v2
-    [*] --> IDLE: Entrada a Mapa sin carrera activa
-    note right of IDLE
-        Métricas: 00:00:00 / 0 km / 0 km/h
-        Controles: acciones bloqueadas
-        FAB "+" disponible (delega a start-run)
-    end note
-    IDLE --> ACTIVE: start-run entrega InitializedRunSession(meta obligatoria)
-
-    state ACTIVE {
-        [*] --> Tracking
-        Tracking --> GoalReached: Distancia >= Meta (3, 5 o 10 km)
-        GoalReached --> Tracking: Animación de celebración (fin automático pendiente de definición)
-    }
-
-    ACTIVE --> PAUSED: Corredor toca "Pausar"
-    note right of PAUSED
-        Temporizador monotónico detenido
-        GPS, distancia y traza congelados
-        Botón cambia a "Reanudar"
-        Cambio de pestaña preserva pausa
-    end note
-    PAUSED --> ACTIVE: Corredor toca "Reanudar"
-    ACTIVE --> ConfirmingFinish: Corredor toca "Finalizar"
-    PAUSED --> ConfirmingFinish: Corredor toca "Finalizar"
-
-    state ConfirmingFinish {
-        [*] --> DialogVisible: Muestra FinishConfirmDialog
-        DialogVisible --> Cancelled: Toca Cancelar
-        DialogVisible --> Confirmed: Toca Confirmar
-    }
-
-    Cancelled --> ACTIVE: Si estaba activo (recorrido inalterado)
-    Cancelled --> PAUSED: Si estaba pausado (recorrido inalterado)
-    Confirmed --> FINISHED: Detener timer y GPS de forma definitiva, congelar métricas
-    FINISHED --> SaveRunFlow: Entrega FrozenRunSummary inmutable hacia save-run
 ```
 
 ---
 
 ## Requirements Traceability
 
-Se clasifican rigurosamente los requisitos entre:
+Se clasifican los requisitos entre:
 
-- **[Acordado]**: Respaldado directamente por `requirements.md`.
-- **[Pendiente de definición con el equipo]**: Puntos identificados explícitamente en el spec para
-  decisión conjunta.
-- **[Propuesta pendiente de aprobación]**: Propuestas técnicas planteadas en el spec a la espera de
-  aprobación formal.
+- **[Acordado]**: Respaldado por los requisitos actualizados y los acuerdos del equipo.
+- **[Pendiente de definición con el equipo]**: Requiere coordinación adicional, sin fijar decisiones no confirmadas.
 
-| Requirement | Tipo                      | Resumen del Requisito                                                                     | Componentes Asociados                          | Interfaces / Contratos                            | Flujo Asociado          |
-|-------------|---------------------------|-------------------------------------------------------------------------------------------|------------------------------------------------|---------------------------------------------------|-------------------------|
-| **1.1**     | [Acordado]                | Centrar mapa en posición inicial si hay permiso y ubicación                               | `MapScreen`, `MapViewModel`                    | `MapUiState.userLocation`                         | Lifecycle inicial       |
-| **1.2**     | [Acordado]                | Métricas iniciales 00:00:00, 0 km, 0 km/h                                                 | `RunPanel`, `MapViewModel`                     | `RunMetrics.ZERO`                                 | Estado IDLE             |
-| **1.3**     | [Acordado]                | Iniciar carrera desde botón flotante (FAB "+") vía `start-run`                            | `MapScreen`, `MapViewModel`                    | `MapUiEffect.OpenStartRunModal`                   | Integración `start-run` |
-| **1.4**     | [Acordado]                | Controles Pausar/Reanudar/Finalizar no permiten acciones en IDLE                          | `RunControls`, `MapViewModel`                  | `areControlActionsAllowed = false`                | Estado IDLE             |
-| **1.5**     | [Acordado]                | Controles Reanudar y Finalizar deshabilitados visualmente en IDLE                         | `RunControls`                                  | `areControlsEnabled = false`                      | Estado IDLE             |
-| **2.1**     | [Acordado]                | Mostrar posición actual del corredor en el mapa                                           | `MapLayer`, `MapScreen`                        | `MapUiState.runnerPosition`                       | Sequence paso 8         |
-| **2.2**     | [Acordado]                | Dibujar y extender traza continua del recorrido                                           | `MapLayer`                                     | `MapUiState.routePoints`                          | Sequence paso 8         |
-| **2.3**     | [Acordado]                | Actualizar continuamente tiempo transcurrido (monotónico)                                 | `RunPanel`, `RunSessionRepositoryImpl`         | `RunMetrics.elapsedSeconds`                       | Sequence paso 8         |
-| **2.4**     | [Acordado]                | Actualizar continuamente distancia acumulada con puntos válidos                           | `RunPanel`, `RunSessionRepositoryImpl`         | `RunMetrics.distanceKilometers`                   | Sequence paso 8         |
-| **2.5**     | [Acordado]                | Actualizar continuamente velocidad del corredor                                           | `RunPanel`, `RunSessionRepositoryImpl`         | `RunMetrics.currentSpeedKmh`                      | Sequence paso 8         |
-| **3.1**     | [Acordado]                | Indicador "GPS" con barras completas en buena señal                                       | `GpsIndicator`                                 | `GpsQuality.FULL_SIGNAL`                          | State tracking          |
-| **3.2**     | [Acordado]                | Indicador visual de barras independiente del filtro de 30 m                               | `GpsIndicator`, `LocationClient`               | `LocationClient.getSignalQualityUpdates`          | Autonomía de señal      |
-| **3.3**     | [Acordado]                | Aviso "Sin señal GPS" tras 15.000 ms sin lecturas válidas                                 | `GpsIndicator`, `GpsPointFilterPolicy`         | `GpsQuality.NO_SIGNAL`                            | Sequence pasos 9-11     |
-| **3.4**     | [Acordado]                | Exclusión de puntos inválidos y distancia durante "Sin señal"                             | `RunSessionRepositoryImpl`                     | `GpsPointFilterPolicy`                            | Sequence paso 4         |
-| **3.5**     | [Acordado]                | Ocultar aviso y continuar registro al recibir punto válido                                | `GpsIndicator`, `RunSessionRepositoryImpl`     | `GpsQuality` recovery                             | Sequence paso 7         |
-| **4.1**     | [Acordado]                | Descartar lecturas GPS con precisión > 30 metros                                          | `GpsPointFilterPolicy`                         | `isPointAccurate(accuracy)`                       | Sequence paso 3         |
-| **4.2**     | [Acordado]                | No incorporar a la traza puntos con precisión > 30 metros                                 | `RunSessionRepositoryImpl`                     | `RunSession.routePoints`                          | Sequence paso 4         |
-| **4.3**     | [Acordado]                | No sumar distancia a partir de puntos imprecisos                                          | `RunSessionRepositoryImpl`                     | `RunMetrics.distanceKilometers`                   | Sequence paso 4         |
-| **5.1**     | [Acordado]                | Detener temporizador, distancia y traza al pausar                                         | `PauseRunUseCase`, `RunSessionRepositoryImpl`  | `RunSessionRepository.pauseSession`               | Sequence paso 14        |
-| **5.2**     | [Acordado]                | Cambiar control de "Pausar" a "Reanudar"                                                  | `RunControls`, `MapUiState`                    | `RunState.PAUSED`                                 | Sequence paso 15        |
-| **5.3**     | [Acordado]                | Continuar temporizador, distancia y traza al reanudar                                     | `ResumeRunUseCase`, `RunSessionRepositoryImpl` | `RunSessionRepository.resumeSession`              | State PAUSED -> ACTIVE  |
-| **5.4**     | [Acordado]                | Cambiar control de "Reanudar" a "Pausar"                                                  | `RunControls`, `MapUiState`                    | `RunState.ACTIVE`                                 | State PAUSED -> ACTIVE  |
-| **6.1**     | [Acordado]                | Recentrar mapa en posición actual al tocar botón de ubicación                             | `MapLayer`, `MapViewModel`                     | `MapUiEvent.OnCenterMapClicked`                   | Acción UI               |
-| **6.2**     | [Acordado]                | Mantener visible la traza completa tras recentrado                                        | `MapLayer`                                     | `MapUiState.routePoints`                          | Acción UI               |
-| **7.1**     | [Acordado]                | Conservar recorrido en curso al navegar entre pestañas dentro de la app (en proceso vivo) | `RunSessionRepositoryImpl` (@Singleton)        | `RunSessionRepository`                            | State lifecycle         |
-| **7.2**     | [Acordado]                | Continuar avance de tiempo y GPS en activo mientras la pestaña Mapa no está visible       | `RunSessionRepositoryImpl`                     | CoroutineScope (@ApplicationScope)                | Pestaña inactiva        |
-| **7.3**     | [Acordado]                | Mantener detenidos tiempo activo, distancia y traza en pausado al cambiar de pestaña      | `RunSessionRepositoryImpl`                     | `RunState.PAUSED`                                 | Pestaña inactiva        |
-| **7.4**     | [Acordado]                | Restaurar estado y métricas consolidadas al regresar a la pestaña Mapa                    | `MapViewModel`, `GetActiveRunSessionUseCase`   | `StateFlow<RunSession>`                           | NavHost restoreState    |
-| **8.1**     | [Acordado]                | Mostrar animación de celebración al alcanzar la meta                                      | `GoalCelebrationOverlay`                       | `MapUiState.showGoalCelebration`                  | State ACTIVE            |
-| **8.2**     | [Pendiente de definición] | Fin automático vs. manual al alcanzar la meta                                             | `GoalCelebrationOverlay`, `MapViewModel`       | `MapUiState` flag de celebración                  | State ACTIVE            |
-| **9.1**     | [Propuesta pendiente]     | Solicitar confirmación con diálogo al tocar "Finalizar"                                   | `FinishConfirmDialog`, `MapViewModel`          | `MapUiState.showFinishConfirmDialog`              | State Confirming        |
-| **9.2**     | [Propuesta pendiente]     | Cancelar finalización conserva estado previo sin alteración                               | `FinishConfirmDialog`, `MapViewModel`          | `MapUiEvent.OnCancelFinish`                       | State Cancelled         |
-| **9.3**     | [Propuesta pendiente]     | Confirmar detiene definitivo, congela métricas y pasa a guardado                          | `FinishRunUseCase`, `MapViewModel`             | `MapUiEffect.NavigateToFinalizationFlow`          | State Confirmed         |
-| **9.4**     | [Pendiente de definición] | Navegación directa a `save-run` vs. pantalla previa de resultados                         | `MapViewModel`, `TrazoApp`                     | `MapUiEffect.NavigateToFinalizationFlow`          | Seam de navegación      |
-| **10.1**    | [Propuesta pendiente]     | Título obligatorio para guardar (`save-run`)                                              | `FrozenRunSummary` (contrato hacia `save-run`) | `FrozenRunSummary`                                | Integración guardado    |
-| **10.2**    | [Propuesta pendiente]     | Destacados opcionales (`save-run`)                                                        | Delegado a `save-run`                          | Delegado a `save-run`                             | Integración guardado    |
-| **10.3**    | [Propuesta pendiente]     | Hasta 2 fotos opcionales de cámara; sin videos (`save-run`)                               | Delegado a `save-run`                          | Delegado a `save-run`                             | Integración guardado    |
-| **10.4**    | [Propuesta pendiente]     | Persistencia estrictamente local en Room sin cuentas ni servidor                          | Delegado a `save-run`                          | Delegado a `save-run`                             | Integración guardado    |
-| **10.5**    | [Propuesta pendiente]     | Disponibilidad en Historial y traza visible en mapa                                       | `HistoryScreen`, `MapLayer`                    | Modelo Room vía `save-run`                        | Integración guardado    |
-| **11.1**    | [Acordado]                | Textos en español rioplatense con voseo sin i18n                                          | Todo el módulo UI                              | `strings.xml`                                     | Ubiquitous UI           |
-| **11.2**    | [Acordado]                | Metas fijas obligatorias (3, 5, 10 km); sin metas personalizadas ni calorías              | `RunGoal`, `RunMetrics`                        | Enum `RunGoal`                                    | Restricción producto    |
-| **11.3**    | [Acordado]                | Pantalla activa (`FLAG_KEEP_SCREEN_ON`) sin garantía background                           | `MapScreen` (DisposableEffect)                 | Window flag                                       | Configuración UI        |
-| **11.4**    | [Acordado]                | Separador decimal con coma para distancia y velocidad                                     | `MetricFormatter`                              | Función pura con Locale `es-AR`                   | Formato UI              |
-| **11.5**    | [Acordado]                | Área táctil mínima de 48 dp (56 dp para controles de carrera)                             | `RunControls`, `MapScreen`                     | Modifiers `size(56.dp)` / `defaultMinSize`        | Accesibilidad UI        |
-| **11.6**    | [Acordado]                | Descripciones accesibles para lectores de pantalla                                        | `RunControls`, `GpsIndicator`                  | `Modifier.semantics { contentDescription = ... }` | Accesibilidad UI        |
+| Requirement | Tipo                                    | Resumen del Requisito                                                                                                                                                     | Componentes Asociados                                | Interfaces / Contratos                  | Flujo Asociado             |
+|-------------|-----------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------|-----------------------------------------|----------------------------|
+| **1.1**     | [Acordado]                              | Centrar mapa en posición inicial cuando la ubicación esté disponible                                                                                                      | `MapScreen`, `LiveRouteTrackingViewModel`            | `LiveRouteTrackingUiState.userLocation` | Lifecycle inicial          |
+| **1.2**     | [Acordado]                              | Métricas iniciales en cero                                                                                                                                                | `RunPanel`, ViewModel                                | `RunMetrics.ZERO`                       | Estado IDLE                |
+| **1.3**     | [Acordado]                              | Iniciar carrera desde FAB mediante `start-run`                                                                                                                            | `MapScreen`, ViewModel                               | `MapUiEffect.OpenStartRunModal`         | Integración `start-run`    |
+| **1.4**     | [Acordado]                              | Bloquear acciones de controles cuando no hay recorrido                                                                                                                    | `RunControls`, ViewModel                             | Estado de controles                     | Estado IDLE                |
+| **1.5**     | [Pendiente de definición con el equipo] | Representación visual de habilitación o deshabilitación de Pausar, Reanudar y Finalizar sin recorrido.                                                                    | `RunControls`                                        | Estado de habilitación                  | Estado IDLE                |
+| **2.1**     | [Acordado]                              | Mostrar posición actual del corredor                                                                                                                                      | `MapLayer`                                           | `runnerPosition`                        | Seguimiento                |
+| **2.2**     | [Acordado]                              | Dibujar y extender traza continua                                                                                                                                         | `MapLayer`                                           | `routePoints`                           | Seguimiento                |
+| **2.3**     | [Acordado]                              | Actualizar tiempo transcurrido                                                                                                                                            | Repositorio, `RunPanel`                              | `elapsedTimeSeconds`                    | Seguimiento                |
+| **2.4**     | [Acordado]                              | Actualizar distancia acumulada con puntos válidos                                                                                                                         | Repositorio, `RunPanel`                              | `distanceMeters`                        | Seguimiento                |
+| **2.5**     | [Acordado]                              | Actualizar velocidad del corredor                                                                                                                                         | Repositorio, `RunPanel`                              | `currentSpeedKmh`                       | Seguimiento                |
+| **3.1**     | [Acordado]                              | Mostrar indicador visual de buena señal GPS                                                                                                                               | `GpsIndicator`                                       | `GpsQuality`                            | Seguimiento                |
+| **3.2**     | [Acordado]                              | Mantener indicador independiente del filtro de precisión                                                                                                                  | `GpsIndicator`, `LocationClient`                     | `getSignalQualityUpdates()`             | Señal                      |
+| **3.3**     | [Acordado]                              | Avisar pérdida de señal tras 15.000 ms sin lecturas válidas                                                                                                               | `GpsIndicator`, `GpsPointFilterPolicy`               | `GpsQuality.NO_SIGNAL`                  | Pérdida GPS                |
+| **3.4**     | [Acordado]                              | No agregar puntos inválidos ni distancia durante pérdida de señal                                                                                                         | Repositorio                                          | `GpsPointFilterPolicy`                  | Pérdida GPS                |
+| **3.5**     | [Acordado]                              | Recuperar el registro al recibir un punto válido                                                                                                                          | Repositorio, `GpsIndicator`                          | `GpsQuality`                            | Recuperación GPS           |
+| **4.1**     | [Acordado]                              | Descartar lecturas con precisión mayor a 30 metros                                                                                                                        | `GpsPointFilterPolicy`                               | `isPointAccurate()`                     | Filtrado                   |
+| **4.2**     | [Acordado]                              | No incorporar puntos imprecisos a la traza                                                                                                                                | Repositorio                                          | `routePoints`                           | Filtrado                   |
+| **4.3**     | [Acordado]                              | No sumar distancia a partir de puntos imprecisos                                                                                                                          | Repositorio                                          | `distanceMeters`                        | Filtrado                   |
+| **5.1**     | [Acordado]                              | Detener temporizador, distancia y traza al pausar                                                                                                                         | `PauseRunUseCase`                                    | `pauseSession()`                        | Pausa                      |
+| **5.2**     | [Acordado]                              | Cambiar control de Pausar a Reanudar                                                                                                                                      | `RunControls`                                        | Estado de sesión                        | Pausa                      |
+| **5.3**     | [Acordado]                              | Continuar seguimiento al reanudar                                                                                                                                         | `ResumeRunUseCase`                                   | `resumeSession()`                       | Reanudación                |
+| **5.4**     | [Acordado]                              | Cambiar control de Reanudar a Pausar                                                                                                                                      | `RunControls`                                        | Estado de sesión                        | Reanudación                |
+| **5.5**     | [Acordado]                              | Diferenciar pausa manual, pausa personal y frenada automática                                                                                                             | Dominio, ViewModel                                   | Estados de sesión                       | Estados de pausa           |
+| **5.6**     | [Pendiente de definición con el equipo] | Transiciones de pausa personal y frenada detectada (los nombres ya están aprobados)                                                                                       | Dominio                                              | `RunState`                              | Coordinación con Persona 4 |
+| **6.1**     | [Acordado]                              | Recentrar mapa en ubicación actual                                                                                                                                        | `MapLayer`, ViewModel                                | `OnCenterMapClicked`                    | Acción UI                  |
+| **6.2**     | [Acordado]                              | Mantener visible la traza completa tras recentrado                                                                                                                        | `MapLayer`                                           | `routePoints`                           | Acción UI                  |
+| **7.1**     | [Acordado]                              | Conservar recorrido al cambiar de pestaña mientras el proceso esté vivo                                                                                                   | Repositorio singleton                                | `RunSessionRepository`                  | Navegación                 |
+| **7.2**     | [Acordado]                              | Continuar tiempo y GPS en ACTIVE aunque Mapa no esté visible                                                                                                              | Repositorio                                          | `@ApplicationScope`                     | Pestaña inactiva           |
+| **7.3**     | [Acordado]                              | Mantener tiempo, distancia y traza detenidos en pausa                                                                                                                     | Repositorio                                          | Estado de sesión                        | Pestaña inactiva           |
+| **7.4**     | [Acordado]                              | Restaurar estado y métricas al volver a Mapa                                                                                                                              | ViewModel                                            | `StateFlow<RunSession>`                 | Restauración               |
+| **8.1**     | [Acordado]                              | Mostrar celebración al alcanzar la meta                                                                                                                                   | `GoalCelebrationOverlay`                             | `goalReached`                           | Meta alcanzada             |
+| **8.2**     | [Acordado]                              | Continuar el recorrido después de alcanzar la meta                                                                                                                        | Repositorio, ViewModel                               | `goalReached`, estado ACTIVE            | Meta alcanzada             |
+| **8.3**     | [Acordado]                              | Respetar configuración de reducción de animaciones                                                                                                                        | `GoalCelebrationOverlay`                             | `rememberReduceMotion()`                | Accesibilidad              |
+| **9.1**     | [Acordado]                              | Verificar el umbral de 200 metros y mostrar el aviso de recorrido demasiado corto o el diálogo de confirmación con el mensaje correspondiente según si se alcanzó la meta | ViewModel, UI de finalización, `FinishConfirmDialog` | `distanceMeters`, `goalReached`         | Finalización               |
+| **9.2**     | [Acordado]                              | Cancelar la confirmación conserva el estado previo del recorrido                                                                                                          | ViewModel                                            | Evento de cancelación                   | Confirmación               |
+| **9.3**     | [Acordado]                              | Confirmar detiene definitivamente el seguimiento y congela las métricas y la traza                                                                                        | `FinishRunUseCase`                                   | `FrozenRunSummary`                      | Finalización               |
+| **9.4**     | [Acordado]                              | Mostrar primero la pantalla de resultados y después continuar a `save-run`                                                                                                | ViewModel, navegación, pantalla de resultados        | `FrozenRunSummary`                      | Integración resultados     |
+| **9.5**     | [Acordado]                              | Incluir en el resumen la fecha y hora real de inicio y el indicador de meta alcanzada                                                                                     | `FrozenRunSummary`                                   | `startedAt`, `goalReached`              | Resumen final              |
+| **9.6**     | [Acordado]                              | Descartar recorridos inferiores a 200 metros sin guardarlos y limpiar la sesión activa                                                                                    | UI de finalización, repositorio                      | `resetToIdle()`                         | Descarte                   |
+| **9.7**     | [Acordado]                              | Volver al recorrido demasiado corto conservando su estado, métricas y traza                                                                                               | UI de finalización, ViewModel                        | Estado de sesión                        | Finalización corta         |
+| **10.1**    | [Acordado]                              | Exigir un título obligatorio para guardar el recorrido                                                                                                                    | Módulo `save-run`                                    | Datos del formulario                    | Guardado                   |
+| **10.2**    | [Acordado]                              | Permitir seleccionar destacados opcionales                                                                                                                                | Módulo `save-run`                                    | Datos del formulario                    | Guardado                   |
+| **10.3**    | [Acordado]                              | Permitir hasta dos fotos opcionales tomadas con la cámara, sin admitir videos                                                                                             | Módulo `save-run`                                    | Fotos del recorrido                     | Guardado                   |
+| **10.4**    | [Acordado]                              | Guardar localmente en Room el recorrido con sus métricas, traza y datos asociados                                                                                         | Módulo `save-run`, Room                              | Datos del recorrido                     | Persistencia               |
+| **10.5**    | [Acordado]                              | Dejar disponible el recorrido guardado en Historial y mostrar su traza en el mapa                                                                                         | Historial, mapa                                      | Recorrido persistido                    | Consulta local             |
+| **10.6**    | [Acordado]                              | Entregar el resumen congelado a `save-run` sin implementar el formulario ni la persistencia desde HU-04                                                                   | HU-04, módulo `save-run`                             | `FrozenRunSummary`                      | Integración guardado       |
+| **11.1**    | [Acordado]                              | Textos en español rioplatense con voseo                                                                                                                                   | UI                                                   | Recursos de texto                       | UI                         |
+| **11.2**    | [Acordado]                              | Metas fijas de 3, 5 y 10 km                                                                                                                                               | `RunGoal`                                            | Enum                                    | Restricción de producto    |
+| **11.3**    | [Acordado]                              | Mantener pantalla activa mientras Mapa está visible                                                                                                                       | `MapScreen`                                          | `FLAG_KEEP_SCREEN_ON`                   | Lifecycle UI               |
+| **11.4**    | [Acordado]                              | Usar coma decimal en distancia y velocidad                                                                                                                                | Formateadores                                        | Locale `es-AR`                          | Formato UI                 |
+| **11.5**    | [Acordado]                              | Área táctil mínima de 48 dp y 56 dp para controles de carrera                                                                                                             | `RunControls`                                        | Modifiers                               | Accesibilidad              |
+| **11.6**    | [Acordado]                              | Descripciones accesibles para lectores de pantalla                                                                                                                        | Componentes UI                                       | `semantics`                             | Accesibilidad              |
 
-### Mapeo de Cobertura de los 8 Escenarios de Aceptación (Trazo v0.6)
+**Nota:** en `requirements.md` el requisito 1.5 mantiene pendiente de definición con el equipo la representación visual de Pausar, Reanudar y Finalizar sin recorrido. El diseño solo fija que esos controles no permiten acciones (R1.4).
 
-A continuación se detalla la correspondencia exacta de cada uno de los 8 escenarios de la
-funcionalidad con los componentes, estados y comportamientos técnicos diseñados:
+### Mapeo de Cobertura de los Escenarios de Aceptación
 
-1. **Escenario 1 — Mapa sin recorrido en curso:**
-    - **Centrado:** Cuando no hay carrera activa, si el permiso y la ubicación están disponibles,
-      `MapScreen` y `MapViewModel` centran la vista en la posición actual del corredor
-      (`MapUiState.userLocation`).
-    - **Métricas en cero:** La UI refleja el temporizador en `00:00:00`, la distancia en `0 km` y la
-      velocidad en `0 km/h` (`formattedTime = "00:00:00"`, `formattedDistance = "0"`,
-      `distanceUnit = "km"`, `formattedSpeed = "0"`, `speedUnit = "km/h"`).
-    - **Inicio de carrera:** El botón flotante (FAB "+") se encuentra disponible para iniciar el
-      flujo de carrera mediante `start-run` (`MapUiEffect.OpenStartRunModal`).
-    - **Bloqueo funcional y visual de controles:** Conforme al requisito original de HU-04, cuando
-      no hay un recorrido en curso, los botones Reanudar y Finalizar están deshabilitados tanto
-      visualmente (con el estilo disabled de Material 3, `areControlsEnabled = false`) como
-      funcionalmente (bloqueados ante cualquier toque, `areControlActionsAllowed = false`). Este
-      comportamiento queda definido como acordado y no como decisión pendiente.
+1. **Escenario 1 — Mapa sin recorrido en curso**
+    - El mapa puede mostrar la ubicación disponible del usuario.
+    - La gestión de permisos corresponde a `start-run`; `MapScreen` no solicita permisos.
+    - Las métricas iniciales son `00:00:00`, `0 km` y `0 km/h`.
+    - El FAB "+" permite iniciar el flujo `start-run`.
+    - Los controles de Pausar, Reanudar y Finalizar no ejecutan acciones cuando no hay recorrido. Su presentación visual queda pendiente de definición (R1.5).
 
-2. **Escenario 2 — Visualizar el recorrido en vivo:**
-    - **Posición del corredor:** `MapLayer` actualiza continuamente el marcador de posición actual
-      del corredor sobre el mapa (`MapUiState.runnerPosition`).
-    - **Traza en vivo:** La polilínea de la ruta se extiende continuamente con cada coordenada
-      válida recibida (`MapUiState.routePoints`).
-    - **Métricas en tiempo real:** `RunPanel` actualiza concurrentemente el tiempo transcurrido en
-      formato tabular (`RunMetrics.elapsedSeconds`), la distancia acumulada en kilómetros
-      (`RunMetrics.distanceKilometers`) y la velocidad actual en km/h
-      (`RunMetrics.currentSpeedKmh`).
+2. **Escenario 2 — Visualizar el recorrido en vivo**
+    - `MapLayer` actualiza el marcador de posición del corredor.
+    - La polilínea se extiende con cada coordenada válida.
+    - `RunPanel` actualiza tiempo, distancia, velocidad actual y velocidad promedio.
+    - El temporizador comienza cuando se asocia la sesión inicializada.
 
-3. **Escenario 3 — Mostrar buena señal GPS:**
-    - **Indicador visual:** `GpsIndicator` muestra la píldora "GPS" con barras completas
-      (`GpsQuality.FULL_SIGNAL`) cuando la señal tiene calidad suficiente.
-    - **Continuidad:** El registro de coordenadas y acumulación de métricas opera normalmente.
-    - **Independencia técnica:** El cálculo visual de las barras de señal se desacopla del filtro de
-      30 metros de precisión (la precisión métrica no impone directamente las barras de señal).
+3. **Escenario 3 — Mostrar buena señal GPS**
+    - `GpsIndicator` representa la calidad de señal.
+    - El indicador visual se mantiene independiente del filtro de precisión de 30 metros.
+    - Las lecturas válidas actualizan la ruta y las métricas.
 
-4. **Escenario 4 — Pérdida de señal GPS:**
-    - **Detección tras 15.000 ms:** Si transcurren 15.000 ms consecutivos sin recibir ubicaciones
-      válidas (contados desde la última ubicación válida recibida, o desde el inicio del recorrido
-      si aún no se recibió ninguna), `GpsPointFilterPolicy` detecta la pérdida de señal.
-    - **Aviso visual:** `GpsIndicator` transiciona a `GpsQuality.NO_SIGNAL` mostrando el aviso "Sin
-      señal GPS".
-    - **Exclusión de datos:** Durante la pérdida de señal, no se agregan puntos inválidos ni
-      estimados a la traza, ni se suma distancia.
-    - **Temporizador activo:** El temporizador de la sesión en curso **no se detiene** mientras el
-      estado sea `ACTIVE`.
-    - **Recuperación:** Al recibir nuevamente una lectura GPS válida, se oculta el aviso "Sin señal
-      GPS" y se reanuda de inmediato la acumulación métrica y el trazado.
+4. **Escenario 4 — Pérdida de señal GPS**
+    - La pérdida se detecta tras 15.000 ms sin lecturas válidas durante un seguimiento iniciado.
+    - No se cuenta un período de espera previo al inicio: `start-run` entrega la sesión cuando ya obtuvo señal.
+    - `GpsIndicator` muestra "Sin señal GPS".
+    - No se agregan puntos inválidos ni se suma distancia a partir de ellos.
+    - El temporizador continúa si la sesión permanece en estado activo.
+    - Al recibir una nueva lectura válida se recupera el registro.
 
-5. **Escenario 5 — Descartar un punto GPS impreciso:**
-    - **Umbral de 30 metros:** Toda lectura GPS con `accuracyMeters > 30.0f` es descartada por
-      `GpsPointFilterPolicy.isPointAccurate()`.
-    - **Aislamiento:** El punto impreciso no se incorpora a `routePoints`, no suma distancia en
-      `RunMetrics.distanceKilometers`, y no actualiza la marca de tiempo de última lectura válida
-      (`lastValidLocationMonotonicTimestamp`).
+5. **Escenario 5 — Descartar un punto GPS impreciso**
+    - Toda lectura con `accuracyMeters > 30.0f` se descarta.
+    - El punto no se incorpora a la traza.
+    - No suma distancia.
+    - No actualiza la referencia de última lectura válida.
 
-6. **Escenario 6 — Pausar y reanudar el recorrido:**
-    - **6.1 Pausar:** Al tocar "Pausar", `PauseRunUseCase` suspende el conteo del temporizador
-      monotónico, congela la acumulación de distancia y detiene el registro de nuevos puntos GPS. El
-      botón "Pausar" conmuta a "Reanudar" (`RunState.PAUSED`).
-    - **6.2 Reanudar:** Al tocar "Reanudar", `ResumeRunUseCase` reactiva el temporizador monotónico,
-      reanuda la acumulación de distancia y continúa incorporando nuevos puntos GPS a la traza. El
-      botón "Reanudar" conmuta a "Pausar" (`RunState.ACTIVE`).
+6. **Escenario 6 — Pausar y reanudar el recorrido**
+    - Al pausar, se detienen el temporizador activo, la acumulación de distancia y el registro GPS.
+    - Al reanudar, se restablecen las actualizaciones.
+    - El período pausado no se suma al tiempo activo.
+    - La diferenciación entre pausa manual, pausa personal y frenada automática debe respetar los estados acordados con Persona 4.
 
-7. **Escenario 7 — Centrar el mapa en mi posición actual:**
-    - **Recentrado:** Cuando el corredor desplaza manualmente el mapa y presiona el botón de
-      ubicación actual, `MapViewModel` y `MapLayer` vuelven a enfocar la vista en la coordenada
-      actual del corredor (`MapUiEvent.OnCenterMapClicked`).
-    - **Persistencia visual:** La traza completa acumulada de la ruta permanece visible en todo
-      momento tras el recentrado.
+7. **Escenario 7 — Centrar el mapa en mi posición actual**
+    - El botón de ubicación actual recentra el mapa.
+    - La traza completa permanece visible después del recentrado.
 
-8. **Escenario 8 — Cambiar de pestaña sin perder el recorrido:**
-    - **Alcance del segundo plano:** Se aclara expresamente que la expresión «en segundo plano» se
-      refiere de forma exclusiva a que la pestaña Mapa deja de estar visible mientras el usuario
-      navega internamente entre pestañas de la aplicación (hacia Historial o Inicio). No implica ni
-      requiere seguimiento con la aplicación minimizada ni ejecución prolongada en segundo plano a
-      nivel de sistema operativo Android.
-    - **Persistencia de sesión:** La sesión en curso continúa activa o pausada en memoria mediante
-      `RunSessionRepositoryImpl` (@Singleton) mientras el proceso de la aplicación permanezca vivo.
-    - **Comportamiento en activo (ACTIVE):** El temporizador monotónico y el registro GPS continúan
-      avanzando normalmente mientras la pestaña Mapa no está visible, acumulando tiempo y distancia.
-    - **Comportamiento en pausa (PAUSED):** Si el recorrido está pausado, no avanzan el tiempo
-      activo, la distancia acumulada ni la traza.
-    - **Restauración integral:** Al regresar a la pestaña Mapa, `GetActiveRunSessionUseCase` y
-      `MapViewModel` recuperan el estado actualizado y consolidado de la sesión.
+8. **Escenario 8 — Cambiar de pestaña sin perder el recorrido**
+    - La sesión permanece en memoria mientras el proceso de la aplicación esté vivo.
+    - En estado activo, el temporizador y el registro GPS continúan aunque Mapa no esté visible.
+    - En estado pausado, el tiempo activo, la distancia y la traza permanecen detenidos.
+    - Al volver a Mapa, se restaura el estado actualizado.
+    - La bandera `FLAG_KEEP_SCREEN_ON` solo se mantiene mientras Mapa está visible. Que la pantalla pueda apagarse al cambiar de pestaña no implica detener el seguimiento.
+
+9. **Escenario 9 — Meta alcanzada**
+    - `GoalCelebrationOverlay` muestra la celebración al alcanzar la meta (3, 5 o 10 km).
+    - El recorrido continúa activo; el corredor decide cuándo tocar "Finalizar".
+    - Se registra `goalReached` para el resumen final.
+    - La celebración respeta la configuración de reducir o quitar animaciones.
+
+10. **Escenario 10 — Finalizar y continuar al flujo de resultados y guardado**
+    - Menos de 200 m: aviso de recorrido demasiado corto (descartar o volver). Descartar ejecuta `resetToIdle()`.
+    - 200 m o más: diálogo de confirmación con el mensaje según `goalReached`.
+    - Al confirmar se detienen temporizador y GPS, se congelan métricas y traza, y se genera el resumen con `startedAt` y `goalReached`.
+    - Se muestra primero la pantalla de resultados (Persona 4) y luego se continúa a `save-run`.
+    - Cancelar o volver conserva el estado previo sin modificar métricas ni traza.
+
+11. **Escenario 11 — Guardar el recorrido finalizado**
+    - Responsabilidad de `save-run` (Persona 1): título obligatorio, destacados opcionales, hasta 2 fotos de cámara (sin video) y persistencia local en Room.
+    - HU-04 solo entrega el resumen congelado.
 
 ---
 
@@ -506,80 +609,130 @@ funcionalidad con los componentes, estados y comportamientos técnicos diseñado
 
 ### Component Summary Table
 
-| Component                    | Layer             | Intent                                                              | Req Coverage                  | Dependencies (P0/P1)                               | Contracts      |
-|------------------------------|-------------------|---------------------------------------------------------------------|-------------------------------|----------------------------------------------------|----------------|
-| `RunSessionRepository`       | Domain (Port)     | Contrato para observar y controlar el seguimiento de la sesión      | 1.2, 5.1, 5.3, 7.1, 9.3       | Domain Models (P0)                                 | State, Service |
-| `LocationClient`             | Domain (Port)     | Emisión reactiva de coordenadas GPS y calidad visual                | 2.1, 3.2, 4.1                 | Coroutines Flow (P0)                               | Event          |
-| `GpsPointFilterPolicy`       | Domain (Logic)    | Filtrado a ≤ 30 m y timeout de 15.000 ms                            | 3.3, 3.4, 4.1, 4.2, 4.3       | Domain Models (P0)                                 | Service        |
-| `GetActiveRunSessionUseCase` | Domain (Use Case) | Observa la sesión activa y expone flujo de datos                    | 1.2, 2.1-2.5, 7.4             | `RunSessionRepository` (P0)                        | Service        |
-| `PauseRunUseCase`            | Domain (Use Case) | Detiene temporizador y registro de distancia/traza                  | 5.1, 5.2                      | `RunSessionRepository` (P0)                        | Service        |
-| `ResumeRunUseCase`           | Domain (Use Case) | Reanuda temporizador y registro de distancia/traza                  | 5.3, 5.4                      | `RunSessionRepository` (P0)                        | Service        |
-| `FinishRunUseCase`           | Domain (Use Case) | Detiene de forma definitiva y emite `FrozenRunSummary`              | 9.3                           | `RunSessionRepository` (P0)                        | Service        |
-| `AndroidLocationClient`      | Data (Location)   | Obtiene coordenadas del sensor Android                              | 2.1, 3.1, 4.1                 | Location APIs de Android (P0)                      | Event          |
-| `RunSessionRepositoryImpl`   | Data (Repository) | Implementación singleton en memoria del seguimiento                 | 5.1, 5.3, 7.1, 7.2, 7.3       | `LocationClient` (P0), `GpsPointFilterPolicy` (P0) | State, Service |
-| `MapViewModel`               | UI (ViewModel)    | Mapea dominio a UiState y despacha intenciones de usuario           | Todos los reqs de UI          | Casos de uso de Domain (P0)                        | State          |
-| `MapScreen`                  | UI (Screen)       | Composable principal, gestión de lifecycle, permisos y KeepScreenOn | 1.1, 1.3, 11.3                | `MapViewModel` (P0)                                | State          |
-| `RunPanel`                   | UI (Component)    | Card flotante con temporizador, barra y métricas tabulares          | 1.2, 2.3, 2.4, 2.5, 11.4      | `MapUiState` (P0)                                  | UI Props       |
-| `RunControls`                | UI (Component)    | Botones Pausar/Reanudar/Finalizar (56 dp)                           | 1.4, 1.5, 5.2, 5.4, 9.1, 11.5 | `MapUiState` (P0)                                  | UI Props       |
-| `GpsIndicator`               | UI (Component)    | Píldora de 28 dp con barras de señal y aviso "Sin señal GPS"        | 3.1, 3.2, 3.3, 3.5, 11.6      | `GpsQuality` (P0)                                  | UI Props       |
-| `FinishConfirmDialog`        | UI (Component)    | Diálogo de confirmación para evitar cierre accidental               | 9.1, 9.2, 9.3                 | `MapUiState` (P0)                                  | UI Props       |
-| `GoalCelebrationOverlay`     | UI (Component)    | Animación de celebración al cumplir la meta                         | 8.1, 8.2                      | `MapUiState` (P0)                                  | UI Props       |
-| `MapLayer`                   | UI (Component)    | Capa de renderizado de traza viva y pin del corredor                | 1.1, 2.1, 2.2, 6.1, 6.2       | `MapUiState` (P0)                                  | UI Props       |
-
----
+| Component                       | Layer             | Intent                                              | Req Coverage | Dependencies                 | Contracts      |
+|---------------------------------|-------------------|-----------------------------------------------------|--------------|------------------------------|----------------|
+| `RunSessionRepository`          | Domain (Port)     | Observar y controlar el seguimiento de la sesión    | 1.2, 5, 7, 9 | Domain Models                | State, Service |
+| `LocationClient`                | Domain (Port)     | Emitir coordenadas GPS y calidad visual             | 2, 3, 4      | Coroutines Flow              | Event          |
+| `GpsPointFilterPolicy`          | Domain (Logic)    | Filtrar precisión y detectar pérdida de señal       | 3, 4         | Domain Models                | Service        |
+| `GetActiveRunSessionUseCase`    | Domain (Use Case) | Observar la sesión y sus métricas                   | 1, 2, 7      | Repository                   | Service        |
+| `AttachActiveRunSessionUseCase` | Domain (Use Case) | Asociar sesión iniciada por `start-run`             | 1, 2         | Repository                   | Service        |
+| `PauseRunUseCase`               | Domain (Use Case) | Pausar el seguimiento                               | 5            | Repository                   | Service        |
+| `ResumeRunUseCase`              | Domain (Use Case) | Reanudar el seguimiento                             | 5            | Repository                   | Service        |
+| `FinishRunUseCase`              | Domain (Use Case) | Finalizar y emitir resumen congelado                | 9            | Repository                   | Service        |
+| `AndroidLocationClient`         | Data (Location)   | Obtener coordenadas del dispositivo                 | 2, 3, 4      | Location APIs                | Event          |
+| `RunSessionRepositoryImpl`      | Data (Repository) | Implementar el seguimiento en memoria               | 5, 7, 8, 9   | LocationClient, FilterPolicy | State, Service |
+| `LiveRouteTrackingViewModel`    | UI (ViewModel)    | Transformar dominio en estado UI y procesar eventos | UI           | Use Cases                    | State          |
+| `MapScreen`                     | UI (Screen)       | Composable principal de la pestaña Mapa             | 1, 11        | ViewModel                    | State          |
+| `RunPanel`                      | UI (Component)    | Mostrar temporizador y métricas                     | 1, 2, 11     | UiState                      | UI Props       |
+| `RunControls`                   | UI (Component)    | Mostrar controles del recorrido                     | 5, 9, 11     | UiState                      | UI Props       |
+| `GpsIndicator`                  | UI (Component)    | Mostrar calidad y pérdida de señal                  | 3, 4         | GpsQuality                   | UI Props       |
+| `FinishConfirmDialog`           | UI (Component)    | Mostrar confirmación de finalización                | 9            | UiState                      | UI Props       |
+| `GoalCelebrationOverlay`        | UI (Component)    | Mostrar celebración de meta                         | 8            | UiState                      | UI Props       |
+| `MapLayer`                      | UI (Component)    | Renderizar mapa, posición y traza                   | 1, 2, 6      | UiState                      | UI Props       |
 
 ### Domain Layer Components
 
-#implement`RunSessionRepository` (Interface)
+#### `RunSessionRepository` (Interface)
 
-| Field        | Detail                                                                                                    |
-|--------------|-----------------------------------------------------------------------------------------------------------|
-| Intent       | Puerto del dominio que expone el flujo reactivo del seguimiento y operaciones de control de ciclo de vida |
-| Requirements | 1.2, 5.1, 5.3, 7.1, 7.2, 7.3, 9.3                                                                         |
+| Field        | Detail                                                                                                                              |
+|--------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| Intent       | Puerto del dominio que expone el flujo reactivo del seguimiento, el estado de recorrido en curso y las operaciones de ciclo de vida |
+| Requirements | 1.2, 5, 7, 8, 9                                                                                                                     |
 
 **Contracts**: Service [x] / State [x]
 
 ```kotlin
 interface RunSessionRepository {
     val activeSession: StateFlow<RunSession>
+    val isRunInProgress: StateFlow<Boolean>
 
     fun attachActiveSession(session: InitializedRunSession)
+
     suspend fun pauseSession(): Result<Unit>
     suspend fun resumeSession(): Result<Unit>
     suspend fun finishSession(): Result<FrozenRunSummary>
+
     fun resetToIdle()
 }
+```
 
+El contrato utiliza `RunSession` sellada y no nula mediante `StateFlow`. Cuando no existe un recorrido en curso, el valor es `RunSession.Idle`. El indicador `isRunInProgress` permite conocer si hay un recorrido en curso sin depender de la sesión visible en pantalla.
+
+El estado `isRunInProgress` permite a otros flujos de la aplicación conocer si existe un recorrido en curso sin depender de la visibilidad de la pantalla Mapa.
+
+```kotlin
+sealed interface RunSession { 
+    data object Idle : RunSession
+    data class ActiveSession(
+        val id: String,
+        val goal: RunGoal,
+        val state: RunState,
+        val routePoints: List<RoutePoint>,
+        val metrics: RunMetrics,
+        val startMonotonicTimestamp: Long,
+        val startedAt: Instant,
+        val lastValidLocationTimestamp: Long?,
+        val accumulatedElapsedTimeMillis: Long,
+        val resumedAtMonotonicTimestamp: Long?,
+        val gpsQuality: GpsQuality,
+        val goalReached: Boolean
+    ) : RunSession
+}
+```
+**Contrato de entrada:**
+
+```kotlin
 data class InitializedRunSession(
     val id: String,
     val goal: RunGoal,
-    val startMonotonicTimestamp: Long
+    val startMonotonicTimestamp: Long,
+    val startedAt: Instant
 )
 ```
 
-- Preconditions:
-    - `attachActiveSession`: La sesión debe estar en estado `IDLE`. La meta `goal` es obligatoria
-      (3, 5 o 10 km).
-    - `pauseSession`: La sesión debe estar en estado `ACTIVE`.
-    - `resumeSession`: La sesión debe estar en estado `PAUSED`.
-    - `finishSession`: La sesión debe estar en estado `ACTIVE` o `PAUSED`.
-- Postconditions:
-    - `attachActiveSession`: Inicia la recepción de coordenadas GPS y el temporizador monotónico.
-    - `pauseSession`: Se detiene el avance del temporizador, cálculo de distancia y traza; estado
-      transiciona a `PAUSED`.
-    - `resumeSession`: Se reanuda el avance del temporizador y registro GPS; estado transiciona a
-      `ACTIVE`.
-    - `finishSession`: Se detiene de manera definitiva el tracking, se liberan recursos de GPS y se
-      emite un `FrozenRunSummary` con copia inmutable defensiva de puntos.
+`startedAt` representa la fecha y hora real de inicio del recorrido y debe conservar el valor proporcionado por `InitializedRunSession` al asociar la sesión.
+**Preconditions:**
+
+- `attachActiveSession`: no debe existir otro recorrido en curso. La meta es obligatoria y debe ser una de las metas admitidas.
+- `pauseSession`: debe existir una sesión en estado activo.
+- `resumeSession`: debe existir una sesión en estado pausado.
+- `finishSession`: debe existir una sesión activa o pausada. La posibilidad de finalizar desde `STOPPED` o `PERSONAL_PAUSED` queda pendiente de coordinación con Persona 4.
+**Postconditions:**
+
+- `attachActiveSession`:
+    - Conserva el valor de `startedAt` recibido en `InitializedRunSession`, que representa la fecha y hora real de inicio del recorrido.
+    - Inicializa las métricas.
+    - Inicia el temporizador y la recepción de ubicaciones.
+    - Establece `isRunInProgress = true`.
+- `pauseSession`:
+    - Detiene el avance del temporizador activo.
+    - Detiene la recolección de ubicaciones.
+    - Congela distancia y traza.
+    - Conserva `isRunInProgress = true`.
+- `resumeSession`:
+    - Reanuda temporizador y recepción GPS.
+    - Restablece la referencia temporal de pérdida de señal.
+    - Conserva `isRunInProgress = true`.
+- `finishSession`:
+    - Detiene definitivamente el seguimiento.
+    - Libera los recursos de GPS.
+    - Genera y emite `FrozenRunSummary` con los datos finales del recorrido.
+    - Después de generar el resumen, restablece la sesión mediante `_activeSession.value = RunSession.Idle`.
+    - Establece `isRunInProgress = false`.
+- `resetToIdle`:
+    - Detiene cualquier job activo.
+    - Descarta la sesión en memoria estableciendo `_activeSession.value = RunSession.Idle`.
+    - Permite que la UI represente el estado `IDLE`.
+    - Establece `isRunInProgress = false`.
 
 ---
 
 #### Component: `GpsPointFilterPolicy`
 
-| Field        | Detail                                                                                                            |
-|--------------|-------------------------------------------------------------------------------------------------------------------|
-| Intent       | Encapsula las reglas de descarte de puntos por imprecisión (> 30 m) y el timeout unificado de 15.000 ms sin señal |
-| Requirements | 3.3, 3.4, 4.1, 4.2, 4.3                                                                                           |
+| Field        | Detail                                                                                      |
+|--------------|---------------------------------------------------------------------------------------------|
+| Intent       | Encapsula las reglas de descarte de puntos por imprecisión y el timeout de pérdida de señal |
+| Requirements | 3, 4                                                                                        |
 
 **Contracts**: Service [x]
 
@@ -597,15 +750,20 @@ class GpsPointFilterPolicy(
         currentMonotonicTimestamp: Long
     ): Boolean {
         if (lastValidLocationMonotonicTimestamp <= 0L) return false
-        return (currentMonotonicTimestamp - lastValidLocationMonotonicTimestamp) >= signalLossTimeoutMillis
+
+        return currentMonotonicTimestamp -
+            lastValidLocationMonotonicTimestamp >= signalLossTimeoutMillis
     }
 }
 ```
 
-- Invariants:
-    - Un punto con precisión `> 30.0f` metros se evalúa como inválido y nunca actualiza
-      `lastValidLocationMonotonicTimestamp`.
-    - El umbral de timeout es unificado exactamente en `15_000L` ms.
+**Invariants:**
+
+- Una lectura con precisión mayor a 30 metros se considera inválida.
+- Un punto inválido nunca actualiza la referencia de última lectura válida.
+- El timeout de pérdida de señal es de 15.000 ms.
+- El timeout no debe contar el período en que la sesión permanece pausada.
+- La ausencia de una primera lectura válida antes de iniciar no se gestiona en este componente: `start-run` entrega la sesión cuando ya obtuvo señal.
 
 ---
 
@@ -616,7 +774,7 @@ class GpsPointFilterPolicy(
 | Field        | Detail                                                                                                                      |
 |--------------|-----------------------------------------------------------------------------------------------------------------------------|
 | Intent       | Adaptador de infraestructura que consulta el hardware de ubicación y emite flujos reactivos de coordenadas y calidad visual |
-| Requirements | 2.1, 3.1, 3.2, 4.1                                                                                                          |
+| Requirements | 2, 3, 4                                                                                                                     |
 
 **Contracts**: Event [x]
 
@@ -630,25 +788,27 @@ data class RawLocationPoint(
     val latitude: Double,
     val longitude: Double,
     val accuracyMeters: Float,
-    val speedMps: Float,
+    val speedMetersPerSecond: Float,
     val monotonicTimestampMillis: Long
 )
 ```
 
-- Implementation Notes:
-    - El flujo de `getSignalQualityUpdates()` evalúa independientemente el estado provisto por el
-      sistema (número de satélites / proveedor) y emite `FULL_SIGNAL` o `WEAK_SIGNAL`.
-    - La emisión de `NO_SIGNAL` se gestiona por la falta de lecturas válidas en el repositorio según
-      `GpsPointFilterPolicy`.
+**Implementation Notes:**
+
+- `getLocationUpdates()` emite lecturas GPS.
+- `getSignalQualityUpdates()` informa la calidad visual de señal de forma independiente de la precisión de cada punto.
+- La calidad `NO_SIGNAL` puede determinarse por la ausencia de lecturas válidas durante el timeout definido.
+- La solicitud de permisos no pertenece a este componente ni a `MapScreen`; el flujo de inicio gestiona los permisos antes de entregar la sesión.
+- La implementación concreta debe manejar las restricciones de permisos de Android sin provocar una pausa automática no definida.
 
 ---
 
 #### Component: `RunSessionRepositoryImpl`
 
-| Field        | Detail                                                                                                                   |
-|--------------|--------------------------------------------------------------------------------------------------------------------------|
-| Intent       | Implementación singleton en memoria que mantiene el seguimiento, acumula métricas y gestiona el ciclo de vida en proceso |
-| Requirements | 1.2, 5.1, 5.3, 7.1, 7.2, 7.3, 9.3                                                                                        |
+| Field        | Detail                                                                                                                     |
+|--------------|----------------------------------------------------------------------------------------------------------------------------|
+| Intent       | Implementación singleton en memoria que mantiene el seguimiento, acumula métricas y gestiona el ciclo de vida de la sesión |
+| Requirements | 1, 2, 3, 4, 5, 7, 8, 9                                                                                                     |
 
 **Contracts**: State [x] / Service [x]
 
@@ -660,8 +820,16 @@ class RunSessionRepositoryImpl @Inject constructor(
     @ApplicationScope private val externalScope: CoroutineScope
 ) : RunSessionRepository {
 
-    private val _activeSession = MutableStateFlow<RunSession>(RunSession.Idle)
-    override val activeSession: StateFlow<RunSession> = _activeSession.asStateFlow()
+    private val _activeSession =
+        MutableStateFlow<RunSession>(RunSession.Idle)
+
+    override val activeSession: StateFlow<RunSession> =
+        _activeSession.asStateFlow()
+
+    private val _isRunInProgress = MutableStateFlow(false)
+
+    override val isRunInProgress: StateFlow<Boolean> =
+        _isRunInProgress.asStateFlow()
 
     private var activeStartMonotonicTime: Long = 0L
     private var accumulatedActiveTimeMillis: Long = 0L
@@ -672,141 +840,238 @@ class RunSessionRepositoryImpl @Inject constructor(
     private var trackingJob: Job? = null
     private var signalCheckJob: Job? = null
 
-    // Other session state and implementation details...
+    // Resto del estado y detalles de implementación.
 }
 ```
 
 **State Management & In-Process Lifecycle:**
 
-- `@Singleton` y `@ApplicationScope` retienen el estado en memoria mientras el proceso de la
-  aplicación permanezca vivo. No se provee persistencia intermedia ante la muerte del proceso
-  (*process death*).
-- Al recibir una sesión mediante `attachActiveSession(session)`:
-    - `activeStartMonotonicTime = SystemClock.elapsedRealtime()`.
-    - `accumulatedActiveTimeMillis = 0L`.
-    - `lastValidLocationMonotonicTimestamp = null`, porque todavía no se recibió ningún punto GPS
-      válido.
-    - `signalTimeoutReferenceMonotonicTimestamp = activeStartMonotonicTime`, para medir los primeros
-      15.000 ms desde el inicio del seguimiento.
-    - Se inicia la recolección de ubicaciones y la comprobación periódica del timeout en
-      `externalScope`.
-- Al recibir un punto válido (`isPointAccurate == true`):
-    - Se agrega a la lista de puntos.
-    - Se suma la distancia geodésica cuando corresponde.
-    - `lastValidLocationMonotonicTimestamp = point.monotonicTimestampMillis`.
-    - `signalTimeoutReferenceMonotonicTimestamp = point.monotonicTimestampMillis`.
-    - Se actualiza `currentSpeedKmh = point.speedMps * 3.6f`.
-    - Se actualiza `averageSpeedKmh = distanceKilometers / (elapsedSeconds / 3600.0f)`, siempre que
-      `elapsedSeconds > 0`.
-    - Si la calidad estaba en `NO_SIGNAL`, se restablece al estado correspondiente a la señal
-      recuperada.
-- Al pausar (`pauseSession()`):
-    - `accumulatedActiveTimeMillis += SystemClock.elapsedRealtime() - activeStartMonotonicTime`.
-    - Se detiene el avance del temporizador.
-    - Se cancela la recolección de ubicaciones y el job de comprobación del timeout.
-    - No se acumula distancia ni se incorporan puntos durante la pausa.
-- Al reanudar (`resumeSession()`):
-    - `activeStartMonotonicTime = SystemClock.elapsedRealtime()`.
-    - `signalTimeoutReferenceMonotonicTimestamp = activeStartMonotonicTime`.
-    - Se reinician la recolección de ubicaciones y la comprobación del timeout.
-    - El período transcurrido durante la pausa no se considera para determinar la pérdida de señal
-      GPS.
-    - Si no se recibe un punto válido durante los siguientes 15.000 ms, se emite `NO_SIGNAL`.
-    - Se conserva `lastValidLocationMonotonicTimestamp` como referencia histórica del último punto
-      válido, sin utilizarlo para contabilizar el tiempo de pérdida de señal inmediatamente después
-      de reanudar.
-- Al revocarse el permiso de ubicación durante la carrera:
-    - La recolección de coordenadas se interrumpe, pero el temporizador continúa activo mientras el
-      estado sea `ACTIVE`. No se realiza una pausa automática.
-    - Al cumplirse 15.000 ms desde la última referencia válida de timeout, se emite `NO_SIGNAL`.
-- Al finalizar (`finishSession()`):
-    - Se cancelan los jobs de tracking y timeout.
-    - Se genera una instantánea `FrozenRunSummary` con una copia defensiva de los puntos de la ruta,
-      independiente de la lista interna del repositorio.
+- `@Singleton` y `@ApplicationScope` retienen el estado en memoria mientras el proceso de la aplicación permanezca vivo.
+- No se provee persistencia intermedia ante *process death*.
+- El repositorio es el propietario del estado de la sesión, del temporizador y de los jobs de seguimiento.
+- La implementación debe mantener `isRunInProgress` sincronizado con las transiciones del recorrido.
+
+**Al recibir una sesión mediante `attachActiveSession(session)`:**
+
+- Se conserva `session.startedAt` como fecha y hora real de inicio del recorrido, sin generar un nuevo valor al adjuntar la sesión.
+- Se inicializan las métricas en cero.
+- Se inicializa el acumulado de tiempo activo.
+- Se inicializa la referencia de seguimiento GPS.
+- Se establece `isRunInProgress = true`.
+- Se inicia el temporizador monotónico.
+- Se inicia la recolección de ubicaciones.
+- No se solicita permiso ni se espera la primera señal desde este método: `start-run` entrega la sesión después de obtener señal GPS.
+
+**Al recibir un punto válido:**
+
+- Se verifica la precisión con `isPointAccurate`.
+- Se incorpora el punto a la ruta.
+- Se suma la distancia geodésica cuando corresponde.
+- Se actualiza la referencia de última lectura válida.
+- Se actualiza la velocidad actual con `speedMetersPerSecond * 3.6f`.
+- Se calcula la velocidad promedio cuando el tiempo activo es mayor a cero.
+- Se actualiza `goalReached` cuando la distancia alcanza o supera la meta.
+- Si la calidad estaba en `NO_SIGNAL`, se refleja la recuperación.
+
+**Al alcanzar la meta:**
+
+- Se establece `goalReached = true`.
+- Se notifica el cambio a la UI para mostrar la celebración.
+- El estado del recorrido permanece activo.
+- No se detiene el temporizador.
+- No se detiene la recolección GPS.
+- No se genera `FrozenRunSummary`.
+- El corredor puede continuar el recorrido y finalizarlo manualmente.
+
+**Al pausar:**
+
+- Se acumula el tiempo activo transcurrido.
+- Se detiene el avance del temporizador.
+- Se cancela la recolección de ubicaciones.
+- Se detiene la comprobación del timeout mientras la sesión esté pausada.
+- No se acumula distancia ni se incorporan puntos.
+- `isRunInProgress` permanece en `true`.
+
+**Al reanudar:**
+
+- Se registra una nueva referencia monotónica de inicio activo.
+- Se restablece la referencia de timeout GPS.
+- Se reinician la recolección de ubicaciones y la comprobación de pérdida de señal.
+- El tiempo transcurrido durante la pausa no se suma al tiempo activo.
+- `isRunInProgress` permanece en `true`.
+
+**Al revocarse el permiso de ubicación durante la carrera:**
+
+- La recolección de coordenadas puede interrumpirse.
+- No se realiza una pausa automática.
+- El temporizador continúa activo mientras la sesión esté en estado activo.
+- La ausencia de lecturas válidas permite detectar la pérdida de señal según el timeout establecido.
+
+**Al finalizar:**
+
+- Se cancelan los jobs de seguimiento y timeout.
+- Se genera `FrozenRunSummary` con copia defensiva de los puntos de la ruta.
+- Se conserva `startedAt`.
+- Se conserva `goalReached`.
+- Se emite `RunSession.Idle`.
+- Se establece `isRunInProgress = false`.
+
+**Al descartar un recorrido inferior a 200 metros:**
+
+- Se detienen los jobs activos.
+- Se libera la recepción de ubicaciones.
+- Se descarta la sesión sin generar un resumen para guardar.
+- Se restablece el estado IDLE.
+- Se emite `RunSession.Idle`.
+- Se establece `isRunInProgress = false`.
+
+---
 
 ### UI Layer Components
 
-#### Component: `MapViewModel`
+#### Component: `LiveRouteTrackingViewModel`
 
-| Field        | Detail                                                                                                                              |
-|--------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| Intent       | Orquestador de la UI que transforma la sesión de dominio en `MapUiState`, procesa eventos del usuario y emite efectos de navegación |
-| Requirements | Todos los requisitos de UI                                                                                                          |
+| Field        | Detail                                                                                                                                 |
+|--------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| Intent       | Orquestador de UI que transforma la sesión de dominio en estado de pantalla, procesa eventos del usuario y emite efectos de navegación |
+| Requirements | Requisitos de UI y ciclo de vida                                                                                                       |
 
 **Contracts**: State [x]
 
 ```kotlin
 @HiltViewModel
-class MapViewModel @Inject constructor(
+class LiveRouteTrackingViewModel @Inject constructor(
     private val getActiveRunSessionUseCase: GetActiveRunSessionUseCase,
     private val pauseRunUseCase: PauseRunUseCase,
     private val resumeRunUseCase: ResumeRunUseCase,
     private val finishRunUseCase: FinishRunUseCase
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MapUiState())
-    val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
+    private val _uiState =
+        MutableStateFlow(LiveRouteTrackingUiState())
 
-    private val _uiEffect = Channel<MapUiEffect>(Channel.BUFFERED)
-    val uiEffect: Flow<MapUiEffect> = _uiEffect.receiveAsFlow()
+    val uiState: StateFlow<LiveRouteTrackingUiState> =
+        _uiState.asStateFlow()
 
-    fun onPauseClicked() {
-    }
-    fun onResumeClicked() {
-    }
-    fun onFinishRequested() {
-    }
-    fun onConfirmFinish() {
-    }
-    fun onCancelFinish() {
-    }
-    fun onCenterMapClicked() {
-    }
-    fun onStartRunClicked() {
-    }
+    private val _uiEffect =
+        Channel<LiveRouteTrackingUiEffect>(Channel.BUFFERED)
+
+    val uiEffect: Flow<LiveRouteTrackingUiEffect> =
+        _uiEffect.receiveAsFlow()
+
+    fun onPauseClicked() { ... }
+    fun onResumeClicked() { ... }
+    fun onFinishRequested() { ... }
+    fun onConfirmFinish() { ... }
+    fun onCancelFinish() { ... }
+    fun onDiscardShortRun() { ... }
+    fun onReturnFromShortRun() { ... }
+    fun onCenterMapClicked() { ... }
+    fun onStartRunClicked() { ... }
 }
 ```
 
+**Estado de UI:**
+
 ```kotlin
-data class MapUiState(
+data class LiveRouteTrackingUiState(
+    val hasActiveRun: Boolean = false,
+    val isRunInProgress: Boolean = false,
     val runState: RunState = RunState.IDLE,
+    val goal: RunGoal? = null,
     val formattedTime: String = "00:00:00",
     val formattedDistance: String = "0",
     val distanceUnit: String = "km",
     val formattedSpeed: String = "0",
     val speedUnit: String = "km/h",
-    val goal: RunGoal? = null,
-    val goalProgressFraction: Float = 0.0f,
-    val goalProgressText: String = "",
+    val formattedAverageSpeed: String = "0",
     val routePoints: List<RoutePoint> = emptyList(),
     val runnerPosition: RoutePoint? = null,
     val isMapCenteredOnRunner: Boolean = true,
-    val gpsQuality: GpsQuality = GpsQuality.FULL_SIGNAL,
+    val gpsQuality: GpsQuality = GpsQuality.NO_SIGNAL,
+    val goalReached: Boolean = false,
     val showFinishConfirmDialog: Boolean = false,
+    val showShortRunDialog: Boolean = false,
     val showGoalCelebration: Boolean = false,
-    val areControlActionsAllowed: Boolean = false,
-    val areControlsEnabled: Boolean = false
+    val areControlActionsAllowed: Boolean = false
 )
+```
 
-sealed interface MapUiEffect {
-    data class NavigateToFinalizationFlow(val summary: FrozenRunSummary) : MapUiEffect
-    data object OpenStartRunModal : MapUiEffect
+**Efectos de UI:**
+
+```kotlin
+sealed interface LiveRouteTrackingUiEffect {
+    data class NavigateToResults(
+        val summary: FrozenRunSummary
+    ) : LiveRouteTrackingUiEffect
+
+    data object OpenStartRunModal : LiveRouteTrackingUiEffect
+
+    data object ReturnToIdleMap : LiveRouteTrackingUiEffect
 }
 ```
 
-- Implementation Notes:
-    - En estado `IDLE`: `formattedTime = "00:00:00"`, `formattedDistance = "0"`,
-      `distanceUnit = "km"`, `formattedSpeed = "0"`, `speedUnit = "km/h"`. La interfaz muestra
-      exactamente `00:00:00`, `0 km` y `0 km/h`.
-    - En estado `IDLE`: Conforme al requisito original de HU-04, los botones Reanudar y Finalizar se
-      encuentran deshabilitados tanto visualmente (`areControlsEnabled = false`, aplicando el estilo
-      disabled de Material 3) como funcionalmente (`areControlActionsAllowed = false`, bloqueando
-      cualquier acción ante toques). Este comportamiento queda establecido sin quedar pendiente de
-      definición.
-    - El botón flotante (FAB "+") de inicio permanece plenamente habilitado y funcional en estado
-      `IDLE`.
-    - Durante el seguimiento (`ACTIVE`): la distancia y la velocidad se formatean utilizando la coma
-      como separador decimal mediante `MetricFormatter` (ej. `"1,2"` y `"5,4"`).
+**Implementation Notes:**
+
+- En estado `IDLE`, las métricas se muestran en cero.
+- La disponibilidad funcional de los controles se determina a partir del estado de la sesión.
+- HU-04 expone el indicador `isRunInProgress` mediante `RunSessionRepository`. Persona 2 utiliza este indicador para controlar la disponibilidad del FAB "+" e impedir que se inicie otro recorrido mientras exista uno en curso.
+- Durante `ACTIVE`, las métricas se actualizan reactivamente.
+- La distancia y la velocidad se formatean utilizando coma decimal para español rioplatense.
+- Al alcanzar la meta, `goalReached` activa la celebración, pero no finaliza la sesión.
+- La confirmación de finalización utiliza `goalReached` para determinar el mensaje correspondiente.
+- Si la distancia es inferior a 200 metros, se muestra el aviso de recorrido demasiado corto en lugar del diálogo de confirmación.
+- Al confirmar la finalización, el efecto de navegación entrega el resumen a resultados, no directamente a `save-run`.
+- La lógica de permisos no se implementa en este ViewModel ni en `MapScreen`.
+
+`MapScreen` no solicita permisos de ubicación y deja parámetros para integrarse con el botón "+" (Persona 2) y con el aviso de Persona 4. La firma es una propuesta a confirmar con las personas involucradas:
+
+```kotlin
+@Composable
+fun MapScreen(
+    onStartRunClick: () -> Unit,                       // botón "+" de start-run (Persona 2)
+    onNavigateToResults: (FrozenRunSummary) -> Unit,   // transporte del resumen: a acordar con Persona 4
+    shortRunNotice: (@Composable (onDiscard: () -> Unit, onReturn: () -> Unit) -> Unit)? = null, // aviso < 200 m: dueño a definir
+    viewModel: LiveRouteTrackingViewModel = hiltViewModel()
+)
+```
+
+#### Component: `FinishConfirmDialog`
+
+El diálogo se muestra únicamente cuando la distancia recorrida es igual o superior a 200 metros.
+
+Los mensajes son:
+
+- Si `goalReached == true`: **«¿Estás seguro de que deseás finalizar?»**
+- Si `goalReached == false`: **«Todavía no llegaste a tu meta. ¿Estás seguro de que deseás finalizar?»**
+
+Acciones:
+
+- **Cancelar:** cierra el diálogo y conserva el estado previo del recorrido.
+- **Finalizar:** ejecuta la finalización definitiva y genera el resumen.
+
+Para distancias inferiores a 200 metros se utiliza el aviso de recorrido demasiado corto, no este diálogo.
+
+#### Component: Aviso de recorrido demasiado corto
+
+Cuando el corredor solicita finalizar un recorrido inferior a 200 metros:
+
+- Se informa que el recorrido es demasiado corto.
+- Se permite descartar el recorrido.
+- Se permite volver al recorrido.
+- No se genera `FrozenRunSummary`.
+- No se inicia el flujo de resultados.
+- No se guarda el recorrido.
+
+La responsabilidad visual y el punto de integración de este aviso deben coordinarse con Persona 4. La lógica del repositorio debe permitir descartar y restablecer el estado mediante `resetToIdle()`.
+
+#### Component: `GoalCelebrationOverlay`
+
+- Se activa cuando `goalReached` cambia a `true`.
+- Muestra la celebración correspondiente a la meta alcanzada.
+- No finaliza automáticamente el recorrido.
+- Respeta la configuración de accesibilidad para reducir animaciones mediante el mecanismo `rememberReduceMotion()` definido por el módulo de UI correspondiente.
+- La sesión y el seguimiento permanecen activos mientras el corredor no pause o finalice.
 
 ---
 
@@ -817,37 +1082,42 @@ sealed interface MapUiEffect {
 ```mermaid
 classDiagram
     class RunSession {
-        <<sealedinterface>>
+    <<sealed interface>>
+    
     }
-
     class Idle {
-        <<dataobject>>
+    <<data object>>
     }
 
     class ActiveSession {
-        +String id
-        +RunState state
-        +RunGoal goal
-        +RunMetrics metrics
-        +List~RoutePoint~ routePoints
-        +GpsQuality gpsQuality
-        +Long startMonotonicTimestamp
+    +String id
+    +RunGoal goal
+    +RunState state
+    +List~RoutePoint~ routePoints
+    +RunMetrics metrics
+    +Long startMonotonicTimestamp
+    +Instant startedAt
+    +Long lastValidLocationTimestamp
+    +Long accumulatedElapsedTimeMillis
+    +Long resumedAtMonotonicTimestamp
+    +GpsQuality gpsQuality
+    +Boolean goalReached
     }
 
     class RunState {
         <<enumeration>>
-        IDLE
+        IDLE        
         ACTIVE
         PAUSED
-        FINISHED
+        STOPPED
+        PERSONAL_PAUSED
     }
 
     class RunGoal {
         <<enumeration>>
-        KM_3
-        KM_5
-        KM_10
-        +Float distanceKm
+        THREE_KILOMETERS
+        FIVE_KILOMETERS
+        TEN_KILOMETERS
     }
 
     class RunMetrics {
@@ -875,49 +1145,89 @@ classDiagram
         +String id
         +RunGoal goal
         +Long startMonotonicTimestamp
+        +Instant startedAt
     }
 
     class FrozenRunSummary {
-        +String sessionId
+        +String id
         +RunGoal goal
-        +Long totalTimeSeconds
-        +Float totalDistanceKm
-        +Float avgSpeedKmh
         +List~RoutePoint~ routePoints
-        +Long finishedMonotonicTimestamp
+        +RunMetrics metrics
+        +Instant startedAt
+        +Long startedAtMonotonicTimestamp
+        +Long finishedAtMonotonicTimestamp
+        +Boolean goalReached
     }
 
-    RunSession <|-- Idle
-    RunSession <|-- ActiveSession
+    class RunSessionRepository {
+        +StateFlow~RunSession~ activeSession
+        +StateFlow~Boolean~ isRunInProgress
+        +attachActiveSession(session)
+        +pauseSession()
+        +resumeSession()
+        +finishSession()
+        +resetToIdle()
+    }
+
+    RunSession <|.. Idle
+    RunSession <|.. ActiveSession
+
     ActiveSession --> RunState
     ActiveSession --> RunGoal
     ActiveSession --> RunMetrics
     ActiveSession --> RoutePoint
     ActiveSession --> GpsQuality
+
     InitializedRunSession --> RunGoal
+
     FrozenRunSummary --> RunGoal
+    FrozenRunSummary --> RunMetrics
     FrozenRunSummary --> RoutePoint
+
+    RunSessionRepository o-- RunSession : activeSession
+    RunSessionRepository --> FrozenRunSummary : finishSession
+    RunSessionRepository --> InitializedRunSession : attachActiveSession
+```
+**RunSession:** representa el tipo de sesión de recorrido y define dos variantes: `Idle`, que indica que no hay un recorrido en curso, y `ActiveSession`, que contiene la meta seleccionada, el estado actual, los puntos de la ruta, las métricas acumuladas, las referencias temporales, la calidad GPS y el indicador de meta alcanzada.
+
+El repositorio expone `StateFlow<RunSession>`, cuyo valor es `RunSession.Idle` cuando no hay recorrido y `RunSession.ActiveSession` cuando existe uno en curso.
+
+### Invariants & Business Rules
+
+- **Metas obligatorias:** Todo recorrido iniciado posee una meta fija obligatoria de 3, 5 o 10 km. No se permiten metas nulas en una sesión iniciada ni en `FrozenRunSummary`.
+- **Fecha y hora real:** `startedAt` representa la fecha y hora real de inicio recibida desde el flujo de inicio y se conserva durante toda la sesión.
+- **Referencias temporales monotónicas:** Los cálculos de tiempo transcurrido y evaluación de timeouts utilizan marcas monotónicas, no el reloj de pared.
+- **Métricas definidas:**
+    - `elapsedSeconds`: segundos acumulados de actividad.
+    - `distanceKilometers`: distancia acumulada entre puntos válidos consecutivos.
+    - `currentSpeedKmh`: velocidad actual calculada a partir de lecturas válidas.
+    - `averageSpeedKmh`: distancia acumulada dividida por el tiempo activo expresado en horas.
+- **Meta alcanzada:** `goalReached` pasa a `true` cuando la distancia acumulada alcanza la meta. No vuelve a `false` durante esa sesión y no implica finalización automática.
+- **Finalización mínima:** No se permite generar un resumen para guardar cuando la distancia es inferior a 200 metros.
+- **Inmutabilidad estricta:** `FrozenRunSummary` representa una instantánea de la sesión al momento de finalizar. La lista de puntos debe copiarse defensivamente para evitar modificaciones posteriores.
+- **Estado de recorrido en curso:** `isRunInProgress` es `true` desde `attachActiveSession` hasta `finishSession` o el descarte mediante `resetToIdle`.
+- **Separación de responsabilidades:** El resumen contiene información del recorrido. No contiene datos del formulario de guardado, destacados ni fotografías.
+
+### `FrozenRunSummary`
+
+El contrato del resumen debe incluir, como mínimo:
+
+```kotlin
+data class FrozenRunSummary(
+    val id: String,
+    val goal: RunGoal,
+    val routePoints: List<RoutePoint>,
+    val metrics: RunMetrics,
+    val startedAt: Instant,
+    val startedAtMonotonicTimestamp: Long,
+    val finishedAtMonotonicTimestamp: Long,
+    val goalReached: Boolean
+)
 ```
 
-#### Invariants & Business Rules
+Este resumen se entrega a resultados después de la finalización confirmada. La pantalla de resultados es responsable de continuar el flujo hacia `save-run`.
 
-- **Metas Obligatorias:** Todo recorrido iniciado posee una meta fija obligatoria (`RunGoal.KM_3`,
-  `RunGoal.KM_5` o `RunGoal.KM_10`). No se permiten valores nulos en una sesión iniciada ni en
-  `FrozenRunSummary`.
-- **Referencias Temporales Monotónicas:** Los cálculos de tiempo transcurrido y la evaluación de
-  timeouts se realizan exclusivamente con marcas monotónicas (`SystemClock.elapsedRealtime()`),
-  inmunes a ajustes de reloj del sistema.
-- **Métricas Definidas:**
-    - `elapsedSeconds`: Segundos acumulados de actividad en estado `ACTIVE`.
-    - `distanceKilometers`: Distancia acumulada entre puntos válidos consecutivos
-      (`accuracy <= 30.0f`).
-    - `currentSpeedKmh`: Velocidad instantánea (`speedMps * 3.6f`) provista por lecturas válidas. En
-      pausa es `0.0f`.
-    - `averageSpeedKmh`: `distanceKilometers / (elapsedSeconds / 3600.0f)`. Si
-      `elapsedSeconds == 0L`, es `0.0f`.
-- **Inmutabilidad Estricta de `FrozenRunSummary`:** Al generarse en `finishSession()`, la lista de
-  puntos se clona de forma defensiva (`List.copyOf(...)` / `toList()`), garantizando que ninguna
-  operación posterior en el repositorio pueda alterar la instantánea final.
+Los datos adicionales relacionados con modo demo, frenadas detectadas o regularidad del suelo deben incorporarse al contrato únicamente después de acordar su responsabilidad y disponibilidad con Persona 4.
 
 ---
 
@@ -925,18 +1235,24 @@ classDiagram
 
 ### Error Strategy
 
-Se prioriza la continuidad atlética y la degradación elegante: la falta transitoria de señal o la
-revocación de permisos no corrompen la sesión ni detienen el tiempo activo del corredor.
+Se prioriza la continuidad del recorrido y la degradación controlada ante problemas de señal GPS.
+
+La falta transitoria de señal o la revocación de permisos no deben provocar una pausa automática si el recorrido permanece en estado activo.
+
+La finalización se protege mediante la validación de distancia mínima y la confirmación explícita para recorridos que alcanzan los 200 metros.
 
 ### Error Categories and Responses
 
-| Escenario de Error                                  | Causa Raíz                           | Respuesta del Sistema                                                                                | Comportamiento en UI                                                             |
-|-----------------------------------------------------|--------------------------------------|------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| **Pérdida de señal GPS (15.000 ms)**                | Falta de cobertura satelital o túnel | Suspender distancia y traza; **el temporizador continúa corriendo** si la sesión está en `ACTIVE`    | Mostrar aviso "Sin señal GPS" en color Error                                     |
-| **Pérdida de señal inicial (15.000 ms sin puntos)** | Sin señal al arrancar la carrera     | Contar 15.000 ms desde `startMonotonicTimestamp`; el temporizador continúa activo                    | Mostrar aviso "Sin señal GPS" tras los primeros 15 s                             |
-| **Punto GPS impreciso (> 30 m)**                    | Baja precisión satelital             | Descartar punto sin actualizar traza, distancia ni marca de señal                                    | Ningún cambio visual en la traza; el usuario no percibe saltos                   |
-| **Permiso de ubicación revocado en carrera**        | Usuario revoca permiso desde Ajustes | Interrupción de lecturas GPS; **NO se pausa automáticamente**; el tiempo sigue corriendo en `ACTIVE` | Mostrar advertencia de permiso en UI; a los 15.000 ms se muestra "Sin señal GPS" |
-| **Toque accidental de Finalizar**                   | Movimiento involuntario              | Interceptar acción mediante `FinishConfirmDialog`                                                    | La sesión no se detiene; se requiere confirmación explícita                      |
+| Escenario                                      | Causa                                             | Respuesta del Sistema                                                     | Comportamiento en UI                                                                                                |
+|------------------------------------------------|---------------------------------------------------|---------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| **Pérdida de señal GPS**                       | Falta de cobertura o ausencia de lecturas válidas | No agregar puntos ni distancia. Mantener el temporizador activo en ACTIVE | Mostrar "Sin señal GPS"                                                                                             |
+| **Punto GPS impreciso**                        | Precisión superior a 30 m                         | Descartar el punto sin actualizar la referencia válida                    | No modificar traza ni distancia                                                                                     |
+| **Permiso de ubicación revocado**              | Usuario revoca permiso desde Ajustes              | Interrumpir lecturas sin pausar automáticamente                           | Mostrar el aviso: «Se perdió el permiso de ubicación. Activalo desde Ajustes para seguir registrando tu recorrido.» |
+| **Finalización accidental**                    | Toque involuntario de Finalizar                   | Solicitar confirmación si la distancia es de 200 m o más                  | Mostrar mensaje correspondiente a `goalReached`                                                                     |
+| **Recorrido inferior a 200 m**                 | El corredor intenta finalizar antes del mínimo    | No generar resumen ni permitir guardado                                   | Mostrar aviso de recorrido demasiado corto                                                                          |
+| **Cancelación de finalización**                | El corredor elige Cancelar                        | Conservar el estado anterior                                              | Cerrar diálogo sin alterar la sesión                                                                                |
+| **Descarte de recorrido corto**                | El corredor confirma el descarte                  | Detener jobs y restablecer sesión                                         | Volver a Mapa sin recorrido                                                                                         |
+| **Fallo de recepción GPS después de reanudar** | No llegan lecturas válidas luego de reanudar      | Evaluar timeout desde la nueva referencia temporal                        | Mostrar "Sin señal GPS" al cumplirse 15.000 ms                                                                      |
 
 ---
 
@@ -944,61 +1260,86 @@ revocación de permisos no corrompen la sesión ni detienen el tiempo activo del
 
 ### Unit Tests (JVM - JUnit 4)
 
-- **`GpsPointFilterPolicyTest`**:
-    - `isPointAccurate_withAccuracyLessThan30Meters_returnsTrue`: lectura con 15 m de precisión es
-      válida.
-    - `isPointAccurate_withAccuracyGreaterThan30Meters_returnsFalse`: lectura con 35 m de precisión
-      es descartada.
-    - `isSignalLost_when15000msElapsedWithoutValidPoint_returnsTrue`: exactamente a los 15.000 ms se
-      detecta pérdida de señal.
-    - `isSignalLost_whenLessThan15000msElapsed_returnsFalse`: dentro de los 15.000 ms se conserva la
-      señal.
-- **`RunSessionRepositoryImplTest`**:
-    - `attachActiveSession_initializesStateToActive_andTimerStarts`: inicio de sesión con meta
-      obligatoria.
-    - `initialSignalLoss_triggersAfter15000msFromStart_whenNoGpsReceived`: pérdida de señal inicial
-      si no hay puntos en los primeros 15 s.
-    - `pauseSession_freezesTimerAndStopsDistanceAccumulation`: verificar detención estricta en
-      pausa.
-    - `resumeSession_continuesTimerAndResumesGpsRecording`: reanudación correcta tras pausa.
-    - `finishSession_producesImmutableFrozenRunSummary_withDefensiveCopyOfPoints`: comprobar que la
-      lista de puntos de `FrozenRunSummary` no puede ser modificada indirectamente.
-    - `locationPermissionRevoked_doesNotAutoPauseSession`: verificar que la revocación de permisos
-      no cambia el estado a `PAUSED`.
-- **`MetricFormatterTest`**:
-    - Formateo con coma decimal en Locale `es-AR` (ej. `5.2` -> `"5,2"`).
+**`GpsPointFilterPolicyTest`:**
+
+- `isPointAccurate_withAccuracyLessThan30Meters_returnsTrue`: una lectura con 15 m de precisión es válida.
+- `isPointAccurate_withAccuracyGreaterThan30Meters_returnsFalse`: una lectura con 35 m se descarta.
+- `isSignalLost_when15000msElapsedWithoutValidPoint_returnsTrue`: a los 15.000 ms se detecta pérdida de señal.
+- `isSignalLost_whenLessThan15000msElapsed_returnsFalse`: antes de los 15.000 ms no se detecta pérdida.
+
+**`RunSessionRepositoryImplTest`:**
+
+- `attachActiveSession_initializesStateToActive_andTimerStarts`: inicia la sesión con meta y fecha de inicio.
+- `attachActiveSession_setsIsRunInProgressToTrue`: el indicador de recorrido en curso pasa a `true`.
+- `pauseSession_freezesTimerAndStopsDistanceAccumulation`: la pausa detiene tiempo activo y acumulación.
+- `resumeSession_continuesTimerAndResumesGpsRecording`: reanuda el seguimiento.
+- `resumeSession_resetsSignalTimeoutReference`: el tiempo de pausa no se cuenta para la pérdida de señal.
+- `finishSession_producesFrozenRunSummary`: genera el resumen congelado.
+- `finishSession_preservesStartedAt`: conserva la fecha y hora real de inicio.
+- `finishSession_preservesGoalReached`: conserva si se alcanzó la meta.
+- `finishSession_setsIsRunInProgressToFalse`: restablece el indicador al finalizar.
+- `resetToIdle_clearsSessionAndSetsIsRunInProgressToFalse`: descarta y restablece el repositorio.
+- `locationPermissionRevoked_doesNotAutoPauseSession`: no realiza pausa automática ante revocación de permisos.
+- `goalReached_keepsSessionActive`: alcanzar la meta no finaliza el recorrido.
+- `goalReached_remainsTrueAfterAdditionalDistance`: el indicador de meta alcanzada se conserva al continuar corriendo.
+
+**`MetricFormatterTest`:**
+
+- Verificar el formateo con coma decimal en Locale `es-AR`.
 
 ### Integration Tests (JUnit 4 con Coroutines Test)
 
-- **`MapViewModelTest`**:
-    - `whenSessionStarts_uiStateReflectsActiveAndCoordinates`: emisión reactiva del `StateFlow`.
-    - `whenFinishRequested_showConfirmDialogIsTrue`: apertura del diálogo de confirmación.
-    - `whenFinishCancelled_dialogClosesAndSessionStateIsPreserved`: cancelación conserva el estado
-      previo.
-    - `whenFinishConfirmed_emitsNavigateToFinalizationFlow`: emisión del efecto de navegación con
-      `FrozenRunSummary`.
-    - `whenGoalReached_triggersCelebrationOverlay`: cumplimiento de meta activa animación de
-      festejo.
+**`LiveRouteTrackingViewModelTest`:**
 
-### UI / Compose Tests (AndroidX Compose Test con JUnit 4)
+- `whenSessionStarts_uiStateReflectsActiveAndCoordinates`: el estado de UI refleja la sesión activa.
+- `whenGoalReached_emitsCelebrationWithoutFinishingSession`: la celebración no finaliza el recorrido.
+- `whenFinishRequested_withLessThan200Meters_showsShortRunWarning`: se muestra el aviso de recorrido corto.
+- `whenShortRunIsDiscarded_resetsSession`: descartar restablece la sesión.
+- `whenShortRunReturnsToRun_preservesPreviousState`: volver conserva el estado anterior.
+- `whenFinishRequested_withAtLeast200Meters_showsConfirmation`: se muestra el diálogo de confirmación.
+- `whenFinishRequested_afterGoalReached_showsReachedGoalMessage`: se muestra el mensaje para meta alcanzada.
+- `whenFinishRequested_beforeGoalReached_showsNotReachedGoalMessage`: se muestra el mensaje para meta no alcanzada.
+- `whenFinishCancelled_preservesPreviousSessionState`: cancelar conserva el estado.
+- `whenFinishConfirmed_emitsNavigateToResults`: confirma y entrega el resumen a resultados.
+- `whenRunIsAttached_exposesIsRunInProgress`: expone el indicador de recorrido en curso.
 
-- **`MapScreenTest`**:
-    - `idleState_showsZeroMetrics_andControlsDoNotTriggerActions`: `00:00:00`, `0 km`, `0 km/h` y
-      botones sin respuesta.
-    - `activeState_displaysPauseAndFinishControls`: botones de 56 dp con íconos correspondientes.
-    - `pausedState_displaysResumeButton`: alternancia correcta a "Reanudar".
-    - `finishDialog_rendersButtonsCorrectly`: diálogo con "Cancelar" y "Finalizar".
+### UI / Compose Tests
+
+**`MapScreenTest`:**
+
+- `idleState_showsZeroMetrics`: muestra métricas en cero.
+- `activeState_displaysPauseAndFinishControls`: muestra controles durante el recorrido.
+- `pausedState_displaysResumeControl`: muestra Reanudar.
+- `finishDialog_showsMessageForReachedGoal`: muestra el mensaje de meta alcanzada.
+- `finishDialog_showsMessageForUnreachedGoal`: muestra el mensaje de meta no alcanzada.
+- `shortRunWarning_showsDiscardAndReturnActions`: muestra las acciones para recorrido corto.
+- `goalCelebration_respectsReducedMotionPreference`: respeta la configuración de reducción de animaciones.
+- `mapScreen_doesNotRequestLocationPermission`: verifica que la pantalla Mapa no solicite permisos.
 
 ---
 
 ## Security & Platform Considerations
 
-- **Privacidad de Coordenadas:** Las coordenadas GPS se procesan estrictamente en memoria dentro del
-  dispositivo y se entregan a `save-run` para persistencia local en Room al finalizar. No existe
-  envío telemático ni telemetría remota.
-- **Pantalla Activa (`FLAG_KEEP_SCREEN_ON`):** Durante la permanencia en la pantalla "Mapa" con un
-  recorrido en curso, se activa la bandera de ventana para evitar el bloqueo del dispositivo durante
-  la actividad física, respetando la pauta de no prometer seguimiento prolongado en segundo plano.
-- **Área Táctil Accesible:** Todos los controles táctiles cumplen con la pauta de accesibilidad
-  mínima de 48 × 48 dp, asignando 56 × 56 dp para los controles críticos de Pausar, Reanudar y
-  Finalizar (`Sizes.runControl`).
+- **Privacidad de coordenadas:** Las coordenadas GPS se procesan en memoria dentro del dispositivo y se entregan mediante `FrozenRunSummary` al flujo de resultados. La persistencia local corresponde a `save-run`. No existe envío telemático ni telemetría remota.
+- **Permisos de ubicación:** La solicitud y gestión inicial de permisos pertenece a `start-run`. `MapScreen` no solicita permisos ni implementa el flujo de inicio.
+- **Pantalla activa (`FLAG_KEEP_SCREEN_ON`):** La bandera se mantiene mientras la pestaña Mapa está visible y corresponde mantener la pantalla activa durante el recorrido. Al cambiar de pestaña, la bandera puede liberarse. Esto no detiene el seguimiento en memoria mientras el proceso siga vivo.
+- **Seguimiento al cambiar de pestaña:** El temporizador y GPS continúan en estado activo aunque Mapa no esté visible, según el alcance de navegación interna definido en los requisitos. No se garantiza seguimiento prolongado cuando la aplicación se minimiza o el proceso termina.
+- **Área táctil accesible:** Los controles táctiles cumplen con un mínimo de 48 × 48 dp, asignando 56 × 56 dp para los controles críticos de Pausar, Reanudar y Finalizar.
+- **Reducción de movimiento:** La celebración de meta respeta la configuración de accesibilidad para reducir animaciones mediante el mecanismo compartido por el módulo de UI.
+- **Ciclo de vida:** Los recursos de GPS y las corrutinas deben cancelarse al finalizar o descartar la sesión. La pausa también detiene la recolección y evita acumular tiempo o distancia durante ese estado.
+
+---
+
+## Decisions Pending Coordination
+
+Los siguientes puntos no deben cerrarse mediante decisiones unilaterales dentro de HU-04:
+
+1. **Transiciones de estados:** los nombres `ACTIVE`, `PAUSED`, `PERSONAL_PAUSED` y `STOPPED` ya fueron aprobados. Queda pendiente coordinar con Persona 4 las transiciones de pausa personal y frenada detectada automáticamente.
+2. **Aviso de recorrido inferior a 200 metros:** confirmar con Persona 4 quién es responsable de su presentación e integración visual.
+3. **Datos adicionales del resumen:** confirmar con Personas 4 y 1 si el resumen debe incluir modo demo, frenadas detectadas o regularidad del suelo, y qué módulo provee esos datos.
+4. **Contrato de estados:** publicar primero el contrato de modelos y `RunSessionRepository` (con `RunSession` sellada), antes de avanzar con la pantalla.
+5. **R1.5:** cotejar el texto exacto del requisito antes de fijar el comportamiento visual de los controles en IDLE.
+6. **Entrega del resumen a resultados:** acordar con Persona 4 si se pasa por navegación o por un contenedor compartido, considerando el tamaño de la traza.
+7. **Arranque:** Persona 2 debe llamar a `attachActiveSession` solo después de obtener señal GPS.
+8. **Nombre del booleano de recorrido en curso:** confirmar `isRunInProgress` con Personas 1 y 2.
+9. **Librerías de mapa y de ubicación:** elegirlas y registrarlas en `libs.versions.toml`.
