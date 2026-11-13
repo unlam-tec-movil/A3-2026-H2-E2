@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="start_run_title">Iniciar nuevo recorrido</string>
+    <string name="start_run_description">Seleccioná una meta:</string>
+    <string name="start_run_goal_km">%1$d km</string>
+    <string name="start_run_hint">Elegí una meta para continuar</string>
+    <string name="start_run_cancel">Cancelar</string>
+    <string name="start_run_confirm">Comenzar</string>
+    <string name="location_issue_permission_title">Necesitamos tu ubicación</string>
+    <string name="location_issue_permission_message">Trazo usa tu ubicación para registrar el recorrido. Activá el permiso en Configuración.</string>
+    <string name="location_issue_approximate_title">Necesitamos la ubicación precisa</string>
+    <string name="location_issue_approximate_message">Elegiste compartir solo la ubicación aproximada. Para registrar tu recorrido, Trazo necesita la ubicación precisa.</string>
+    <string name="location_issue_device_off_title">Ubicación desactivada</string>
+    <string name="location_issue_device_off_message">Activá la ubicación del dispositivo para poder comenzar tu recorrido.</string>
+    <string name="location_issue_open_settings">Ir a configuración</string>
+    <string name="location_issue_close">Cerrar</string>
+</resources>
