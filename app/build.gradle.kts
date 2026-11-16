@@ -9,6 +9,19 @@ plugins {
     alias(libs.plugins.kover)
 }
 
+// Plantilla de tiles de CARTO (incluye la API key). Va en local.properties, que no se commitea.
+val localProperties =
+    Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }
+val cartoTileUrl: String =
+    localProperties
+        .getProperty("CARTO_TILE_URL", "")
+        .trim()
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+
 android {
     namespace = "com.trazo.app"
     compileSdk = 37
@@ -22,16 +35,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Clave de Google Maps leída de local.properties (no se commitea).
-        val localProperties =
-            Properties().apply {
-                rootProject
-                    .file("local.properties")
-                    .takeIf { it.exists() }
-                    ?.inputStream()
-                    ?.use { load(it) }
-            }
-        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY", "")
+        buildConfigField("String", "CARTO_TILE_URL", "\"$cartoTileUrl\"")
     }
 
     buildTypes {
@@ -51,6 +55,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -87,9 +92,9 @@ dependencies {
     // Coil
     implementation(libs.coil)
 
-    // Google Maps y ubicación
+    // Mapa (MapCompose) y ubicación
     implementation(libs.play.services.location)
-    implementation(libs.maps.compose)
+    implementation(libs.mapcompose)
 
     // Tests unitarios
     testImplementation(libs.junit)

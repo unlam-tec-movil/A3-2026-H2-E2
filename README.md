@@ -30,18 +30,23 @@ código usando ktlint y gradle. El segundo ejecuta los tests de la aplicación.
 Para configurar el proyecto en Android Studio, se debe de tener instalado el plugin
 de [ktlint](https://plugins.jetbrains.com/plugin/15057-ktlint)
 
-## Google Maps API key
+## Mapa
 
-La pestaña Mapa usa Maps Compose, que necesita una clave de Google Maps. Sin clave el mapa se ve
-gris. Cada integrante debe agregar su clave en `local.properties` (no se commitea):
+La pestaña Mapa usa [MapCompose](https://github.com/p-lr/MapCompose) con los tiles raster
+**CARTO Positron**. Los tiles se descargan por internet y quedan en una caché HTTP local.
+
+CARTO pide una API key. Al crearla en CARTO (Basemaps) te da tres datos: la API key, la
+**PNG tile URL** y la vector style URL. Copiá la **PNG tile URL** completa (ya trae la clave) en
+`local.properties`, que no se commitea, y hacé *Sync Gradle*:
 
 ```properties
-MAPS_API_KEY=tu_clave
+CARTO_TILE_URL=<PNG tile URL de CARTO, tal cual>
 ```
 
-La clave se crea en Google Cloud Console con **Maps SDK for Android** habilitado. Conviene
-restringirla al package `com.trazo.app` y al SHA-1 del certificado de debug. El SDK de Maps para
-Android no tiene costo, pero Google Cloud pide vincular una cuenta de facturación.
+El nombre tiene que ser exactamente `CARTO_TILE_URL` (de *tile*, no *title*); después de
+cambiarlo hacé *Sync Gradle* y volvé a instalar la app. La vector style URL no se usa (MapCompose dibuja tiles raster). Sin la propiedad, la app compila y
+funciona, pero los tiles muestran el aviso de CARTO de que falta la clave. CARTO es gratis para uso no comercial y exige mostrar la atribución
+«© OpenStreetMap contributors © CARTO», que la app muestra sobre el mapa.
 
 # Arquitectura Hexagonal
 

@@ -63,13 +63,7 @@ fun GoalCelebrationOverlay(
                     textAlign = TextAlign.Center,
                 )
 
-                val goalText =
-                    when (goal) {
-                        RunGoal.THREE_KILOMETERS -> stringResource(R.string.map_goal_3km)
-                        RunGoal.FIVE_KILOMETERS -> stringResource(R.string.map_goal_5km)
-                        RunGoal.TEN_KILOMETERS -> stringResource(R.string.map_goal_10km)
-                        null -> stringResource(R.string.map_goal_generic)
-                    }
+                val goalText = goalLabel(goal)
 
                 Text(
                     text = stringResource(R.string.map_celebration_reached_goal, goalText),
