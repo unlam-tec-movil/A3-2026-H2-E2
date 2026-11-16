@@ -30,6 +30,19 @@ código usando ktlint y gradle. El segundo ejecuta los tests de la aplicación.
 Para configurar el proyecto en Android Studio, se debe de tener instalado el plugin
 de [ktlint](https://plugins.jetbrains.com/plugin/15057-ktlint)
 
+## Google Maps API key
+
+La pestaña Mapa usa Maps Compose, que necesita una clave de Google Maps. Sin clave el mapa se ve
+gris. Cada integrante debe agregar su clave en `local.properties` (no se commitea):
+
+```properties
+MAPS_API_KEY=tu_clave
+```
+
+La clave se crea en Google Cloud Console con **Maps SDK for Android** habilitado. Conviene
+restringirla al package `com.trazo.app` y al SHA-1 del certificado de debug. El SDK de Maps para
+Android no tiene costo, pero Google Cloud pide vincular una cuenta de facturación.
+
 # Arquitectura Hexagonal
 
 Propone independizar la lógica de negocio del context o de detalles de implementación.

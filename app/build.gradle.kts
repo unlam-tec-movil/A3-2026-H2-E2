@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -19,6 +21,17 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Clave de Google Maps leída de local.properties (no se commitea).
+        val localProperties =
+            Properties().apply {
+                rootProject
+                    .file("local.properties")
+                    .takeIf { it.exists() }
+                    ?.inputStream()
+                    ?.use { load(it) }
+            }
+        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY", "")
     }
 
     buildTypes {

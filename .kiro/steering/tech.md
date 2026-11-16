@@ -64,6 +64,8 @@ tocan varias personas).
 ### Required Tools
 - Android Studio con plugin ktlint; JDK 17 (el daemon de Gradle pide JetBrains JDK 25).
 - SDK configurado en `local.properties` (no se commitea).
+- `MAPS_API_KEY` en `local.properties` (no se commitea): `app/build.gradle.kts` la inyecta al
+  manifest con `manifestPlaceholders`. Sin ella el mapa se ve gris.
 
 ### Common Commands
 ```bash
