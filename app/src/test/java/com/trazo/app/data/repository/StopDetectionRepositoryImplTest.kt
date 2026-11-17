@@ -1,5 +1,6 @@
 package com.trazo.app.data.repository
 
+import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.stops.MotionSample
 import com.trazo.app.domain.model.stops.QueryStatus
 import com.trazo.app.domain.model.stops.StopDetectionConfig
@@ -7,6 +8,7 @@ import com.trazo.app.domain.model.stops.StopKind
 import com.trazo.app.domain.model.stops.StopLocation
 import com.trazo.app.domain.model.stops.StopPhase
 import com.trazo.app.domain.repository.MotionSource
+import com.trazo.app.domain.repository.RunStatePublisher
 import com.trazo.app.domain.repository.RunningRunSource
 import com.trazo.app.domain.repository.StopLocationProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,6 +25,7 @@ import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -47,6 +50,23 @@ class StopDetectionRepositoryImplTest {
         override val runningRunId: Flow<String?> = id
     }
 
+    private class FakePublisher : RunStatePublisher {
+        val published = mutableListOf<Pair<String, RunState>>()
+        var failNext = 0
+
+        override suspend fun publish(
+            runId: String,
+            state: RunState,
+        ): Result<Unit> {
+            if (failNext > 0) {
+                failNext--
+                return Result.failure(IllegalStateException("origen no válido"))
+            }
+            published += runId to state
+            return Result.success(Unit)
+        }
+    }
+
     private val location = StopLocation(-34.6, -58.4, 5f)
     private val locationProvider =
         object : StopLocationProvider {
@@ -55,6 +75,7 @@ class StopDetectionRepositoryImplTest {
     private val config = StopDetectionConfig()
     private val motion = FakeMotionSource()
     private val run = FakeRunningRunSource()
+    private val publisher = FakePublisher()
     private var nextId = 0
 
     private fun TestScope.repository() =
@@ -62,6 +83,7 @@ class StopDetectionRepositoryImplTest {
             motionSource = motion,
             runningRunSource = run,
             locationProvider = locationProvider,
+            publisher = publisher,
             clock = { testScheduler.currentTime },
             scope = backgroundScope,
             config = config,
@@ -219,5 +241,82 @@ class StopDetectionRepositoryImplTest {
             val phase = repository.state.value.phase as StopPhase.Braking
             assertEquals(QueryStatus.ANSWERED, phase.query)
             assertEquals(1, repository.state.value.brakes.size)
+        }
+
+    @Test
+    fun `una frenada publica STOPPED una sola vez`() =
+        runTest {
+            repository()
+            run.id.value = "r1"
+            emitStillSamplesUntil(60_000)
+
+            advance(15_000)
+
+            assertEquals(listOf("r1" to RunState.STOPPED), publisher.published)
+        }
+
+    @Test
+    fun `clasificar como pausa personal publica PERSONAL_PAUSED`() =
+        runTest {
+            val repository = repository()
+            run.id.value = "r1"
+            emitStillSamplesUntil(60_000)
+            advance(22_000)
+
+            repository.classifyCurrentStop(StopKind.PERSONAL_PAUSE)
+            advance(1_000)
+
+            assertEquals(
+                listOf(RunState.STOPPED, RunState.PERSONAL_PAUSED),
+                publisher.published.map { it.second },
+            )
+        }
+
+    @Test
+    fun `retomar el movimiento publica ACTIVE`() =
+        runTest {
+            repository()
+            run.id.value = "r1"
+            emitStillSamplesUntil(10_000)
+            advance(10_000)
+            assertEquals(listOf(RunState.STOPPED), publisher.published.map { it.second })
+
+            // El sensor calla: sin evidencia se trata como movimiento y tras 1,5 s se retoma.
+            advance(5_000)
+
+            assertEquals(
+                listOf(RunState.STOPPED, RunState.ACTIVE),
+                publisher.published.map { it.second },
+            )
+        }
+
+    @Test
+    fun `con pausa manual no se publica nada`() =
+        runTest {
+            repository()
+            run.id.value = "r1"
+            emitStillSamplesUntil(60_000)
+            advance(10_000)
+            run.id.value = null
+            advance(100)
+            val before = publisher.published.size
+
+            advance(20_000)
+
+            assertEquals(before, publisher.published.size)
+            assertFalse(publisher.published.any { it.second == RunState.PAUSED })
+        }
+
+    @Test
+    fun `si el puerto rechaza la publicacion se reintenta en el siguiente ciclo`() =
+        runTest {
+            repository()
+            publisher.failNext = 2
+            run.id.value = "r1"
+            emitStillSamplesUntil(60_000)
+
+            advance(12_000)
+
+            assertEquals(listOf("r1" to RunState.STOPPED), publisher.published)
         }
 }

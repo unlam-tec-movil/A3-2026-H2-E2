@@ -81,7 +81,7 @@
   - _Depends: 1.2, 2.1, 2.3_
   - _Requirements: 1.4, 2.1, 2.2, 2.3, 2.4, 4.2, 4.3, 4.4_
 
-- [ ] 2.5 Publicar el estado del recorrido desde el repositorio
+- [x] 2.5 Publicar el estado del recorrido desde el repositorio
   - Al cambiar de categoría la fase publica `ACTIVE` (movimiento o quietud), `STOPPED` (frenada) o
     `PERSONAL_PAUSED` (pausa personal) a través del puerto de publicación
   - Nunca publica sobre una pausa manual; si el puerto la rechaza, el estado del recorrido manda

@@ -1,10 +1,13 @@
 package com.trazo.app.data.repository
 
+import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.stops.StopDetectionConfig
 import com.trazo.app.domain.model.stops.StopDetectionState
 import com.trazo.app.domain.model.stops.StopKind
+import com.trazo.app.domain.model.stops.StopPhase
 import com.trazo.app.domain.repository.MonotonicClock
 import com.trazo.app.domain.repository.MotionSource
+import com.trazo.app.domain.repository.RunStatePublisher
 import com.trazo.app.domain.repository.RunningRunSource
 import com.trazo.app.domain.repository.StopDetectionRepository
 import com.trazo.app.domain.repository.StopLocationProvider
@@ -33,6 +36,7 @@ class StopDetectionRepositoryImpl(
     private val motionSource: MotionSource,
     private val runningRunSource: RunningRunSource,
     private val locationProvider: StopLocationProvider,
+    private val publisher: RunStatePublisher,
     private val clock: MonotonicClock,
     scope: CoroutineScope,
     private val config: StopDetectionConfig = StopDetectionConfig(),
@@ -72,6 +76,8 @@ class StopDetectionRepositoryImpl(
             _state.value = detector.initial()
             lastRunId = runId
         }
+        // Al iniciar o reanudar el recorrido HU-04 está en ACTIVE: es lo último publicado.
+        var lastPublished: RunState? = RunState.ACTIVE
         val estimator = StillnessEstimator(config)
         val reading = AtomicReference<Reading?>(null)
 
@@ -85,6 +91,12 @@ class StopDetectionRepositoryImpl(
                 while (isActive) {
                     delay(config.tickIntervalMillis)
                     observe(reading.get())
+                    // Si el puerto rechaza, no se registra como publicado y se reintenta en el
+                    // siguiente tick mientras la fase siga requiriendo ese estado.
+                    val desired = _state.value.phase.toRunState()
+                    if (desired != lastPublished && publisher.publish(runId, desired).isSuccess) {
+                        lastPublished = desired
+                    }
                 }
             }
         }
@@ -97,4 +109,11 @@ class StopDetectionRepositoryImpl(
         val observation = Observation(now, isStill, locationProvider.lastKnown())
         _state.update { detector.advance(it, observation) }
     }
+
+    private fun StopPhase.toRunState(): RunState =
+        when (this) {
+            StopPhase.Moving, is StopPhase.Still -> RunState.ACTIVE
+            is StopPhase.Braking -> RunState.STOPPED
+            is StopPhase.PersonalPause -> RunState.PERSONAL_PAUSED
+        }
 }
