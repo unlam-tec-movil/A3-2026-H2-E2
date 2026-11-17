@@ -90,7 +90,7 @@
   - _Depends: 2.4_
   - _Requirements: 2.1, 4.3_
 
-- [ ] 2.6 (P) Exponer el acelerómetro como flujo de muestras
+- [x] 2.6 (P) Exponer el acelerómetro como flujo de muestras
   - Flujo frío que registra el sensor al colectar y lo da de baja al cancelar, con la magnitud de la
     aceleración y sin permisos
   - Sin acelerómetro el flujo no emite y solo deja un aviso en el log; el recorrido no se afecta
@@ -108,7 +108,7 @@
   - _Boundary: res (strings, drawable)_
   - _Requirements: 3.1, 3.4, 4.1_
 
-- [ ] 3.2 (P) Alerta animada de frenada
+- [x] 3.2 (P) Alerta animada de frenada
   - Superficie inversa con círculo e ícono, título y detalle; se anuncia a accesibilidad y comunica
     con texto e ícono, no solo color
   - Entra con deslizamiento y desvanecimiento; con «Quitar animaciones» aparece sin transición
@@ -117,7 +117,7 @@
   - _Boundary: BrakeAlert_
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 3.3 (P) Diálogo de consulta de la detención
+- [x] 3.3 (P) Diálogo de consulta de la detención
   - Pregunta con los botones «Frenada» y «Pausa personal», de al menos 48 dp de alto, que se
     reordenan al crecer la fuente
   - No se cierra por toque exterior ni por atrás; solo al elegir o cuando la detención termina
