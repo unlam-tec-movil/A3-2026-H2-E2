@@ -34,6 +34,7 @@ funciona con la pantalla encendida y la app visible.
   ubicación).
 - Persistencia de las frenadas (HU-04 / `save-run`). No existe servicio en segundo plano: la
   detección con pantalla apagada queda fuera de alcance.
+- Modo demo (`isDemoMode`): `stop-detection` no lo usa.
 
 ## Boundary Commitments
 
@@ -65,14 +66,16 @@ funciona con la pantalla encendida y la app visible.
 - `domain` no importa nada de Android, de `data` ni de `ui`. `data` implementa los puertos de
   `domain`. `ui/screens` depende de `domain` (nunca de `data`), `ui/components` solo de `ui/theme`
   (steering `design-system.md`).
-- **Dependencia dura con HU-04 (P0)**: los adaptadores `RunSessionRunningRunSource`,
-  `RunSessionStopLocationProvider` y `RunSessionStatePublisher`, el módulo Hilt y el montaje en
-  `MapScreen` requieren el contrato acordado de HU-04: `RunSession` sellada (`Idle` /
-  `ActiveSession`, nunca nula), `RunSessionRepository.activeSession: StateFlow<RunSession>`,
-  `RunState` (`IDLE`, `ACTIVE`, `PAUSED`, `FINISHED` + los estados nuevos de abajo), `routePoints` y
-  `@ApplicationScope`. El dominio, el sensor, el repositorio y la UI con previews no dependen de
-  HU-04.
-- **Estados del recorrido (acordados con Persona 3, definitivos)**:
+- **Dependencia con HU-04 (P0; ya integrada en `develop` y verificada contra el código real)**: los
+  adaptadores `RunSessionRunningRunSource`, `RunSessionStopLocationProvider` y
+  `RunSessionStatePublisher`, el módulo Hilt y el montaje en `MapScreen` usan lo que existe en
+  `RunSessionRepository` / `RunSessionRepositoryImpl`: `RunSession` sellada (`Idle` /
+  `ActiveSession`, nunca nula), `activeSession: StateFlow<RunSession>`,
+  `isRunInProgress: StateFlow<Boolean>`, `RunState` (`IDLE`, `ACTIVE`, `PAUSED`, `STOPPED`,
+  `PERSONAL_PAUSED`), `routePoints` y `@ApplicationScope`. **`RunState` no tiene `FINISHED`**:
+  `finishSession()` deja la sesión en `RunSession.Idle` y `isRunInProgress` en `false`. El dominio,
+  el sensor, el repositorio y la UI con previews no dependen de HU-04.
+- **Estados del recorrido (verificados en `RunState.kt`)**:
 
   | `RunState`        | Significado                                                   |
   |-------------------|---------------------------------------------------------------|
@@ -81,17 +84,22 @@ funciona con la pantalla encendida y la app visible.
   | `PERSONAL_PAUSED` | Pausa personal (elegida en la consulta de 20 s)               |
   | `PAUSED`          | Pausa manual del corredor; se mantiene (esta spec no la toca) |
 
-- **Transiciones de `RunSessionRepository` (contrato acordado con Persona 3; supuesto a confirmar)**:
+- **Transiciones de `RunSessionRepository` (verificadas en `RunSessionRepositoryImpl`)**. Todas son
+  `suspend`, devuelven `Result<Unit>` (`FrozenRunSummary` en `finishSession`) y fallan con
+  `Result.failure(IllegalStateException)` si el origen no es el permitido:
 
-  | Función             | Origen permitido                  | Destino           |
-  |---------------------|-----------------------------------|-------------------|
-  | `markStopped()`     | `ACTIVE`                          | `STOPPED`         |
-  | `pausePersonally()` | `ACTIVE` o `STOPPED`              | `PERSONAL_PAUSED` |
-  | `markMoving()`      | `STOPPED` o `PERSONAL_PAUSED`     | `ACTIVE`          |
+  | Función             | Origen permitido en el código | Destino           | Origen que necesita este diseño       | ¿Coincide? |
+  |---------------------|-------------------------------|-------------------|---------------------------------------|------------|
+  | `markStopped()`     | `ACTIVE`                      | `STOPPED`         | `ACTIVE`                              | Sí         |
+  | `pausePersonally()` | `ACTIVE`                      | `PERSONAL_PAUSED` | `STOPPED` (se elige en la consulta de 20 s) | **No (D1)** |
+  | `markMoving()`      | `STOPPED`                     | `ACTIVE`          | `STOPPED` y `PERSONAL_PAUSED`         | **Parcial (D2)** |
+  | `resumeSession()`   | `PAUSED` o `PERSONAL_PAUSED`  | `ACTIVE`          | `PERSONAL_PAUSED` (única vía en el código) | —     |
+  | `finishSession()`   | cualquier sesión activa       | `Idle`            | los cuatro estados                    | Sí         |
 
-  Cualquier otro origen devuelve `Result.failure`. `isRunInProgress` queda en `true` en los tres
-  estados. Este diseño solo llama `pausePersonally()` desde `STOPPED`. La pausa manual sigue por
-  `pauseSession()` / `resumeSession()` y no es parte de esta spec.
+  `isRunInProgress` queda en `true` en `ACTIVE`, `STOPPED`, `PERSONAL_PAUSED` y `PAUSED`, y pasa a
+  `false` solo con `finishSession()` o `resetToIdle()`. La pausa manual sigue por `pauseSession()` /
+  `resumeSession()` (solo desde `ACTIVE`) y no es parte de esta spec. Las discrepancias D1–D4 con el
+  diseño se detallan en «Discrepancias con el código real» (sección Riesgos).
 - Android framework: `SensorManager`, `Settings.Global`. Sin dependencias nuevas de producción; en
   pruebas, `kotlinx-coroutines-test`, que **ya agregó Persona 3** al catálogo (`gradle/libs.versions.toml`):
   esta spec solo lo usa.
@@ -104,8 +112,8 @@ funciona con la pantalla encendida y la app visible.
 - Que HU-04 cambie `RunSession.id`, la semántica de `ACTIVE` / `STOPPED` / `PERSONAL_PAUSED` /
   `PAUSED`, la forma sellada de `RunSession` o el origen de `routePoints`.
 - Que cambien los nombres, los orígenes permitidos o el `Result` de `markStopped()`,
-  `pausePersonally()` y `markMoving()`, o que no se confirmen los supuestos pendientes con el líder
-  (ver Riesgos).
+  `pausePersonally()`, `markMoving()` y `resumeSession()`, o que se resuelvan de otra forma las
+  discrepancias D1–D3 (ver Riesgos).
 - Que cambie la firma de `rememberReduceMotion()` (la usan tres consumidores).
 - Que `save-run` lea las frenadas en un momento distinto a «antes de iniciar el siguiente
   recorrido».
@@ -296,11 +304,13 @@ con `query: NotDue | Pending | Answered`; `Still` y `PersonalPause` llevan `sinc
   Al retomar el movimiento (movimiento sostenido) se vuelve a `ACTIVE`. La detección solo está
   activa con el recorrido en `ACTIVE`, `STOPPED` o `PERSONAL_PAUSED`: los dos últimos los produce
   esta misma spec y hay que seguir leyendo el sensor para saber cuándo el corredor retoma.
-- **Pausa manual (`PAUSED`) y fin**: si el corredor pausa a mano, o el recorrido pasa a `FINISHED` o
-  `Idle`, el recorrido deja de estar en los estados de detección: la fase vuelve a `Moving`, la
+- **Pausa manual (`PAUSED`) y fin**: si el corredor pausa a mano, o el recorrido termina (la sesión
+  pasa a `Idle`; no existe `RunState.FINISHED`), el recorrido deja de estar en los estados de
+  detección: la fase vuelve a `Moving`, la
   consulta pendiente se cierra, se deja de leer el sensor y **la lista de frenadas se conserva**. La
   pausa manual se mantiene: esta spec **nunca** publica `ACTIVE` sobre `PAUSED` (la publicación es
-  condicional al estado actual; ver supuesto a confirmar en Riesgos). La lista se vacía solo cuando
+  condicional al estado actual; ver «Discrepancias con el código real»). Finalizar es posible desde
+  los cuatro estados (confirmado y verificado: `finishSession()` solo exige una sesión activa). La lista se vacía solo cuando
   arranca un recorrido con distinto id (no al reanudar el mismo).
 
 ## Requirements Traceability
@@ -468,7 +478,7 @@ interface StopDetectionRepository {
 
 - Contrato para `save-run`: `state.value.brakes` contiene las frenadas válidas (sin pausas
   personales) del último recorrido y es estable desde que el recorrido deja de estar en los estados
-  de detección (`PAUSED`, `FINISHED`, `Idle`) hasta que arranca otro recorrido con distinto id.
+  de detección (`PAUSED`, `Idle`) hasta que arranca otro recorrido con distinto id.
 
 #### Puertos
 
@@ -483,7 +493,7 @@ interface StopLocationProvider {
     fun lastKnown(): StopLocation?
 }  // null si no hay fix
 interface RunStatePublisher {
-    fun publish(runId: String, state: RunState): Result<Unit>
+    suspend fun publish(runId: String, state: RunState): Result<Unit>
 }  // solo ACTIVE, STOPPED, PERSONAL_PAUSED; Result.failure si el recorrido cambió o el origen no es válido
 fun interface MonotonicClock {
     fun nowMillis(): Long
@@ -491,9 +501,10 @@ fun interface MonotonicClock {
 ```
 
 `RunStatePublisher` es el puerto de salida con el que el dominio informa el estado agregado por
-esta spec. Su adaptador traduce `ACTIVE` → `markMoving()`, `STOPPED` → `markStopped()` y
-`PERSONAL_PAUSED` → `pausePersonally()` de `RunSessionRepository` (contrato acordado con Persona 3,
-supuesto a confirmar; ver Riesgos).
+esta spec. Es `suspend` porque las funciones de `RunSessionRepository` que usa su adaptador
+(`markStopped()`, `pausePersonally()`, `markMoving()`, `resumeSession()`) lo son; el repositorio de
+detección lo invoca desde su corrutina. Ver «Adaptadores de HU-04» para la traducción de estados y
+«Discrepancias con el código real» para los puntos que hoy no coinciden.
 
 Los puertos viven en `domain/repository/` (misma convención que `LocationClient` en HU-04). Todos
 son P0: sin ellos el repositorio no puede operar.
@@ -536,8 +547,8 @@ son P0: sin ellos el repositorio no puede operar.
 **Implementation Notes**
 
 - Integración: el módulo `StopDetectionModule` provee
-  `MonotonicClock { SystemClock.elapsedRealtime() }`, el `CoroutineScope` y los `@Binds`. Se escribe
-  cuando HU-04 esté integrada.
+  `MonotonicClock { SystemClock.elapsedRealtime() }`, el `CoroutineScope` (`@ApplicationScope`, ya
+  existente en `di/`) y los `@Binds`. HU-04 ya está en `develop`; se escribe en la tarea 4.3.
 - Validación: pruebas con `runTest` y reloj falso atado a `testScheduler.currentTime`.
 - Riesgos: ver «Riesgos y preguntas abiertas».
 
@@ -562,15 +573,28 @@ son P0: sin ellos el repositorio no puede operar.
 - `RunSessionRunningRunSource` (con `RunSession` sellada y nunca nula):
   `activeSession.map { s -> (s as? ActiveSession)?.takeIf { it.state in DETECTION_STATES }?.id }.distinctUntilChanged()`
   con `DETECTION_STATES = setOf(RunState.ACTIVE, RunState.STOPPED, RunState.PERSONAL_PAUSED)`.
-  `Idle`, `PAUSED` (pausa manual) y `FINISHED` no cuentan como «en curso». Se incluyen `STOPPED` y
+  `Idle` (incluye el recorrido ya finalizado) y `PAUSED` (pausa manual) no cuentan como «en curso».
+  Se incluyen `STOPPED` y
   `PERSONAL_PAUSED` y no solo `ACTIVE` porque los publica esta misma spec: si el id pasara a `null`
   al detectar la frenada, se cortaría el sensor y nunca se detectaría el movimiento.
 - `RunSessionStopLocationProvider`: `(activeSession.value as? ActiveSession)?.routePoints?.lastOrNull()`
   convertido a `StopLocation`; `null` si es `Idle` o no hay puntos.
-- `RunSessionStatePublisher`: implementa `RunStatePublisher` sobre `markStopped()`,
-  `pausePersonally()` y `markMoving()` de `RunSessionRepository` (contrato acordado con Persona 3;
-  **supuesto a confirmar**). Es condicional: solo aplica si la sesión es `ActiveSession` con ese
-  `runId`; los orígenes no permitidos devuelven `Result.failure`, que el repositorio ignora.
+- `RunSessionStatePublisher`: implementa `RunStatePublisher` llamando a las funciones `suspend` de
+  `RunSessionRepository` y devolviendo su `Result<Unit>` tal cual. Es condicional: lee
+  `activeSession.value` y solo aplica si es `ActiveSession` con ese `runId`; si no, devuelve
+  `Result.failure` sin llamar al repositorio. Traducción según el código real:
+
+  | `publish(runId, …)` | Estado actual de la sesión | Llamada                                   |
+  |---------------------|----------------------------|-------------------------------------------|
+  | `STOPPED`           | `ACTIVE`                   | `markStopped()`                           |
+  | `PERSONAL_PAUSED`   | `STOPPED`                  | `pausePersonally()` — **falla hoy (D1)**  |
+  | `ACTIVE`            | `STOPPED`                  | `markMoving()`                            |
+  | `ACTIVE`            | `PERSONAL_PAUSED`          | `resumeSession()` (**D2**: `markMoving()` falla desde ese origen) |
+  | cualquier otro      | —                          | `Result.failure` sin llamar               |
+
+  Nunca llama `resumeSession()` si el estado actual es `PAUSED`: esa función también acepta
+  `PAUSED` y reanudaría una pausa manual. Los `Result.failure` los ignora el repositorio de
+  detección, que reintenta en el siguiente tick.
 
 ### UI
 
@@ -662,9 +686,10 @@ alerta para que las otras dos puedan depender de ella.
   idempotente.
 - **Recorrido que termina o se pausa a mano con consulta o alerta visibles**: la fase vuelve a
   `Moving`, ambos elementos desaparecen por derivación del estado.
-- **Publicación de estado rechazada** (`Result.failure`: el recorrido cambió, está en
-  `PAUSED`/`FINISHED` u origen no permitido): el detector la ignora y reevalúa en el siguiente ciclo;
-  el estado del recorrido manda sobre el de esta spec.
+- **Publicación de estado rechazada** (`Result.failure`: el recorrido cambió, está en `PAUSED`,
+  ya terminó (`Idle`) u origen no permitido): el detector la ignora y reevalúa en el siguiente
+  ciclo; el estado del recorrido manda sobre el de esta spec. Una falla permanente (D1) se
+  reintentaría en cada tick de 500 ms sin avanzar: por eso 4.2 queda bloqueada hasta resolver D1.
 - Errores del sensor/log: solo logging; no hay mensajes al usuario porque los requisitos no los
   definen.
 
@@ -701,8 +726,11 @@ alerta para que las otras dos puedan depender de ella.
   4.7). Con `suppressed = true`: la alerta y la consulta no se muestran; una frenada ocurrida
   durante la supresión queda registrada y no genera alerta al volver a `false`; una consulta
   pendiente se resuelve como `BRAKE` (HU-06 7.1–7.3).
-- `RunSessionRunningRunSourceTest`: `Idle`, `PAUSED` y `FINISHED` → `null`; `ACTIVE`, `STOPPED` y
+- `RunSessionRunningRunSourceTest`: `Idle` y `PAUSED` → `null`; `ACTIVE`, `STOPPED` y
   `PERSONAL_PAUSED` → el id de la sesión.
+- `RunSessionStatePublisherTest` (repositorio falso con los mismos orígenes permitidos que
+  `RunSessionRepositoryImpl`): cada fila de la tabla de traducción; no llama `resumeSession()` sobre
+  `PAUSED`; propaga `Result.failure`.
 
 ### UI Tests (Compose, `androidTest`)
 
@@ -737,20 +765,55 @@ alerta para que las otras dos puedan depender de ella.
   Mitigación (ya parte del diseño): `sampleStaleMillis` en `StopDetectionConfig`; sin muestras
   recientes el repositorio observa «en movimiento» (ver `StopDetectionRepositoryImpl`). Pedir
   detección con pantalla apagada reabriría el tema (Revalidation Triggers).
-- **Transiciones de `RunSessionRepository` (contrato acordado con Persona 3; supuesto a
-  confirmar)**: `markStopped()` (`ACTIVE` → `STOPPED`), `pausePersonally()` (`ACTIVE` o `STOPPED` →
-  `PERSONAL_PAUSED`; este diseño solo la llama desde `STOPPED`) y `markMoving()` (`STOPPED` o
-  `PERSONAL_PAUSED` → `ACTIVE`). Cualquier otro origen devuelve `Result.failure`; el detector la
-  ignora y reevalúa en el siguiente ciclo. `isRunInProgress` queda `true` en los tres estados. La
-  pausa manual sigue por `pauseSession()` / `resumeSession()` y no es parte de esta spec. Mientras no
-  se confirme, `RunSessionStatePublisher` depende de estos nombres.
-- **Supuestos pendientes con el líder** (bloquean solo las tareas de integración; dominio, sensor y
-  UI no dependen de la respuesta):
-  - En `STOPPED` el temporizador y el GPS siguen corriendo.
-  - En `PERSONAL_PAUSED` el temporizador y el GPS se detienen, igual que en la pausa manual.
+- **Contrato de `RunSessionRepository` (confirmado)**: los nombres `markStopped()`,
+  `pausePersonally()` y `markMoving()` (todas `suspend`, `Result<Unit>`), `activeSession` e
+  `isRunInProgress` existen tal como se esperaba. Los orígenes permitidos no coinciden del todo con
+  el diseño: ver D1 y D2.
+- **Decisiones confirmadas por Rocío** (ya no son supuestos):
+  - En `STOPPED` el temporizador sigue corriendo; en `PERSONAL_PAUSED` se detiene (igual que en la
+    pausa manual).
   - Se puede finalizar el recorrido desde los cuatro estados (`ACTIVE`, `STOPPED`,
-    `PERSONAL_PAUSED`, `PAUSED`).
-  - Qué controles de pantalla se muestran en cada estado.
+    `PERSONAL_PAUSED`, `PAUSED`). Verificado en el código.
+  - Los controles de pantalla por estado van acordes a los escenarios de los requisitos
+    (confirmado por Rocío; no verificado en código: `LiveRouteTrackingViewModel` solo expone
+    `runState` y `areControlActionsAllowed = true` en cualquier sesión activa, los controles por
+    estado los resuelve la UI).
+- **Modo demo**: `FrozenRunSummary` ya trae `isDemoMode` con valor por defecto `false` y
+  `RunSessionRepositoryImpl` lo copia de la sesión; `stop-detection` no lo usa ni lo condiciona.
+
+### Discrepancias con el código real
+
+Detectadas al contrastar este diseño con `RunSessionRepositoryImpl` (`develop`). No se modificó ni
+el código ni los requisitos; hace falta una decisión con Rocío / Persona 3.
+
+- **D1 — `pausePersonally()` solo acepta `ACTIVE`** (`check(session.state == RunState.ACTIVE)`).
+  El diseño la llama desde `STOPPED` (el corredor elige «Pausa personal» cuando la fase `Braking`
+  ya publicó `STOPPED`), así que hoy devolvería siempre `Result.failure` y el detector reintentaría
+  en cada tick. Opciones: (a) Persona 3 amplía el origen a `ACTIVE` o `STOPPED` (lo que asumía este
+  diseño; recomendada); (b) el adaptador encadena `markMoving()` + `pausePersonally()`, no atómico
+  (pasa por `ACTIVE` y reinicia GPS y temporizador un instante).
+- **D2 — `markMoving()` solo acepta `STOPPED`**. Desde `PERSONAL_PAUSED` el diseño pedía volver a
+  `ACTIVE` con `markMoving()`; en el código esa transición la hace `resumeSession()` (acepta
+  `PAUSED` o `PERSONAL_PAUSED`). El adaptador usa `resumeSession()` para ese origen, comprobando
+  antes el estado, porque `resumeSession()` también reanudaría una pausa manual. Quedaría una
+  ventana de carrera teórica (el corredor reanuda y pausa a mano justo entre la lectura y la
+  llamada); si no se acepta, Persona 3 puede ampliar `markMoving()` a `PERSONAL_PAUSED`.
+- **D3 — En `STOPPED` el temporizador y el GPS se detienen**, contra la decisión confirmada de que
+  el temporizador sigue. `markStopped()` llama `stopJobs()` (cancela ubicación, señal y temporizador),
+  congela `accumulatedElapsedTimeMillis` y pone `resumedAtMonotonicTimestamp = null`; `markMoving()`
+  los reinicia con `resumedAt = now`, de modo que el tiempo en `STOPPED` **no se cuenta** (hoy
+  `STOPPED` se comporta como una pausa). El comportamiento de `PERSONAL_PAUSED` sí coincide (se
+  detiene). Además, el diseño daba por hecho que el GPS seguía en `STOPPED` (la confirmación de
+  Rocío solo menciona el temporizador; el GPS queda por aclarar). Requiere que Persona 3 cambie
+  `markStopped()` / `markMoving()` o que se revise la decisión.
+- **D4 — No existe `RunState.FINISHED`** (corrección de documentación, sin impacto en código): el
+  fin del recorrido es `RunSession.Idle` con `isRunInProgress = false`. Se corrigieron las
+  referencias a `FINISHED` en este documento y en `tasks.md`.
+
+Coinciden con el diseño: `markStopped()` solo desde `ACTIVE`; `pausePersonally()` y la pausa manual
+detienen el temporizador; `finishSession()` funciona desde los cuatro estados; `isRunInProgress`
+permanece `true` en los cuatro estados; `RunSession` es sellada (`Idle` / `ActiveSession`); existe
+`@ApplicationScope`; las funciones rethrow `CancellationException` y devuelven `Result`.
 - **Simplificación conocida (aceptada)**: la pausa personal se descuenta desde que el corredor la
   elige en la consulta, no desde que empezó la quietud. Por eso el tiempo descontado difiere del real
   en ~20–30 s (la consulta aparece a los 20 s y el corredor tarda un poco en responder).

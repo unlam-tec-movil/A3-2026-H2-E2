@@ -1,8 +1,9 @@
 # Implementation Plan
 
-> **Orden de trabajo:** dominio, sensor y UI no dependen de HU-04 (tareas 1 a 3). Las tareas de
-> integración (4.x) requieren el contrato de HU-04 de Persona 3; la 4.3 además espera la respuesta a
-> los supuestos pendientes con el líder de `design.md` («Riesgos y preguntas abiertas»).
+> **Orden de trabajo:** dominio, sensor y UI no dependen de HU-04 (tareas 1 a 3). HU-04 ya está en
+> `develop` y el contrato se verificó contra el código. La 4.1 está desbloqueada; la 4.2 (y por
+> dependencia la 4.3 y la 4.4) sigue bloqueada por las discrepancias D1–D3 de `design.md`
+> («Discrepancias con el código real»), que requieren una decisión con Rocío / Persona 3.
 
 - [ ] 1. Fundaciones: utilidad compartida, pruebas con tiempo virtual y contratos del dominio
 
@@ -27,7 +28,8 @@
   - Configuración calibrable con los umbrales y tiempos (8 s, 20 s, confirmación de 1,5 s, tick de
     500 ms, ventana de 1 s, caducidad de muestras de 2 s)
   - Puertos: fuente de movimiento, recorrido en curso, ubicación, publicación de estado del recorrido
-    y reloj monotónico; contrato de salida con el estado y la clasificación de la detención actual
+    (función `suspend` con `Result`) y reloj monotónico; contrato de salida con el estado y la
+    clasificación de la detención actual
   - El dominio compila sin importar Android, `data` ni `ui`; `movement` y la consulta pendiente se
     derivan de la fase en un test unitario
   - _Boundary: Domain (model/stops, repository)_
@@ -144,39 +146,48 @@
   - _Depends: 3.2, 3.3, 3.4_
   - _Requirements: 3.1, 4.1_
 
-- [ ] 4. Integración con HU-04 y Mapa (bloqueada hasta el contrato de Persona 3)
+- [ ] 4. Integración con HU-04 y Mapa (4.1 desbloqueada; 4.2 a 4.4 bloqueadas por D1–D3)
 
 - [ ] 4.1 Adaptar el recorrido y la ubicación de HU-04
   - El «recorrido en curso» entrega el id mientras la sesión está activa, detenida o en pausa
-    personal, y `null` en reposo, pausa manual o finalizada
+    personal, y `null` en reposo, pausa manual o finalizada (la sesión finalizada es `Idle`; no
+    existe `RunState.FINISHED`)
   - La ubicación de la frenada es el último punto de la traza de la sesión activa, o `null`
-  - Tests: reposo, `PAUSED` y `FINISHED` → `null`; `ACTIVE`, `STOPPED` y `PERSONAL_PAUSED` → id
+  - Tests: `Idle` y `PAUSED` → `null`; `ACTIVE`, `STOPPED` y `PERSONAL_PAUSED` → id
+  - Ya no depende de nada pendiente: usa `activeSession`, `RunSession.ActiveSession.routePoints` y
+    `RunState`, verificados en el código
   - _Depends: 2.4_
   - _Requirements: 1.4, 2.2_
 
 - [ ] 4.2 Implementar la publicación de estado sobre `RunSessionRepository`
-  - Usa las transiciones acordadas con Persona 3: `markStopped()` (`ACTIVE` → `STOPPED`),
-    `pausePersonally()` (`ACTIVE` o `STOPPED` → `PERSONAL_PAUSED`, solo se llama desde `STOPPED`) y
-    `markMoving()` (`STOPPED` o `PERSONAL_PAUSED` → `ACTIVE`); cualquier otro origen devuelve
-    `Result.failure`
-  - **Dependiente de los supuestos pendientes con el líder** (temporizador y GPS en `STOPPED` y en
-    `PERSONAL_PAUSED`, finalizar desde los cuatro estados, controles por estado); si cambian, se
-    revisa esta tarea
-  - Si una transición devuelve `Result.failure`, el repositorio la ignora y reevalúa en el siguiente
-    ciclo; la sesión es la del id y la pausa manual (`PAUSED`) nunca se pisa
-  - Un test con el repositorio real o falso verifica que no pisa `PAUSED` y que `Result.failure` se
-    ignora y se reintenta en el siguiente ciclo
+  - **BLOQUEADA por D1 y D2 (y D3 para el comportamiento confirmado del temporizador)**; ver
+    «Discrepancias con el código real» en `design.md`. Se desbloquea cuando Rocío / Persona 3
+    resuelvan cómo cerrar la brecha entre el diseño y `RunSessionRepositoryImpl`
+  - El adaptador llama a las funciones `suspend` del repositorio y devuelve su `Result<Unit>`:
+    `STOPPED` → `markStopped()` (solo desde `ACTIVE`); `ACTIVE` desde `STOPPED` → `markMoving()`;
+    `ACTIVE` desde `PERSONAL_PAUSED` → `resumeSession()` (D2); `PERSONAL_PAUSED` desde `STOPPED` →
+    `pausePersonally()`, que hoy solo acepta `ACTIVE` (D1)
+  - Antes de llamar lee `activeSession.value`: solo actúa si es `ActiveSession` con ese id y nunca
+    llama `resumeSession()` sobre `PAUSED`
+  - Si una llamada devuelve `Result.failure`, el repositorio la ignora y reevalúa en el siguiente
+    ciclo; la pausa manual (`PAUSED`) nunca se pisa
+  - Tests con un repositorio falso que replica los orígenes permitidos del real: cada traducción;
+    no pisa `PAUSED`; `Result.failure` se ignora y se reintenta en el siguiente ciclo
+  - Verificación manual cuando D3 se resuelva: en `STOPPED` el temporizador sigue y en
+    `PERSONAL_PAUSED` se detiene
   - _Depends: 2.5, 4.1_
   - _Requirements: 2.1, 4.3_
 
 - [ ] 4.3 Cablear la inyección del repositorio de detección
-  - Módulo con el reloj monotónico, el alcance de aplicación de HU-04 y los enlaces de repositorio,
-    sensor y adaptadores
+  - Bloqueada solo por dependencia con la 4.2 (D1–D3)
+  - Módulo con el reloj monotónico, el alcance de aplicación de HU-04 (`@ApplicationScope`) y los
+    enlaces de repositorio, sensor y adaptadores
   - La app compila y el repositorio se inyecta como único en toda la aplicación
   - _Depends: 2.6, 4.1, 4.2_
   - _Requirements: 1.4_
 
 - [ ] 4.4 Montar la superposición en el Mapa por parámetro
+  - Bloqueada solo por dependencia con la 4.3 (D1–D3)
   - Coordinar con Persona 3 (dueña del Mapa): se suma la pieza con `suppressed` sin reescribir la
     pantalla; la alimenta el cierre de HU-06
   - En el Mapa con un recorrido en curso aparece la alerta sobre el panel del temporizador y, a los
