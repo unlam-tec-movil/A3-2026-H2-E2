@@ -1,0 +1,11 @@
+<!-- Ícono de frenada: octógono de señal de pare con hueco central (24dp). Dibujo propio del proyecto. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="@android:color/black"
+      android:fillType="evenOdd"
+      android:pathData="M8,3L16,3L21,8L21,16L16,21L8,21L3,16L3,8ZM9,10.5L15,10.5L15,13.5L9,13.5Z"/>
+</vector>

@@ -101,7 +101,7 @@
 
 - [ ] 3. Interfaz: alerta, consulta y superposición
 
-- [ ] 3.1 Agregar los recursos de la alerta y la consulta
+- [x] 3.1 Agregar los recursos de la alerta y la consulta
   - Textos con prefijo `map_` («Frenada detectada», «Semáforo o intersección», pregunta de la
     consulta y sus dos opciones) e ícono de frenada
   - Los recursos compilan y no quedan textos fijos en los componentes
@@ -127,7 +127,7 @@
   - _Boundary: StopClassificationDialog_
   - _Requirements: 4.1, 4.5, 4.6_
 
-- [ ] 3.4 (P) Estado de interfaz de la detección con `suppressed`
+- [x] 3.4 (P) Estado de interfaz de la detección con `suppressed`
   - Alerta cuando aparece una frenada nueva, oculta a los 4 s; diálogo visible mientras haya consulta
     pendiente
   - Con `suppressed` verdadero no se muestran alerta ni diálogo, la frenada igual queda registrada y
@@ -205,3 +205,9 @@
     transición
   - _Depends: 4.4_
   - _Requirements: 1.1, 1.2, 3.2, 3.3_
+
+## Implementation Notes
+
+- 3.4: `StopDetectionViewModel` queda sin `@HiltViewModel`/`@Inject` (hay un `TODO(4.3)`): sin el binding de `StopDetectionRepository` (tarea 4.3, bloqueada por D1–D3) la compilación de Hilt de toda la app falla. Agregar las anotaciones al cablear la 4.3.
+- 3.2 y 3.3: `BrakeAlert` y `StopClassificationDialog` están escritos y sus tests instrumentados (`BrakeAlertTest`, `StopClassificationDialogTest`) compilan, pero no se corrieron por falta de dispositivo/emulador. Siguen sin marcar hasta ejecutarlos con `./gradlew :app:connectedDebugAndroidTest`.
+

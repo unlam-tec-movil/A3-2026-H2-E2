@@ -42,4 +42,12 @@
     <string name="map_goal_5km">5 km</string>
     <string name="map_goal_10km">10 km</string>
     <string name="map_goal_generic">tu meta</string>
+
+    <!-- HU-05.1 Detección de frenadas -->
+    <string name="map_brake_alert_title">Frenada detectada</string>
+    <string name="map_brake_alert_detail">Semáforo o intersección</string>
+    <string name="map_stop_query_title">¿Qué tipo de detención fue?</string>
+    <string name="map_stop_query_text">Llevás más de 20 segundos sin moverte. Elegí cómo contarla.</string>
+    <string name="map_stop_query_brake">Frenada</string>
+    <string name="map_stop_query_personal_pause">Pausa personal</string>
 </resources>
