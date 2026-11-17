@@ -17,7 +17,7 @@
   - Confirmar que `rememberReduceMotion()` de `ui/components/layout/GoalCelebrationOverlay.kt` sirve para el resultado; no crear otra
   - Los tests de la spec compilan y corren en JVM con el fake
   - _Requirements: 5.4, 5.5_
-- [ ] 1.2 (P) Textos e ícono del resultado
+- [x] 1.2 (P) Textos e ícono del resultado
   - Crear `strings_finish_run.xml` con los textos `result_*` (títulos «¡Meta cumplida!» y «Recorrido finalizado», «Completaste tu meta de %1$s.», métricas, «Continuar», «No disponible», «Incompleto»), con voseo rioplatense
   - No agregar textos del aviso, del diálogo de confirmación ni del recorrido corto: ya están como `map_*` en `strings.xml`
   - Agregar el ícono `ic_goal_check`
@@ -44,13 +44,13 @@
   - _Requirements: 1.2, 1.3, 2.1, 2.2_
 
 - [ ] 3. Resultado: dominio y estado
-- [ ] 3.1 (P) Formateo de los valores del resultado
+- [x] 3.1 (P) Formateo de los valores del resultado
   - Distancia en km con coma decimal desde `RunMetrics.distanceMeters` (metros, Double), tiempo `HH:MM:SS` desde `elapsedTimeSeconds` y regularidad con espacio y sin decimales, en `es-AR`; solo formatea, no recalcula
   - Tests: `5200.0` m → `5,2 km`, `1930` s → `00:32:10`, `80` → `80 %`
   - Los tests del formateador pasan
   - _Boundary: ResultFormatter_
   - _Requirements: 5.1, 5.5_
-- [ ] 3.2 (P) Caso de uso de lectura del resumen
+- [x] 3.2 (P) Caso de uso de lectura del resumen
   - `GetFinishedRunSummaryUseCase` en `domain/usecases/`, con `@Inject`, que delega en `RunSessionRepository.getFinishedSummary(id)` y devuelve `FrozenRunSummary?`
   - No limpia nada (la interfaz no tiene `remove`)
   - Test con fake: devuelve el resumen del id y `null` si es desconocido
