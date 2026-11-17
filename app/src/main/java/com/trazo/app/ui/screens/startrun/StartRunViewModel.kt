@@ -1,6 +1,7 @@
 package com.trazo.app.ui.screens.startrun
 
 import androidx.lifecycle.ViewModel
+import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.domain.model.RunGoal
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import javax.inject.Inject
 data class StartRunUiState(
     val isDialogVisible: Boolean = false,
     val selectedGoal: RunGoal? = null,
+    val locationIssue: LocationStatus? = null,
 ) {
     val isConfirmEnabled: Boolean
         get() = selectedGoal != null
@@ -32,9 +34,16 @@ class StartRunViewModel
         private val _uiState = MutableStateFlow(StartRunUiState())
         val uiState: StateFlow<StartRunUiState> = _uiState.asStateFlow()
 
-        /** Abre el modal sin ninguna meta elegida. */
-        fun onStartRunRequested() {
-            _uiState.value = StartRunUiState(isDialogVisible = true)
+        /**
+         * Abre el modal si la ubicación está lista. Si no, guarda el problema para avisarlo.
+         */
+        fun onStartRunRequested(locationStatus: LocationStatus) {
+            _uiState.value =
+                if (locationStatus == LocationStatus.READY) {
+                    StartRunUiState(isDialogVisible = true)
+                } else {
+                    StartRunUiState(locationIssue = locationStatus)
+                }
         }
 
         /** Marca una meta. Si ya había otra, queda solo la nueva. */
@@ -44,6 +53,11 @@ class StartRunViewModel
 
         /** Cierra el modal sin comenzar nada y olvida la meta. */
         fun onDismiss() {
+            _uiState.value = StartRunUiState()
+        }
+
+        /** Cierra el aviso de ubicación sin hacer nada más. */
+        fun onLocationIssueDismiss() {
             _uiState.value = StartRunUiState()
         }
 

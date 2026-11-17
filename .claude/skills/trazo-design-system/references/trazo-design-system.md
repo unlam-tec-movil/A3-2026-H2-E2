@@ -247,6 +247,8 @@ La jerarquía se marca primero con el color de la superficie y después con somb
 | level2 | Barra superior flotante y botón "Centrar" del mapa, opción "Iniciar un recorrido" | `0 1px 2px rgba(27,46,49,.18), 0 2px 6px 2px rgba(27,46,49,.10)` |
 | level3 | FAB, modales, alerta de frenada | `0 4px 8px 3px rgba(27,46,49,.12), 0 1px 3px rgba(27,46,49,.18)` |
 
+En Compose: `Elevation.level1` (1 dp), `Elevation.level2` (3 dp) y `Elevation.level3` (6 dp), en `ui/theme/Dimens.kt`.
+
 ### 5.5 Iconografía
 
 - **Material Symbols Rounded**, 24 dp, peso 400 (trazo de 2 dp), sin relleno.
@@ -278,7 +280,7 @@ La jerarquía se marca primero con el color de la superficie y después con somb
 - **Opción "Iniciar un recorrido"** (al tocar el FAB): FAB extendido de 56 dp, forma large, secondaryContainer / onSecondaryContainer, ícono `route`.
 - **Pausar:** 56 × 56, forma medium, primary con ícono blanco. Al tocarlo cambia a **Reanudar** (`play_arrow`), en primaryContainer / onPrimaryContainer.
 - **Finalizar:** 56 × 56, forma medium, errorContainer / onErrorContainer, ícono `stop`.
-- **Centrar en mi ubicación:** 48 dp, círculo blanco, ícono primary, elevación level2. Va arriba a la derecha del mapa, debajo de la barra superior.
+- **Centrar en mi ubicación:** 48 dp, círculo blanco, ícono primary, elevación level2. Va abajo a la derecha del mapa, 16 dp (`Spacing.lg`) por encima del panel del recorrido; la atribución de los tiles va a su izquierda.
 
 ### 6.3 Chips
 
@@ -388,7 +390,7 @@ Los avisos que no requieren acción usan `role=status`. Los de error usan `role=
 | Pantalla | Estructura |
 |---|---|
 | **Inicio** | Barra superior primary con "Trazo" y engranaje. "Actividad reciente" con "Ver todo". Lista de cards compactas. FAB "+". Barra de navegación (Inicio activo). **Estado vacío:** ilustración y "Todavía no hay recorridos" (headlineLarge) |
-| **Mapa** | Mapa a pantalla completa. Barra superior flotante con GPS. Botón "Centrar". Alerta de frenada cuando corresponde. Panel del recorrido en curso. Barra de navegación (Mapa activo). Sin recorrido: trazas guardadas, panel en cero y FAB "+" |
+| **Mapa** | Mapa a pantalla completa, también detrás de la barra de estado (íconos de estado oscuros). Barra superior flotante con GPS. Botón "Centrar". Alerta de frenada cuando corresponde. Panel del recorrido en curso. Barra de navegación (Mapa activo). Sin recorrido: trazas guardadas, panel en cero y FAB "+" |
 | **Modal "Iniciar nuevo recorrido"** | Scrim al 32 %. Modal extraLarge con el título (headlineSmall), "Seleccioná una meta:", chips 3/5/10 km, y botones "Cancelar" (outlined) y "Comenzar" (filled, deshabilitado sin meta) |
 | **¡Meta cumplida! / Recorrido finalizado** | Ver 6.13 |
 | **Guardar recorrido** | Barra superior con volver. Card de resumen (fecha, marca, 3 métricas). Campo de título. "¿Qué destacarías del recorrido?" (opcional) con chips. "Fotos" con contador. Botón fijo "Guardar recorrido". Si el corredor vuelve sin guardar, aparece el diálogo "¿Descartar el recorrido?" con "Descartar" y "Seguir editando" |

@@ -1,7 +1,8 @@
 package com.trazo.app.ui.navigation
 
-import android.net.http.SslCertificate.restoreState
-import android.net.http.SslCertificate.saveState
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -9,6 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -16,6 +18,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.trazo.app.data.location.locationSettingsIntent
+import com.trazo.app.data.location.readLocationStatus
+import com.trazo.app.domain.model.LocationStatus
+import com.trazo.app.ui.components.common.LocationIssueDialog
 import com.trazo.app.ui.components.common.StartRunDialog
 import com.trazo.app.ui.screens.history.HistoryScreen
 import com.trazo.app.ui.screens.home.HomeScreen
@@ -34,6 +40,27 @@ fun TrazoApp() {
             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
             launchSingleTop = true
             restoreState = true
+        }
+    }
+    val context = LocalContext.current
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+        ) {
+            startRunViewModel.onStartRunRequested(readLocationStatus(context))
+        }
+
+    val requestStartRun: () -> Unit = {
+        val status = readLocationStatus(context)
+        if (status == LocationStatus.PERMISSION_DENIED) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                ),
+            )
+        } else {
+            startRunViewModel.onStartRunRequested(status)
         }
     }
 
@@ -55,14 +82,19 @@ fun TrazoApp() {
             modifier = Modifier.padding(innerPadding),
         ) {
             composable(TrazoDestination.HOME.route) {
-                // El modal "Iniciar nuevo recorrido" y la pantalla de Configuración
-                // pertenecen a otras historias.
                 HomeScreen(
-                    onStartRunClick = startRunViewModel::onStartRunRequested,
+                    onStartRunClick = requestStartRun,
                     onSettingsClick = {},
                 )
             }
-            composable(TrazoDestination.MAP.route) { MapScreen() }
+            composable(TrazoDestination.MAP.route) {
+                MapScreen(
+                    onStartRunClick = requestStartRun,
+                    onNavigateToResults = { _ ->
+                        // TODO (Persona 4): Navegar a la pantalla de Resultados pasando el resumen congelado
+                    },
+                )
+            }
             composable(TrazoDestination.HISTORY.route) { HistoryScreen() }
         }
     }
@@ -77,6 +109,17 @@ fun TrazoApp() {
                 }
             },
             onDismiss = startRunViewModel::onDismiss,
+        )
+    }
+
+    startRunState.locationIssue?.let { issue ->
+        LocationIssueDialog(
+            issue = issue,
+            onOpenSettings = {
+                context.startActivity(locationSettingsIntent(context, issue))
+                startRunViewModel.onLocationIssueDismiss()
+            },
+            onDismiss = startRunViewModel::onLocationIssueDismiss,
         )
     }
 }
