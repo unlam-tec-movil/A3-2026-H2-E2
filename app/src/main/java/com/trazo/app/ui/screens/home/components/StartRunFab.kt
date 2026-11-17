@@ -27,11 +27,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.trazo.app.R
+import com.trazo.app.ui.theme.Elevation
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme
@@ -39,9 +39,6 @@ import com.trazo.app.ui.theme.TrazoTheme
 /** Opacidades de Material 3 para un contenedor y un contenido deshabilitados. */
 private const val DISABLED_CONTAINER_ALPHA = 0.12f
 private const val DISABLED_CONTENT_ALPHA = 0.38f
-
-/** Elevación level2 de Material 3 (opción "Iniciar un recorrido", referencia §5.4). */
-private val OptionElevationLevel2 = 3.dp
 
 /**
  * FAB "+" de Inicio. Al tocarlo, la pantalla decide mostrar la opción "Iniciar un recorrido",
@@ -141,10 +138,10 @@ private fun StartRunOption(
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             elevation =
                 FloatingActionButtonDefaults.elevation(
-                    defaultElevation = OptionElevationLevel2,
-                    pressedElevation = OptionElevationLevel2,
-                    focusedElevation = OptionElevationLevel2,
-                    hoveredElevation = OptionElevationLevel2,
+                    defaultElevation = Elevation.level2,
+                    pressedElevation = Elevation.level2,
+                    focusedElevation = Elevation.level2,
+                    hoveredElevation = Elevation.level2,
                 ),
         )
     }
