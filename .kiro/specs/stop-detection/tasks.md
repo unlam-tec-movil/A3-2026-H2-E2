@@ -56,7 +56,7 @@
   - _Boundary: StopDetector_
   - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 2.3_
 
-- [ ] 2.3 Máquina de estados: reanudación, consulta de 20 s y clasificación
+- [x] 2.3 Máquina de estados: reanudación, consulta de 20 s y clasificación
   - Salir de la quietud exige 1 500 ms de movimiento continuo; un pico corto no parte la detención
   - Al retomar el movimiento se conserva la frenada ya registrada
   - A más de 20 000 ms (estricto, desde el inicio de la quietud) la consulta queda pendiente
