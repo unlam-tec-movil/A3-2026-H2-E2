@@ -39,18 +39,14 @@
   - Acordado: Persona 3 agrega el botón y lo conecta al diálogo de confirmación existente; los archivos (`GoalCelebrationOverlay`, `MapScreen`, ViewModel) son suyos
   - Persona 3 también corrige el manejo de errores de `finishSession()` en `onConfirmFinish()` para poder reintentar sin perder la sesión (hoy no usa `onFailure`)
   - _Requirements: 1.1, 1.3_
-- [ ] 2.2 (Persona 3) Agregar «Finalizar» a `GoalCelebrationOverlay`
-  - Parámetro `onFinish: (() -> Unit)? = null`; con valor, mostrar «Finalizar» (`map_finish`) junto a «Seguir corriendo»; sin valor, el componente queda igual
-  - Objetivo táctil de 48 dp; el texto envuelve a fuente 200 %; no cambiar animación ni textos existentes
-  - UI test: con `onFinish` aparece «Finalizar» y lo invoca; sin `onFinish` no aparece; con «Quitar animaciones» sigue sin animar
+- [ ] 2.2 (Persona 3) Botón «Finalizar» en el aviso de meta
+  - El aviso de meta alcanzada muestra «Finalizar» y lo conecta al diálogo de confirmación existente
   - _Depends: 2.1_
-  - _Requirements: 1.1, 1.3, 1.5_
-- [ ] 2.3 (Persona 3) Conectar «Finalizar» del aviso en `MapScreen`
-  - Pasar `onFinish = { viewModel.onCelebrationDismissed(); viewModel.onFinishRequested() }` al overlay
-  - Al tocarlo, el aviso se cierra y se abre la confirmación que corresponde (con meta alcanzada, «¿Estás seguro de que deseás finalizar?»); el registro sigue hasta confirmar
-  - Si ya hay un test del ViewModel para este flujo, reutilizarlo; si falta, agregar uno: tocar «Finalizar» desde el aviso muestra `showFinishConfirmDialog` y no llama a `finishSession()`
-  - _Depends: 2.2_
-  - _Requirements: 1.2, 1.3, 2.1, 2.2_
+  - _Requirements: 1.1, 1.3_
+- [ ] 2.3 (Persona 3) Reintento si falla `finishSession()`
+  - Si `finishSession()` falla, el corredor puede reintentar sin perder la sesión
+  - _Depends: 2.1_
+  - _Requirements: 2.3, 3.3_
 
 - [ ] 3. Resultado: dominio y estado
 - [x] 3.1 (P) Formateo de los valores del resultado
