@@ -184,6 +184,8 @@
   - Bloqueada por dependencia con la 4.2: espera el aviso de Persona 3 (cambios D1–D3 en `develop`)
   - Módulo con el reloj monotónico, el alcance de aplicación de HU-04 (`@ApplicationScope`) y los
     enlaces de repositorio, sensor y adaptadores
+  - El binding de `MotionSource` y de `MonotonicClock` lo provee `floor-regularity`
+    (`SharedMotionSource`); esta 4.3 solo bindea `StopDetectionRepository`
   - La app compila y el repositorio se inyecta como único en toda la aplicación
   - _Depends: 2.6, 4.1, 4.2_
   - _Requirements: 1.4_
