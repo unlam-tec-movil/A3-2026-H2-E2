@@ -815,10 +815,14 @@ no están en `develop`. No se modificó código ni requisitos (`requirements.md`
   fin del recorrido es `RunSession.Idle` con `isRunInProgress = false`. Se corrigieron las
   referencias a `FINISHED` en este documento y en `tasks.md`.
 
-- **Pregunta abierta — frenadas y regularidad en `FrozenRunSummary`**: no está definido quién agrega
-  el conteo de frenadas y la regularidad a `FrozenRunSummary`. Se le preguntó a Persona 3 y no hay
-  respuesta todavía. Hasta que responda, esta spec no los agrega ni asume quién lo hace (las frenadas
-  se exponen solo por `StopDetectionRepository.state.brakes`).
+- **Frenadas y regularidad en `FrozenRunSummary` (acordado con Persona 3)**: Persona 3 agrega los
+  campos de frenadas y regularidad a `FrozenRunSummary` y define su forma. HU-05 produce el conteo de
+  frenadas (a partir de `StopDetectionRepository.state.brakes`) y HU-05.2 produce la regularidad.
+  Esta spec no modifica `FrozenRunSummary`.
+- **Pregunta abierta — cómo llega el dato al resumen en `finishSession()`**: si `finishSession()` lo
+  lee desde `StopDetectionRepository` o se lo pasa quien finaliza el recorrido. Se define con
+  Persona 3 al integrar. Hasta entonces, las frenadas se exponen solo por
+  `StopDetectionRepository.state.brakes`.
 
 Coinciden con el diseño: `markStopped()` solo desde `ACTIVE`; `pausePersonally()` y la pausa manual
 detienen el temporizador; `finishSession()` funciona desde los cuatro estados; `isRunInProgress`

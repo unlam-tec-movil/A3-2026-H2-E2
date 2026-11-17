@@ -211,7 +211,6 @@
 ## Implementation Notes
 
 - 3.4: `StopDetectionViewModel` queda sin `@HiltViewModel`/`@Inject` (hay un `TODO(4.3)`): sin el binding de `StopDetectionRepository` (tarea 4.3, bloqueada hasta que Persona 3 avise) la compilación de Hilt de toda la app falla. Agregar las anotaciones al cablear la 4.3.
-- 3.2 y 3.3: `BrakeAlert` y `StopClassificationDialog` están escritos y sus tests instrumentados (`BrakeAlertTest`, `StopClassificationDialogTest`) compilan, pero no se corrieron por falta de dispositivo/emulador. Siguen sin marcar hasta ejecutarlos con `./gradlew :app:connectedDebugAndroidTest`.
-- Pregunta abierta: quién agrega frenadas y regularidad a `FrozenRunSummary` (se le preguntó a
-  Persona 3, sin respuesta todavía). No bloquea ninguna tarea de esta spec; ver `design.md`.
+- 3.2 y 3.3: los tests instrumentados (`BrakeAlertTest`, `StopClassificationDialogTest`) se corrieron y pasaron en el emulador (commit 72a8408).
+- `FrozenRunSummary`: acordado con Persona 3. Ella agrega y define los campos de frenadas y regularidad; HU-05 produce el conteo de frenadas y HU-05.2 la regularidad. Queda abierto solo cómo llega el dato al resumen en `finishSession()` (si lo lee desde `StopDetectionRepository` o se lo pasa quien finaliza), a definir con Persona 3 al integrar. No bloquea ninguna tarea de esta spec; ver `design.md`.
 
