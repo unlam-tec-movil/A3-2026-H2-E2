@@ -37,7 +37,7 @@
 
 - [ ] 2. Núcleo: detección, sensor y repositorio
 
-- [ ] 2.1 (P) Estimar si el corredor está quieto con una ventana de aceleración
+- [x] 2.1 (P) Estimar si el corredor está quieto con una ventana de aceleración
   - Decide «quieto» con la desviación de la magnitud en una ventana de 1 s, sin depender de la
     orientación del teléfono
   - Con la ventana incompleta el resultado es «en movimiento»
@@ -46,7 +46,7 @@
   - _Boundary: StillnessEstimator_
   - _Requirements: 1.1, 1.2_
 
-- [ ] 2.2 (P) Máquina de estados: de movimiento a frenada registrada
+- [x] 2.2 (P) Máquina de estados: de movimiento a frenada registrada
   - Reductor puro con el tiempo recibido en cada observación y ids de frenada inyectados
   - A los 8 000 ms desde que comenzó la quietud pasa a «Frenada» y registra una única frenada con la
     ubicación recibida (o sin ella si no hay)
