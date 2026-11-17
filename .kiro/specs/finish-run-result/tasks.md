@@ -56,7 +56,7 @@
   - Test con fake: devuelve el resumen del id y `null` si es desconocido
   - _Boundary: GetFinishedRunSummaryUseCase_
   - _Requirements: 5.5, 6.2, 6.3, 6.4_
-- [ ] 3.3 Estado de la pantalla de resultado
+- [x] 3.3 Estado de la pantalla de resultado
   - `ResultViewModel` que lee `runId` de `SavedStateHandle`, obtiene el resumen con el caso de uso y arma `ResultUiState` con `ResultFormatter`; usa `summary.goalReached` y `summary.goal` (`domain.model.map.RunGoal`); la regularidad queda `null`; ignora `isDemoMode`
   - Si el resumen es `null`, emite `LeaveToMap`
   - Tests con fake: con meta, sin meta, regularidad ausente, id desconocido; las métricas salen de `metrics` sin recalcular
@@ -91,7 +91,7 @@
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
 - [ ] 6. Validación
-- [ ] 6.1 Prueba de flujo con fakes
+- [x] 6.1 Prueba de flujo con fakes
   - `ResultViewModel` con un resumen congelado: con meta → «¡Meta cumplida!»; sin meta → «Recorrido finalizado»
   - Regresión de 4.6: con menos de 200 m `onFinishRequested()` abre el aviso corto y no llama a `finishSession()`, así que no se llega al resultado (ya cubierto por `LiveRouteTrackingViewModelTest`; solo agregar si falta)
   - _Depends: 3.3_
