@@ -7,7 +7,7 @@
 
 - [ ] 1. Fundaciones: utilidad compartida, pruebas con tiempo virtual y contratos del dominio
 
-- [ ] 1.1 Crear la utilidad compartida «Quitar animaciones»
+- [x] 1.1 Crear la utilidad compartida «Quitar animaciones»
   - Una función componible que informa si el corredor tiene desactivadas las animaciones del sistema
   - Queda disponible para esta spec, `finish-run-result` y la celebración de Persona 3; avisar a
     Persona 3 cuando esté en la rama
@@ -22,7 +22,7 @@
   - _Boundary: Gradle (catálogo de versiones y módulo app)_
   - _Requirements: 2.1, 4.1_
 
-- [ ] 1.3 Definir los modelos, la configuración y los puertos del dominio
+- [x] 1.3 Definir los modelos, la configuración y los puertos del dominio
   - Modelos: estado de movimiento, tipo de detención, ubicación de la frenada, evento de frenada,
     muestra de movimiento, fases de la máquina de estados y estado agregado con sus derivados
   - Configuración calibrable con los umbrales y tiempos (8 s, 20 s, confirmación de 1,5 s, tick de
