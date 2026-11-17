@@ -3,7 +3,7 @@
 > Revisado contra el código real de `feat/hu-06-resultado` (con HU-04 ya mergeada desde `develop`).
 > Los requisitos no cambian. Varias piezas que este diseño pensaba crear **ya existen** en HU-04
 > (Persona 3); lo que queda para esta spec es la pantalla de resultado, su ruta y un ajuste mínimo
-> al aviso de meta existente.
+> al aviso de meta existente (este último pasó a Persona 3, ver «Acuerdos con Persona 3»).
 
 ## Overview
 
@@ -14,8 +14,7 @@ finalizado») con el paso a «Guardar recorrido».
 **Users**: corredores recreativos que registran un recorrido con meta de 3, 5 o 10 km.
 
 **Impact**: HU-04 ya implementa la decisión de cierre y casi todo el Mapa (ver «Existing
-Architecture Analysis»). Esta spec agrega: (1) el botón «Finalizar» al aviso de meta existente
-(`GoalCelebrationOverlay`); (2) la ruta `result/{runId}` y la pantalla de resultado, que lee el
+Architecture Analysis»). Esta spec agrega: (1) ~~el botón «Finalizar» al aviso de meta~~ (ahora lo hace Persona 3 en HU-04); (2) la ruta `result/{runId}` y la pantalla de resultado, que lee el
 `FrozenRunSummary` con `RunSessionRepository.getFinishedSummary(id)`; (3) el paso a «Guardar
 recorrido» por id.
 
@@ -38,6 +37,22 @@ recorrido» por id.
 - Persistencia en disco y recuperación ante muerte del proceso.
 - Librería de animación (Lottie): las animaciones son nativas de Compose.
 
+## Acuerdos con Persona 3
+
+1. **Botón «Finalizar» y errores (Persona 3, HU-04).** Persona 3 agrega «Finalizar» en
+   `GoalCelebrationOverlay`, lo conecta al diálogo de confirmación existente y corrige el manejo de
+   errores de `finishSession()` para poder reintentar sin perder la sesión. Esta spec no toca esos
+   archivos (tareas 2.1–2.3, a cargo de Persona 3).
+2. **Limpieza del resumen.** `getFinishedSummary(id)` mantiene su nombre. Persona 3 agrega
+   `removeFinishedSummary(id)` a `RunSessionRepository`; lo llama `save-run` (HU-07) al terminar de
+   guardar o al descartar el recorrido. **HU-06 no lo llama**: la pantalla de Resultado solo lee, y el
+   descarte de un recorrido corto usa `resetToIdle()` sin crear resumen.
+3. **`rememberReduceMotion()`** vive en `ui/theme/ReduceMotion.kt` (PR #105, de Rocío). Persona 3 usa
+   esos mismos archivos y borra su versión provisoria de `GoalCelebrationOverlay.kt`.
+4. **Ruta y cableado.** `result/{runId}` y el cableado en `TrazoApp.kt` son de HU-06; Persona 3 no
+   toca ese archivo. «Continuar» llama a `onContinue(runId)`; la ruta `saverun/{runId}` es de
+   `save-run` y se conecta cuando exista.
+
 ## Existing Architecture Analysis (código real)
 
 Qué hace hoy HU-04 y qué parte de esta spec ya cubre:
@@ -48,14 +63,14 @@ Qué hace hoy HU-04 y qué parte de esta spec ya cubre:
 | `FinishConfirmDialog` | `ui/components/layout/` | `AlertDialog` con texto según `goalReached` (`map_finish_confirm_goal_reached` / `_not_reached`), «Finalizar» (`map_finish`, rojo) y «Cancelar». Se invoca directo desde `MapScreen`; no hay parámetro `confirmDialog` ni `FinishPrompt`. | 2.1, 2.4, 3.1, 3.4 |
 | Aviso de recorrido corto | `MapScreen` | `AlertDialog` por defecto (`map_short_run_title`, `map_short_run_text`, «Descartar» / «Volver al recorrido»), con un slot opcional `shortRunNotice`. Cerrar = volver. | 4.1, 4.4 |
 | `onDiscardShortRun()` | ViewModel | `resetToIdle()` (detiene jobs y deja `Idle`) + efecto `ReturnToIdleMap`. No llama a `finishSession()`, así que no queda resumen guardado. | 4.5 |
-| `GoalCelebrationOverlay` | `ui/components/layout/` | Aviso de meta a pantalla completa (scrim, «¡Felicitaciones!», «Alcanzaste tu meta de X», «Seguir corriendo»), con `fadeIn`/`fadeOut` y sin animación si `rememberReduceMotion()`. El ViewModel lo muestra una vez al cruzar la meta (`previousGoalReached`). **No tiene botón «Finalizar».** | 1.1 (parcial), 1.2, 1.4, 1.5 |
+| `GoalCelebrationOverlay` | `ui/components/layout/` | Aviso de meta a pantalla completa (scrim, «¡Felicitaciones!», «Alcanzaste tu meta de X», «Seguir corriendo»), con `fadeIn`/`fadeOut` y sin animación si `rememberReduceMotion()`. El ViewModel lo muestra una vez al cruzar la meta (`previousGoalReached`). **No tiene botón «Finalizar»: lo agrega Persona 3.** | 1.1 (parcial), 1.2, 1.4, 1.5 |
 | `LiveRouteTrackingUiState.suppressed` | `ui/screens/map/` | `showGoalCelebration \|\| showFinishConfirmDialog \|\| showShortRunDialog`. Ya está expuesto y testeado. | 7.1 (lado productor) |
 | `RunSessionRepositoryImpl.finishSession()` | `data/repository/` | Detiene jobs, congela métricas, arma el `FrozenRunSummary`, lo guarda en `finishedSummaries` (interno), deja `Idle` y devuelve `Result<FrozenRunSummary>`. | 2.3, 3.3, 5.6 |
-| `RunSessionRepository.getFinishedSummary(id)` | `domain/repository/` | `FrozenRunSummary?` por id. **No existe `remove`.** | lectura para 5.x y 6.x |
+| `RunSessionRepository.getFinishedSummary(id)` | `domain/repository/` | `FrozenRunSummary?` por id. Hoy no existe `remove`; Persona 3 agrega `removeFinishedSummary(id)`, que llama `save-run`. | lectura para 5.x y 6.x |
 | `FinishRunUseCase` | `domain/usecases/` | Delega en `finishSession()`. | 2.3, 3.3 |
 | `LiveRouteTrackingUiEffect.NavigateToResults(summary)` | ViewModel / `MapScreen` | Tras `finishSession()` exitoso emite el **`FrozenRunSummary` completo** (no el id). | — |
 | `TrazoApp` | `ui/navigation/` | `onNavigateToResults = { _ -> /* TODO (Persona 4) */ }`. No hay ruta de resultado ni de guardado. | — |
-| `rememberReduceMotion()` | `GoalCelebrationOverlay.kt` (paquete `ui.components.layout`) | Versión **provisoria** (lee `ANIMATOR_DURATION_SCALE`), marcada hasta que Persona 4 publique la suya. | 1.5, 5.4 |
+| `rememberReduceMotion()` | `ui/theme/ReduceMotion.kt` (PR #105, Rocío) | Utilidad definitiva. La versión provisoria de `GoalCelebrationOverlay.kt` la borra Persona 3. | 1.5, 5.4 |
 
 **Modelo real**
 
@@ -79,7 +94,7 @@ y de UI en `app/src/androidTest`.
 | Tema | Estado | Decisión |
 |------|--------|----------|
 | Aviso de meta con animación (1.1) | **Cubierto** por `GoalCelebrationOverlay` (texto distinto al del diseño viejo, pero los requisitos no fijan el texto) | Reutilizar |
-| Botón «Finalizar» en el aviso (1.1, 1.3) | **Falta** | Agregar un parámetro opcional al overlay (ver abajo). No se crea un componente nuevo. |
+| Botón «Finalizar» en el aviso (1.1, 1.3) | **Falta** | **Persona 3 (HU-04)** lo agrega y lo conecta; no es de esta spec. |
 | Sin animación con «Quitar animaciones» (1.5) | Cubierto | Reutilizar |
 | Aviso de recorrido demasiado corto (4.1–4.5) | **Cubierto** por el `AlertDialog` de `MapScreen` | No se crea `TooShortRunDialog` ni `DiscardRunUseCase` |
 | Decisión y confirmaciones de «Finalizar» (2.x, 3.x, 4.2) | **Cubierto** por el ViewModel y `FinishConfirmDialog` | No se crean `FinishPolicy`, `FinishRunViewModel`, `FinishRunOverlay` ni `CloseRunUseCase` |
@@ -87,8 +102,8 @@ y de UI en `app/src/androidTest`.
 | Prioridad del cierre, lado productor (7.1) | `suppressed` ya existe | Sin cambios |
 | Prioridad del cierre, lado consumidor (7.1–7.3) | No hay código de `stop-detection` en `main` | **Bloqueado** por `stop-detection` |
 | Pantalla de resultado (5.x) | **Falta** | Esta spec |
-| Ruta del resultado y paso a «Guardar» con id (6.1) | **Falta** (stub con `TODO`) | Esta spec |
-| Conservar datos al guardar (6.2–6.4) | Los datos están en el resumen, salvo frenadas y regularidad | `save-run` los lee por id; ver Open Questions |
+| Ruta del resultado y paso a «Guardar» con id (6.1) | **Falta** (stub con `TODO`) | Esta spec: ruta `result/{runId}` y `onContinue(runId)`; la ruta `saverun/{runId}` es de `save-run` |
+| Conservar datos al guardar (6.2–6.4) | Los datos están en el resumen, salvo frenadas y regularidad | `save-run` los lee por id y llama `removeFinishedSummary(id)` al terminar; ver Open Questions |
 
 ## Boundary Commitments
 
@@ -97,17 +112,19 @@ y de UI en `app/src/androidTest`.
 - Pantalla `result` completa: `ResultScreen`, `ResultContent`, `ResultViewModel`, `GoalReachedCard`,
   `ResultFormatter` y su ruta `result/{runId}`.
 - `GetFinishedRunSummaryUseCase` (fino, sobre `getFinishedSummary(id)`).
-- El botón «Finalizar» del aviso de meta (cambio aditivo en `GoalCelebrationOverlay`, acordado con
-  Persona 3) y su conexión en `MapScreen`.
 - Conectar `onNavigateToResults` de `TrazoApp` a la ruta con el id.
 - Textos `result_*` del resultado.
+- El callback `onContinue(runId)` de «Continuar».
 
 ### Out of Boundary
 
+- **Botón «Finalizar» del aviso de meta** (`GoalCelebrationOverlay`, conexión en `MapScreen`) y el
+  manejo de errores de `finishSession()` con reintento: Persona 3 (HU-04).
+- **`removeFinishedSummary(id)`**: lo agrega Persona 3 al repositorio y lo llama `save-run` (HU-07).
+  HU-06 no lo llama.
 - `LiveRouteTrackingViewModel`, `LiveRouteTrackingUiState`, `FinishConfirmDialog`, el diálogo de
   recorrido corto, `RunControls`, `RunSessionRepositoryImpl` y sus textos `map_*` (HU-04, Persona 3).
-- **Quién limpia el resumen** (`finishedSummaries` crece y la interfaz no tiene `remove`): pregunta
-  abierta a Persona 3 (ver Open Questions). Esta spec solo lee.
+- Limpiar el resumen (ver arriba): esta spec solo lee.
 - Detección de frenadas, alerta y consulta de 20 s (`stop-detection`).
 - Regularidad (HU-05.2, sin dueño) y modo demo (la pantalla lo ignora).
 - Pantalla «Guardar recorrido», su ruta y qué hace al guardar o descartar (`save-run`).
@@ -123,11 +140,11 @@ y de UI en `app/src/androidTest`.
 
 ### Revalidation Triggers
 
-- HU-04 cambia `FrozenRunSummary`, `RunMetrics`, la firma de `getFinishedSummary` o de
-  `finishSession()`, o agrega `remove`.
+- HU-04 cambia `FrozenRunSummary`, `RunMetrics`, la firma de `getFinishedSummary` (nombre acordado)
+  o de `finishSession()`.
 - HU-04 cambia el efecto `NavigateToResults` (hoy lleva el resumen; se usa `summary.id`).
-- Persona 3 no acepta el parámetro `onFinish` en `GoalCelebrationOverlay`.
-- Persona 4 publica su `rememberReduceMotion()` definitiva.
+- Persona 3 no entrega el botón «Finalizar» del aviso (HU-04).
+- Cambia la ubicación de `rememberReduceMotion()` (hoy `ui/theme/ReduceMotion.kt`).
 - `stop-detection` define cómo consume `suppressed` o cómo aporta las frenadas.
 - `save-run` define su ruta y cómo lee el recorrido.
 
@@ -177,11 +194,11 @@ app/src/main/java/com/trazo/app/
 │   └── GetFinishedRunSummaryUseCase.kt   # NUEVO: getFinishedSummary(id)
 └── ui/
     ├── components/layout/
-    │   └── GoalCelebrationOverlay.kt     # EXISTENTE: se suma onFinish opcional
+    │   └── GoalCelebrationOverlay.kt     # EXISTENTE: lo modifica Persona 3 (botón «Finalizar»), no esta spec
     ├── navigation/
-    │   └── TrazoApp.kt                   # EXISTENTE: ruta result/{runId}, barra oculta, Continuar
+    │   └── TrazoApp.kt                   # EXISTENTE: ruta result/{runId}, barra oculta, onContinue
     └── screens/
-        ├── map/MapScreen.kt              # EXISTENTE: pasa onFinish al overlay
+        ├── map/MapScreen.kt              # EXISTENTE: de Persona 3, no se toca acá
         └── result/
             ├── ResultScreen.kt           # NUEVO: ResultScreen + ResultContent stateless
             ├── ResultViewModel.kt        # NUEVO: ResultUiState + ViewModel + ResultEffect
@@ -194,22 +211,17 @@ app/src/test/java/com/trazo/app/ui/screens/result/        # ResultViewModelTest,
 app/src/androidTest/java/com/trazo/app/ui/screens/result/ # ResultContentTest
 ```
 
-No hay `ui/theme/ReduceMotion.kt`: se reutiliza `rememberReduceMotion()` de
-`ui/components/layout/GoalCelebrationOverlay.kt`. No hay `domain/model/result/`, `FinishPolicy`,
+Se reutiliza `rememberReduceMotion()` de `ui/theme/ReduceMotion.kt` (PR #105); esta spec no crea
+otra. No hay `domain/model/result/`, `FinishPolicy`,
 `CloseRunUseCase`, `DiscardRunUseCase`, `FinishRunViewModel`, `FinishRunOverlay`,
 `GoalReachedNotice` ni `TooShortRunDialog`.
 
 ### Modified Files
 
-- `ui/components/layout/GoalCelebrationOverlay.kt` — **archivo de Persona 3**. Parámetro opcional
-  `onFinish: (() -> Unit)? = null`. Si no es `null`, muestra «Finalizar» (`map_finish`) junto a
-  «Seguir corriendo». Aditivo: los llamadores actuales no cambian.
-- `ui/screens/map/MapScreen.kt` — **archivo de Persona 3**. Pasa
-  `onFinish = { viewModel.onCelebrationDismissed(); viewModel.onFinishRequested() }` al overlay, así
-  se descarta el aviso y se abre la confirmación que corresponde.
 - `ui/navigation/TrazoApp.kt` — reemplaza el `TODO` de `onNavigateToResults` por
   `navController.navigate("$RESULT_ROUTE/${summary.id}") { launchSingleTop = true }`, agrega
-  `composable("$RESULT_ROUTE/{runId}")`, oculta la barra inferior en esa ruta y conecta «Continuar».
+  `composable("$RESULT_ROUTE/{runId}")`, oculta la barra inferior en esa ruta y conecta «Continuar»
+  (`onContinue(runId)`). Archivo de esta spec; Persona 3 no lo toca.
   `TrazoDestination` no cambia (`result` no es pestaña).
 - `res/values/strings.xml` — sin cambios; los textos nuevos van en `strings_finish_run.xml`.
 
@@ -220,7 +232,7 @@ stateDiagram-v2
     [*] --> Recording
     Recording --> GoalNotice: distancia mayor o igual a la meta (una vez)
     GoalNotice --> Recording: Seguir corriendo
-    GoalNotice --> Deciding: Finalizar
+    GoalNotice --> Deciding: Finalizar (Persona 3)
     Recording --> Deciding: Finalizar de RunControls
     Deciding --> TooShortDialog: menos de 200 m
     Deciding --> Confirm: 200 m o más (texto según goalReached)
@@ -228,7 +240,7 @@ stateDiagram-v2
     TooShortDialog --> Idle: descartar
     Confirm --> Recording: cancelar o cerrar
     Confirm --> Result: Finalizar
-    Result --> SaveRun: Continuar
+    Result --> SaveRun: Continuar (onContinue, ruta de save-run)
 ```
 
 ```mermaid
@@ -263,7 +275,10 @@ sequenceDiagram
 - **`finishSession()` ya deja `Idle`**: no hay `resetToIdle()` posterior.
 - **Por navegación viaja solo el id** (`summary.id`). Hoy el efecto lleva el resumen completo; `TrazoApp`
   usa solo su `id` y descarta el resto.
-- **Descartar** (recorrido corto) usa `resetToIdle()` sin `finishSession()`: no queda resumen.
+- **Descartar** (recorrido corto) usa `resetToIdle()` sin `finishSession()`: no queda resumen, así
+  que no hay nada que limpiar.
+- **El resultado solo lee.** No llama a `removeFinishedSummary(id)`; lo hace `save-run` al guardar o
+  descartar. Mientras tanto el resumen sigue disponible por id.
 - **«Atrás» en el resultado no hace nada** (`BackHandler` sin acción), sin flecha de volver y con la
   barra inferior oculta: el recorrido no está guardado y se perdería.
 
@@ -271,9 +286,9 @@ sequenceDiagram
 
 | Req | Resumen | Cubierto por | Qué agrega esta spec |
 |-----|---------|--------------|----------------------|
-| 1.1 | Aviso animado con «Finalizar» | `GoalCelebrationOverlay` + ViewModel | Botón «Finalizar» (`onFinish`) |
+| 1.1 | Aviso animado con «Finalizar» | `GoalCelebrationOverlay` + ViewModel | — (botón «Finalizar»: Persona 3) |
 | 1.2 | Sigue corriendo y registrando | ViewModel (no detiene nada) | — |
-| 1.3 | «Finalizar» disponible | `RunControls` + botón del aviso | Botón «Finalizar» del aviso |
+| 1.3 | «Finalizar» disponible | `RunControls` + botón del aviso (Persona 3) | — |
 | 1.4 | Sin aviso si no hay meta | ViewModel (`goalReached`) | — |
 | 1.5 | Sin animación con «Quitar animaciones» | `rememberReduceMotion()` | — |
 | 2.1–2.4 | Confirmación con meta | `FinishConfirmDialog`, ViewModel | Resultado «¡Meta cumplida!» (5.2) |
@@ -284,7 +299,7 @@ sequenceDiagram
 | 5.2–5.4 | Título con/sin animación | — | `GoalReachedCard` |
 | 5.5 | Valores sin recalcular | — | `ResultFormatter` solo formatea `metrics` |
 | 5.6 | No registra en el resultado | `finishSession()` ya detuvo | — |
-| 6.1 | «Continuar» abre «Guardar» | — | `TrazoApp` navega con el id |
+| 6.1 | «Continuar» abre «Guardar» | — | `onContinue(runId)`; `saverun/{runId}` es de `save-run` |
 | 6.2 | Conserva métricas y meta | `FrozenRunSummary` por id | Frenadas y regularidad: Open Questions |
 | 6.3 | Inicio, demo, traza | `FrozenRunSummary` (`startedAt`, `isDemoMode`, `routePoints`) | — |
 | 6.4 | Meta alcanzada o no | `goalReached` | — |
@@ -309,12 +324,11 @@ class GetFinishedRunSummaryUseCase @Inject constructor(
 
 Sigue el patrón de `FinishRunUseCase`. Solo lee: **nunca limpia** el resumen (no hay `remove`).
 
-### UI (Mapa): cambio mínimo
+### UI (Mapa): a cargo de Persona 3
 
-`GoalCelebrationOverlay(showCelebration, goal, onDismiss, modifier, onFinish: (() -> Unit)? = null)`.
-Con `onFinish != null` agrega un botón «Finalizar» (`R.string.map_finish`) bajo «Seguir corriendo».
-Mantiene objetivo táctil de 48 dp y que el texto envuelva a fuente 200 %. No cambia el resto del
-componente.
+El botón «Finalizar» de `GoalCelebrationOverlay`, su conexión al diálogo de confirmación y el
+reintento ante fallo de `finishSession()` los implementa Persona 3 (HU-04). Esta spec no define su
+firma ni toca esos archivos.
 
 ### UI (Resultado)
 
@@ -349,14 +363,15 @@ class ResultViewModel @Inject constructor(
   Mapa tiene formateadores privados (`formatDistance` con 2 decimales, `formatElapsedTime`); no se
   tocan.
 
-`ResultScreen(onContinue: (runId: String) -> Unit, onLeave)`: conecta el ViewModel, consume
+`ResultScreen(onContinue: (runId: String) -> Unit, onLeave)` (`onContinue` es el callback que
+`TrazoApp` conecta a `saverun/{runId}` cuando exista): conecta el ViewModel, consume
 `LeaveToMap` y registra `BackHandler(enabled = true) {}`. `ResultContent(state, onContinue)`: fondo
 `primary` y `GoalReachedCard` centrada; botón «Continuar» filled a todo el ancho.
 
 `GoalReachedCard`: con meta cumplida, check de `ic_goal_check` con `scale` (spring) + `fadeIn` una
 vez, título «¡Meta cumplida!» y «Completaste tu meta de X.» con `goalLabel(goal)`; sin meta, mismo
 layout sin check ni animación, título «Recorrido finalizado» y marca «Incompleto». Con
-`rememberReduceMotion()` el check se dibuja estático. Recuadros: Distancia, Tiempo y Regularidad
+`rememberReduceMotion()` (de `ui/theme/ReduceMotion.kt`) el check se dibuja estático. Recuadros: Distancia, Tiempo y Regularidad
 («No disponible» sin dato). Frenadas no se muestra (5.1 no la incluye). Título con `heading()`.
 
 ### Navegación
@@ -365,17 +380,17 @@ layout sin check ni animación, título «Recorrido finalizado» y marca «Incom
   `navArgument("runId") { type = NavType.StringType }`.
 - `onNavigateToResults = { summary -> navController.navigate("$RESULT_ROUTE/${summary.id}") { launchSingleTop = true } }`.
 - Barra inferior oculta cuando `currentRoute` empieza con `RESULT_ROUTE`.
-- `onContinue(runId)` navega a `saverun/$runId`. La ruta `saverun` todavía **no existe** y `save-run`
-  solo tiene `requirements.md`: hasta que exista, «Continuar» queda conectado a un callback vacío.
+- `onContinue(runId)` navega a `saverun/$runId`. La ruta `saverun` es de `save-run` y todavía **no
+  existe**: hasta que exista, «Continuar» queda conectado a un callback vacío.
 
 ### Contrato pedido a otras specs
 
 | Spec | Lo que este diseño necesita |
 |------|-----------------------------|
-| HU-04 (Persona 3) | Aceptar `onFinish` opcional en `GoalCelebrationOverlay` y su conexión en `MapScreen`. Definir quién limpia `finishedSummaries` (no hay `remove`). Mantener `NavigateToResults` con un resumen que tenga `id`. |
+| HU-04 (Persona 3) | Botón «Finalizar» en `GoalCelebrationOverlay` conectado al diálogo existente; reintento ante fallo de `finishSession()` sin perder la sesión; `removeFinishedSummary(id)` en `RunSessionRepository`; borrar su `rememberReduceMotion()` provisoria; mantener `getFinishedSummary(id)` y `NavigateToResults` con un resumen que tenga `id`. No tocar `TrazoApp.kt`. |
 | `stop-detection` | Consumir `suppressed` y resolver la consulta pendiente como frenada (7.3). Sin código en `main` todavía. Aportar las frenadas a `save-run`. |
-| `save-run` | Definir la ruta (recibe el id), leer con `getFinishedSummary(id)` y decidir cuándo se limpia el resumen. |
-| Persona 4 | Si publica otra `rememberReduceMotion()`, migrar los usos (hoy está en `GoalCelebrationOverlay.kt`). |
+| `save-run` (HU-07) | Definir la ruta `saverun/{runId}`, leer con `getFinishedSummary(id)` y llamar `removeFinishedSummary(id)` al terminar de guardar o al descartar. |
+| Rocío (PR #105) | `rememberReduceMotion()` en `ui/theme/ReduceMotion.kt`. |
 
 ## Data Models
 
@@ -387,7 +402,7 @@ layout sin check ni animación, título «Recorrido finalizado» y marca «Incom
 
 | Escenario | Respuesta | UI |
 |-----------|-----------|----|
-| `finishSession()` falla | Hoy `onConfirmFinish()` **no maneja el fallo**: el diálogo ya se cerró y no hay efecto de error | Sin cambios; ver Open Questions |
+| `finishSession()` falla | Hoy `onConfirmFinish()` no maneja el fallo. Persona 3 lo corrige (HU-04) para poder reintentar sin perder la sesión | Fuera de esta spec |
 | Resultado sin datos (`getFinishedSummary` devuelve `null`) | `LeaveToMap` | Vuelve al Mapa |
 | Doble toque en «Finalizar recorrido» | No hay `isFinishing`; el segundo `finishSession()` falla con «no hay sesión» | Sin efecto visible |
 | Regularidad ausente | `regularityText = null` | «No disponible» |
@@ -408,8 +423,6 @@ layout sin check ni animación, título «Recorrido finalizado» y marca «Incom
 
 - `ResultContent`: ambos títulos, métricas, «No disponible», sin check en «Recorrido finalizado»,
   «Continuar» invoca el callback con el id.
-- `GoalCelebrationOverlay` con `onFinish`: muestra «Finalizar», invoca el callback y sin `onFinish`
-  no aparece el botón.
 - Accesibilidad: fuente al 200 % sin recortes; estado comunicado con texto e ícono.
 
 ## Security Considerations
@@ -420,30 +433,23 @@ se registra la ubicación en logs.
 ## Performance & Scalability
 
 - La traza no viaja por navegación; el resumen se lee por id.
-- `finishedSummaries` crece mientras nadie llame a un `remove` inexistente (ver Open Questions).
+- `finishedSummaries` se limpia con `removeFinishedSummary(id)`, que llama `save-run`; hasta entonces el
+  resumen queda en memoria.
 
 ## Open Questions / Risks
 
-- **Para Persona 3: ¿quién limpia el resumen?** `RunSessionRepository` no tiene `remove` y
-  `finishedSummaries` guarda cada recorrido finalizado hasta que muere el proceso. Opciones: que
-  `save-run` lo limpie al guardar o descartar (hace falta `remove` en la interfaz) o aceptar la
-  retención. Esta spec solo lee.
-- **Cambio en archivos de Persona 3** (`GoalCelebrationOverlay`, `MapScreen`): el botón «Finalizar»
-  del aviso requiere su acuerdo. Si no lo acepta, 1.1 y 1.3 quedan cubiertos solo por el «Finalizar»
-  de `RunControls`.
+- **Resuelto con Persona 3:** el botón «Finalizar» del aviso y el reintento ante fallo de
+  `finishSession()` son de HU-04; `removeFinishedSummary(id)` lo agrega ella y lo llama `save-run`.
+  Riesgo residual: hasta que `save-run` exista, los resúmenes quedan en memoria.
 - **Frenadas y regularidad (6.2) no están en `FrozenRunSummary`.** Dependen de `stop-detection` y
   HU-05.2. El resultado muestra «No disponible» en regularidad y no muestra frenadas; `save-run`
   necesita otra fuente.
 - **Prioridad del cierre (7.1–7.3)**: `suppressed` ya está, pero `stop-detection` no tiene código en
   `main`. Queda bloqueado hasta que exista su overlay.
-- **Fallo de `finishSession()` sin feedback**: `onConfirmFinish()` no usa `onFailure`. No lo piden los
-  requisitos; proponerlo a Persona 3 si se quiere un aviso.
 - **Formato de distancia**: el panel del Mapa muestra 2 decimales; el resultado usa 1 (`5,2 km`).
   Alinear con el equipo de diseño.
-- **`TODO (Persona 4)` en `TrazoApp`** asigna la navegación al resultado a Persona 4: confirmar que
-  esta spec es la dueña.
+- **`TODO (Persona 4)` en `TrazoApp`**: acordado que la ruta `result/{runId}` y el cableado son de
+  esta spec; Persona 3 no toca ese archivo.
 - **Dos `RunGoal`** (`domain.model` con `kilometers: Int` y `domain.model.map` con `distanceKm:
   Double`): se usa el de `map`. Riesgo de confusión al importar.
-- **`rememberReduceMotion()` provisoria** en `GoalCelebrationOverlay.kt`; si Persona 4 publica otra, se
-  migra.
-- **Ruta `saverun` inexistente** y `save-run` sin `design.md`: «Continuar» queda con callback vacío.
+- **Ruta `saverun/{runId}` inexistente** (es de `save-run`): «Continuar» queda con callback vacío.
