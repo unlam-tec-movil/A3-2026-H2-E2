@@ -2,15 +2,14 @@ package com.trazo.app.ui.screens.map
 
 import android.app.Activity
 import android.view.WindowManager
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -21,9 +20,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.android.gms.maps.model.LatLng
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.ui.components.layout.FinishConfirmDialog
@@ -78,120 +78,105 @@ fun MapScreen(
         }
     }
 
-    val currentLocation =
-        uiState.runnerPosition?.let { location ->
-            LatLng(
-                location.latitude,
-                location.longitude,
-            )
+    // Íconos oscuros en la barra de estado mientras se ve el mapa claro (Inicio usa claros).
+    val view = LocalView.current
+    DisposableEffect(activity, view) {
+        val controller = activity?.let { WindowCompat.getInsetsController(it.window, view) }
+        val previousLightStatusBars = controller?.isAppearanceLightStatusBars
+        controller?.isAppearanceLightStatusBars = true
+        onDispose {
+            if (controller != null && previousLightStatusBars != null) {
+                controller.isAppearanceLightStatusBars = previousLightStatusBars
+            }
+        }
+    }
+
+    // Sin Scaffold propio: el mapa ocupa también el área de la barra de estado, y el espacio de la
+    // barra inferior ya lo reserva el Scaffold de TrazoApp.
+    Box(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        MapLayer(
+            routePoints = uiState.routePoints,
+            currentLocation = uiState.runnerPosition,
+            isMapCenteredOnRunner = uiState.isMapCenteredOnRunner,
+            onCenterMapClicked = { viewModel.onCenterMapClicked() },
+            onMapDragged = { viewModel.onMapDragged() },
+        ) {
+            RunPanel(uiState = uiState) {
+                RunControls(
+                    uiState = uiState,
+                    onPause = viewModel::onPauseClicked,
+                    onResume = viewModel::onResumeClicked,
+                    onFinish = viewModel::onFinishRequested,
+                )
+            }
         }
 
-    Scaffold(
-        modifier = modifier,
-    ) { paddingValues ->
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-        ) {
-            MapLayer(
-                routePoints = uiState.routePoints,
-                currentLocation = currentLocation,
-                isMapCenteredOnRunner = uiState.isMapCenteredOnRunner,
-                onCenterMapClicked = { viewModel.onCenterMapClicked() },
-                onMapDragged = { viewModel.onMapDragged() },
-            )
-
-            if (uiState.hasActiveRun) {
-                Column(
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopStart)
-                            .padding(Spacing.lg),
-                ) {
-                    GpsIndicator(
-                        gpsQuality = uiState.gpsQuality,
-                    )
-                }
-            }
-
+        if (uiState.hasActiveRun) {
             Column(
                 modifier =
                     Modifier
-                        .align(Alignment.BottomCenter)
+                        .align(Alignment.TopStart)
+                        .statusBarsPadding()
                         .padding(Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
-                RunPanel(
-                    uiState = uiState,
-                )
-
-                RunControls(
-                    uiState = uiState,
-                    onPause = {
-                        viewModel.onPauseClicked()
-                    },
-                    onResume = {
-                        viewModel.onResumeClicked()
-                    },
-                    onFinish = {
-                        viewModel.onFinishRequested()
-                    },
+                GpsIndicator(
+                    gpsQuality = uiState.gpsQuality,
                 )
             }
-
-            FinishConfirmDialog(
-                showFinishConfirmDialog = uiState.showFinishConfirmDialog,
-                goalReached = uiState.goalReached,
-                onConfirmFinish = {
-                    viewModel.onConfirmFinish()
-                },
-                onCancelFinish = {
-                    viewModel.onCancelFinish()
-                },
-            )
-
-            if (uiState.showShortRunDialog) {
-                if (shortRunNotice != null) {
-                    shortRunNotice(
-                        { viewModel.onDiscardShortRun() },
-                        { viewModel.onReturnFromShortRun() },
-                    )
-                } else {
-                    AlertDialog(
-                        onDismissRequest = { viewModel.onReturnFromShortRun() },
-                        title = { Text(text = stringResource(R.string.map_short_run_title)) },
-                        text = { Text(text = stringResource(R.string.map_short_run_text)) },
-                        confirmButton = {
-                            TextButton(
-                                onClick = { viewModel.onDiscardShortRun() },
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.map_discard),
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            }
-                        },
-                        dismissButton = {
-                            OutlinedButton(
-                                onClick = { viewModel.onReturnFromShortRun() },
-                            ) {
-                                Text(text = stringResource(R.string.map_return_to_run))
-                            }
-                        },
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    )
-                }
-            }
-
-            GoalCelebrationOverlay(
-                showCelebration = uiState.showGoalCelebration,
-                goal = uiState.goal,
-                onDismiss = {
-                    viewModel.onCelebrationDismissed()
-                },
-            )
         }
+
+        FinishConfirmDialog(
+            showFinishConfirmDialog = uiState.showFinishConfirmDialog,
+            goalReached = uiState.goalReached,
+            onConfirmFinish = {
+                viewModel.onConfirmFinish()
+            },
+            onCancelFinish = {
+                viewModel.onCancelFinish()
+            },
+        )
+
+        if (uiState.showShortRunDialog) {
+            if (shortRunNotice != null) {
+                shortRunNotice(
+                    { viewModel.onDiscardShortRun() },
+                    { viewModel.onReturnFromShortRun() },
+                )
+            } else {
+                AlertDialog(
+                    onDismissRequest = { viewModel.onReturnFromShortRun() },
+                    title = { Text(text = stringResource(R.string.map_short_run_title)) },
+                    text = { Text(text = stringResource(R.string.map_short_run_text)) },
+                    confirmButton = {
+                        TextButton(
+                            onClick = { viewModel.onDiscardShortRun() },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.map_discard),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(
+                            onClick = { viewModel.onReturnFromShortRun() },
+                        ) {
+                            Text(text = stringResource(R.string.map_return_to_run))
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                )
+            }
+        }
+
+        GoalCelebrationOverlay(
+            showCelebration = uiState.showGoalCelebration,
+            goal = uiState.goal,
+            onDismiss = {
+                viewModel.onCelebrationDismissed()
+            },
+        )
     }
 }

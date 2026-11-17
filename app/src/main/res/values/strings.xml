@@ -11,7 +11,9 @@
     <string name="home_settings_description">Configuración</string>
 
     <!-- HU-04 Mapa y Seguimiento del Recorrido -->
-    <string name="map_your_run">Tu recorrido</string>
+    <string name="map_elapsed_time">Tiempo recorrido</string>
+    <string name="map_goal_badge">Meta %1$s</string>
+    <string name="map_your_location">Tu ubicación</string>
     <string name="map_distance">Distancia</string>
     <string name="map_current_speed">Velocidad actual</string>
     <string name="map_average_speed">Promedio</string>
@@ -23,7 +25,8 @@
     <string name="map_gps_no_signal">Sin señal GPS</string>
     <string name="map_gps_weak_signal">Señal GPS débil</string>
     <string name="map_gps_full_signal">Buena señal GPS</string>
-    <string name="map_recenter">Recentrar mapa</string>
+    <string name="map_recenter">Centrar en mi ubicación</string>
+    <string name="map_attribution" translatable="false">© OpenStreetMap contributors © CARTO</string>
     <string name="map_finish_confirm_goal_reached">¿Estás seguro de que deseás finalizar?</string>
     <string name="map_finish_confirm_goal_not_reached">Todavía no llegaste a tu meta. ¿Estás seguro de que deseás finalizar?</string>
     <string name="map_short_run_title">Recorrido demasiado corto</string>
