@@ -68,7 +68,7 @@
   - _Depends: 2.2_
   - _Requirements: 2.3, 2.4, 4.1, 4.2, 4.3, 4.4, 4.7_
 
-- [ ] 2.4 Repositorio de detección: orquestación de sensor, reloj y recorrido
+- [x] 2.4 Repositorio de detección: orquestación de sensor, reloj y recorrido
   - Lee el sensor solo mientras hay un recorrido en curso y lo deja de leer al pasar a pausa manual o
     al terminar; cada observación usa el reloj monotónico y un tick de 500 ms
   - Sin muestras por más de 2 s trata al corredor como «en movimiento» para no registrar frenadas
