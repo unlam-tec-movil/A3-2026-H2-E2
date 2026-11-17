@@ -1,9 +1,10 @@
 # Implementation Plan
 
 > **Orden de trabajo:** dominio, sensor y UI no dependen de HU-04 (tareas 1 a 3). HU-04 ya está en
-> `develop` y el contrato se verificó contra el código. La 4.1 está desbloqueada; la 4.2 (y por
-> dependencia la 4.3 y la 4.4) sigue bloqueada por las discrepancias D1–D3 de `design.md`
-> («Discrepancias con el código real»), que requieren una decisión con Rocío / Persona 3.
+> `develop` y el contrato se verificó contra el código. La 4.1 está desbloqueada. Las tareas 4.2 a
+> 4.4 siguen bloqueadas hasta que Persona 3 avise: las discrepancias D1–D3 de `design.md`
+> («Discrepancias con el código real») ya están acordadas con ella, pero los cambios en
+> `RunSessionRepository` todavía no están en `develop`.
 
 - [ ] 1. Fundaciones: utilidad compartida, pruebas con tiempo virtual y contratos del dominio
 
@@ -146,7 +147,7 @@
   - _Depends: 3.2, 3.3, 3.4_
   - _Requirements: 3.1, 4.1_
 
-- [ ] 4. Integración con HU-04 y Mapa (4.1 desbloqueada; 4.2 a 4.4 bloqueadas por D1–D3)
+- [ ] 4. Integración con HU-04 y Mapa (4.1 desbloqueada; 4.2 a 4.4 bloqueadas hasta que Persona 3 avise que sus cambios (D1–D3, acordados) están en `develop`)
 
 - [ ] 4.1 Adaptar el recorrido y la ubicación de HU-04
   - El «recorrido en curso» entrega el id mientras la sesión está activa, detenida o en pausa
@@ -160,26 +161,27 @@
   - _Requirements: 1.4, 2.2_
 
 - [ ] 4.2 Implementar la publicación de estado sobre `RunSessionRepository`
-  - **BLOQUEADA por D1 y D2 (y D3 para el comportamiento confirmado del temporizador)**; ver
-    «Discrepancias con el código real» en `design.md`. Se desbloquea cuando Rocío / Persona 3
-    resuelvan cómo cerrar la brecha entre el diseño y `RunSessionRepositoryImpl`
-  - El adaptador llama a las funciones `suspend` del repositorio y devuelve su `Result<Unit>`:
-    `STOPPED` → `markStopped()` (solo desde `ACTIVE`); `ACTIVE` desde `STOPPED` → `markMoving()`;
-    `ACTIVE` desde `PERSONAL_PAUSED` → `resumeSession()` (D2); `PERSONAL_PAUSED` desde `STOPPED` →
-    `pausePersonally()`, que hoy solo acepta `ACTIVE` (D1)
-  - Antes de llamar lee `activeSession.value`: solo actúa si es `ActiveSession` con ese id y nunca
-    llama `resumeSession()` sobre `PAUSED`
+  - **BLOQUEADA hasta que Persona 3 avise**: D1, D2 y D3 (`design.md`, «Discrepancias con el código
+    real») ya están acordadas con ella, pero sus cambios en `RunSessionRepository` todavía no están en
+    `develop`
+  - El adaptador llama a las funciones `suspend` del repositorio y devuelve su `Result<Unit>`
+    (orígenes acordados): `STOPPED` → `markStopped()` (solo desde `ACTIVE`; deja temporizador y GPS
+    corriendo, D3); `ACTIVE` desde `STOPPED` o `PERSONAL_PAUSED` → `markMoving()` (D2; no acepta
+    `PAUSED`); `PERSONAL_PAUSED` desde `STOPPED` → `pausePersonally()` (D1; acepta `ACTIVE` y
+    `STOPPED`). Ya no usa `resumeSession()`
+  - Antes de llamar lee `activeSession.value`: solo actúa si es `ActiveSession` con ese id; en
+    `PAUSED` no publica nada, así que no llama a `markMoving()`
   - Si una llamada devuelve `Result.failure`, el repositorio la ignora y reevalúa en el siguiente
     ciclo; la pausa manual (`PAUSED`) nunca se pisa
   - Tests con un repositorio falso que replica los orígenes permitidos del real: cada traducción;
     no pisa `PAUSED`; `Result.failure` se ignora y se reintenta en el siguiente ciclo
-  - Verificación manual cuando D3 se resuelva: en `STOPPED` el temporizador sigue y en
-    `PERSONAL_PAUSED` se detiene
+  - Verificación manual cuando los cambios de Persona 3 estén en `develop`: en `STOPPED` el
+    temporizador y el GPS siguen y en `PERSONAL_PAUSED` se detienen
   - _Depends: 2.5, 4.1_
   - _Requirements: 2.1, 4.3_
 
 - [ ] 4.3 Cablear la inyección del repositorio de detección
-  - Bloqueada solo por dependencia con la 4.2 (D1–D3)
+  - Bloqueada por dependencia con la 4.2: espera el aviso de Persona 3 (cambios D1–D3 en `develop`)
   - Módulo con el reloj monotónico, el alcance de aplicación de HU-04 (`@ApplicationScope`) y los
     enlaces de repositorio, sensor y adaptadores
   - La app compila y el repositorio se inyecta como único en toda la aplicación
@@ -187,7 +189,7 @@
   - _Requirements: 1.4_
 
 - [ ] 4.4 Montar la superposición en el Mapa por parámetro
-  - Bloqueada solo por dependencia con la 4.3 (D1–D3)
+  - Bloqueada por dependencia con la 4.3: espera el aviso de Persona 3 (cambios D1–D3 en `develop`)
   - Coordinar con Persona 3 (dueña del Mapa): se suma la pieza con `suppressed` sin reescribir la
     pantalla; la alimenta el cierre de HU-06
   - En el Mapa con un recorrido en curso aparece la alerta sobre el panel del temporizador y, a los
@@ -208,6 +210,8 @@
 
 ## Implementation Notes
 
-- 3.4: `StopDetectionViewModel` queda sin `@HiltViewModel`/`@Inject` (hay un `TODO(4.3)`): sin el binding de `StopDetectionRepository` (tarea 4.3, bloqueada por D1–D3) la compilación de Hilt de toda la app falla. Agregar las anotaciones al cablear la 4.3.
+- 3.4: `StopDetectionViewModel` queda sin `@HiltViewModel`/`@Inject` (hay un `TODO(4.3)`): sin el binding de `StopDetectionRepository` (tarea 4.3, bloqueada hasta que Persona 3 avise) la compilación de Hilt de toda la app falla. Agregar las anotaciones al cablear la 4.3.
 - 3.2 y 3.3: `BrakeAlert` y `StopClassificationDialog` están escritos y sus tests instrumentados (`BrakeAlertTest`, `StopClassificationDialogTest`) compilan, pero no se corrieron por falta de dispositivo/emulador. Siguen sin marcar hasta ejecutarlos con `./gradlew :app:connectedDebugAndroidTest`.
+- Pregunta abierta: quién agrega frenadas y regularidad a `FrozenRunSummary` (se le preguntó a
+  Persona 3, sin respuesta todavía). No bloquea ninguna tarea de esta spec; ver `design.md`.
 
