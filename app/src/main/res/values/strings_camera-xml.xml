@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="camera_permission_rationale">Usamos la cámara para que puedas sacar una foto de tu recorrido.</string>
+    <string name="camera_permission_allow">Continuar</string>
+    <string name="camera_permission_denied_message">Sin el permiso de cámara no podemos sacar la foto. Podés activarlo desde la configuración.</string>
+    <string name="camera_open_settings">Ir a configuración</string>
+    <string name="camera_ready">Cámara lista</string>
+</resources>
