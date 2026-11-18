@@ -22,7 +22,7 @@
 
 - [ ] 2. Núcleo: medidor, sensor compartido y repositorio
 
-- [ ] 2.1 (P) Medidor de tramos de 10 segundos
+- [x] 2.1 (P) Medidor de tramos de 10 segundos
   - Agrupa las muestras en tramos consecutivos y clasifica cada tramo cerrado por el desvío estándar
     de la magnitud contra el umbral
   - Un tramo abierto no se cuenta; un hueco mayor al máximo entre muestras descarta el tramo; el
@@ -33,7 +33,7 @@
   - _Depends: 1.1_
   - _Requirements: 3.1, 3.2, 3.7, 3.8, 3.9, 7.2_
 
-- [ ] 2.2 (P) Compartir la lectura del acelerómetro entre consumidores
+- [x] 2.2 (P) Compartir la lectura del acelerómetro entre consumidores
   - Un único listener mientras haya al menos un colector; se da de baja cuando se va el último y
     vuelve a registrarse si aparece otro
   - Sin acelerómetro el flujo queda vacío y los colectores no fallan
@@ -42,7 +42,7 @@
   - _Boundary: SharedMotionSource_
   - _Requirements: 5.3, 5.7, 6.1, 6.7_
 
-- [ ] 2.3 (P) Informar si el dispositivo tiene acelerómetro
+- [x] 2.3 (P) Informar si el dispositivo tiene acelerómetro
   - Devuelve verdadero solo si existe el sensor; falso si no hay gestor de sensores
   - La prueba instrumentada confirma el valor en el emulador y no lanza excepciones
   - _Boundary: AndroidMotionSensorAvailability_
