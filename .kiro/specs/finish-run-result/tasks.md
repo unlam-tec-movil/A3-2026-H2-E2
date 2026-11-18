@@ -19,7 +19,7 @@
 > esta spec, y ella no toca ese archivo.
 
 - [ ] 1. Fundación
-- [ ] 1.1 Fake del repositorio y uso de `rememberReduceMotion()` de `ui/theme`
+- [x] 1.1 Fake del repositorio y uso de `rememberReduceMotion()` de `ui/theme`
   - `kotlinx-coroutines-test` y `ui-test-junit4` ya están en `app/build.gradle.kts`: no tocar dependencias
   - Crear (o reutilizar el del test de `LiveRouteTrackingViewModelTest`) un fake de `RunSessionRepository` con `getFinishedSummary(id)` controlable y registro de llamadas
   - El fake implementa `removeFinishedSummary(id)` cuando Persona 3 lo agregue a la interfaz, pero ningún test de esta spec lo llama
@@ -88,7 +88,7 @@
   - _Boundary: TrazoApp navigation_
   - _Depends: 4.1_
   - _Requirements: 2.3, 3.3, 5.6_
-- [ ] 5.2 «Continuar» hacia «Guardar recorrido»
+- [x] 5.2 «Continuar» hacia «Guardar recorrido»
   - «Continuar» llama a un callback `onContinue(runId)` expuesto por la pantalla; la ruta `saverun/{runId}` es de `save-run` (HU-07) y se conecta cuando exista
   - Hasta entonces el callback queda vacío en `TrazoApp`; después navega a `saverun/$runId`
   - `save-run` lee con `getFinishedSummary(id)` y es quien llama `removeFinishedSummary(id)` al guardar o descartar; esta spec no lo llama
