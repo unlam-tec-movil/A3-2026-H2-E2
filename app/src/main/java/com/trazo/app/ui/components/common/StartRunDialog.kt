@@ -52,6 +52,13 @@ fun StartRunDialog(
                         )
                     }
                 }
+
+                Text(
+                    text = stringResource(R.string.start_run_location_reason),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
                 if (selectedGoal == null) {
                     Text(
                         text = stringResource(R.string.start_run_hint),
