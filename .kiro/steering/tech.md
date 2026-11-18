@@ -64,6 +64,9 @@ tocan varias personas).
 ### Required Tools
 - Android Studio con plugin ktlint; JDK 17 (el daemon de Gradle pide JetBrains JDK 25).
 - SDK configurado en `local.properties` (no se commitea).
+- Mapa: MapCompose (`ovh.plrapps:mapcompose`) con tiles raster CARTO Positron. Requiere
+  `CARTO_TILE_URL` (la "PNG tile URL" de CARTO, con la clave) en `local.properties`; necesita
+  internet y mostrar la atribución de OpenStreetMap y CARTO.
 
 ### Common Commands
 ```bash

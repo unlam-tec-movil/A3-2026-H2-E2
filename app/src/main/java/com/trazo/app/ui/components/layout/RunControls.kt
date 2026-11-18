@@ -1,22 +1,38 @@
 package com.trazo.app.ui.components.layout
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonColors
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import com.trazo.app.R
+import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.ui.screens.map.LiveRouteTrackingUiState
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoShapes
+import com.trazo.app.ui.theme.TrazoTheme
 
+/** Opacidades de Material 3 para un contenedor y un contenido deshabilitados. */
+private const val DISABLED_CONTAINER_ALPHA = 0.12f
+private const val DISABLED_CONTENT_ALPHA = 0.38f
+
+/**
+ * Controles del recorrido en curso: Pausar/Reanudar y Finalizar, como botones de ícono de
+ * 56 × 56 dp (referencia §6.2). Sin recorrido en curso se muestran deshabilitados.
+ */
 @Composable
 fun RunControls(
     uiState: LiveRouteTrackingUiState,
@@ -25,45 +41,97 @@ fun RunControls(
     onFinish: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Button(
-            onClick = {
-                if (uiState.isRunning) {
-                    onPause()
-                } else if (uiState.isPaused) {
-                    onResume()
-                }
-            },
+        val isPaused = uiState.isPaused
+
+        RunControlButton(
+            onClick = if (isPaused) onResume else onPause,
             enabled = uiState.canPause || uiState.canResume,
-            shape = TrazoShapes.medium,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(Sizes.runControl),
+            colors =
+                if (isPaused) {
+                    runControlColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                } else {
+                    runControlColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    )
+                },
         ) {
-            Text(
-                text = if (uiState.isPaused) stringResource(R.string.map_resume) else stringResource(R.string.map_pause),
-                style = MaterialTheme.typography.labelLarge,
+            Icon(
+                imageVector = if (isPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                contentDescription =
+                    stringResource(if (isPaused) R.string.map_resume else R.string.map_pause),
             )
         }
 
-        OutlinedButton(
+        RunControlButton(
             onClick = onFinish,
             enabled = uiState.canFinish,
-            shape = TrazoShapes.medium,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(Sizes.runControl),
+            colors =
+                runControlColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
         ) {
-            Text(
-                text = stringResource(R.string.map_finish),
-                color = if (uiState.canFinish) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                style = MaterialTheme.typography.labelLarge,
+            Icon(
+                imageVector = Icons.Rounded.Stop,
+                contentDescription = stringResource(R.string.map_finish),
             )
         }
+    }
+}
+
+@Composable
+private fun RunControlButton(
+    onClick: () -> Unit,
+    enabled: Boolean,
+    colors: IconButtonColors,
+    content: @Composable () -> Unit,
+) {
+    FilledIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        shape = TrazoShapes.medium,
+        colors = colors,
+        modifier = Modifier.size(Sizes.runControl),
+        content = content,
+    )
+}
+
+@Composable
+private fun runControlColors(
+    containerColor: Color,
+    contentColor: Color,
+): IconButtonColors {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    return IconButtonDefaults.filledIconButtonColors(
+        containerColor = containerColor,
+        contentColor = contentColor,
+        disabledContainerColor = onSurface.copy(alpha = DISABLED_CONTAINER_ALPHA),
+        disabledContentColor = onSurface.copy(alpha = DISABLED_CONTENT_ALPHA),
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun RunControlsPreview() {
+    TrazoTheme {
+        RunControls(
+            uiState =
+                LiveRouteTrackingUiState(
+                    hasActiveRun = true,
+                    runState = RunState.ACTIVE,
+                    areControlActionsAllowed = true,
+                ),
+            onPause = {},
+            onResume = {},
+            onFinish = {},
+        )
     }
 }

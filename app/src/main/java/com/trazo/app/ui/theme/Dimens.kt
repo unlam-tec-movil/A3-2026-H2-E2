@@ -21,3 +21,10 @@ object Sizes {
     val traceLiveWidth = 6.dp
     val traceSavedWidth = 4.dp
 }
+
+/** Niveles de elevación de Material 3 (referencia §5.4). */
+object Elevation {
+    val level1 = 1.dp // panel del temporizador sobre el mapa
+    val level2 = 3.dp // botón «Centrar», opción «Iniciar un recorrido»
+    val level3 = 6.dp // FAB, modales, alerta de frenada
+}

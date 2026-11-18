@@ -208,7 +208,7 @@ Las dependencias y versiones deben corresponder estrictamente a las declaradas e
 | **Inyección de Dependencias**   | Dagger Hilt Android              | `2.60.1`         | Inyección de dependencias y singleton en memoria                           | `@Singleton`, `@HiltViewModel`          |
 | **Integración Hilt Navigation** | AndroidX Hilt Navigation Compose | `1.2.0`          | Obtención de ViewModels con scope de navegación                            | `hiltViewModel()`                       |
 | **Ubicación / Hardware**        | Android Core KTX                 | `1.16.0`         | Acceso a APIs de sistema                                                   | Permiso gestionado por `start-run`      |
-| **Mapa**                        | Maps Compose                     | Según catálogo   | Renderizado del mapa y traza                                               | No gestionar permisos desde `MapScreen` |
+| **Mapa**                        | MapCompose (p-lr) + tiles CARTO Positron | Según catálogo   | Renderizado del mapa y traza                                               | No gestionar permisos desde `MapScreen`. Clave de CARTO (`CARTO_TILE_URL`) en `local.properties`; atribución «© OpenStreetMap contributors © CARTO» visible |
 | **Ubicación**                   | Play Services Location           | Según catálogo   | Proveedor de actualizaciones de ubicación, si está incorporado al proyecto | Implementación en `data/location`       |
 | **Pruebas Unitarias**           | JUnit 4                          | `4.13.2`         | Ejecución de pruebas unitarias en JVM                                      | Pruebas de lógica y contratos           |
 | **Pruebas de Instrumentación**  | AndroidX JUnit / Espresso        | Según catálogo   | Pruebas de integración y componentes Compose                               | Verificación en dispositivo             |
@@ -1342,4 +1342,4 @@ Los siguientes puntos no deben cerrarse mediante decisiones unilaterales dentro 
 6. **Entrega del resumen a resultados:** acordar con Persona 4 si se pasa por navegación o por un contenedor compartido, considerando el tamaño de la traza.
 7. **Arranque:** Persona 2 debe llamar a `attachActiveSession` solo después de obtener señal GPS.
 8. **Nombre del booleano de recorrido en curso:** confirmar `isRunInProgress` con Personas 1 y 2.
-9. **Librerías de mapa y de ubicación:** elegirlas y registrarlas en `libs.versions.toml`.
+9. **Librerías de mapa y de ubicación:** ~~elegirlas y registrarlas en `libs.versions.toml`.~~ Resuelto: MapCompose (`ovh.plrapps:mapcompose`) con tiles raster CARTO Positron (clave de CARTO en `local.properties` como `CARTO_TILE_URL`), y Play Services Location, según el catálogo. Se descartó Google Maps (Maps Compose) porque su API key exige una cuenta de facturación. Este cambio de librería es un disparador de revalidación del diseño y debe acordarse con el equipo.

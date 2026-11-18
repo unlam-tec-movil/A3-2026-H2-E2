@@ -20,7 +20,7 @@ androidXHilt = "1.2.0" # Integración de Hilt con componentes de AndroidX y Navi
 ksp = "2.3.11" # Procesamiento de código en tiempo de compilación.
 kover = "0.9.9" # Medición de cobertura de pruebas.
 ktlint = "14.2.0" # Análisis y formato del código Kotlin.
-mapsCompose = "6.4.1" # Integración de Google Maps con Jetpack Compose.
+mapcompose = "3.0.0" # MapCompose (p-lr): mapa por tiles en Compose. 3.0.0 usa el mismo BOM de Compose (2025.04).
 coroutinesTest = "1.10.1"
 
 [libraries]
@@ -72,7 +72,7 @@ google-dagger-hilt-android-testing = { group = "com.google.dagger", name = "hilt
 coil = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 # Google Maps integrado con Jetpack Compose
-maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
+mapcompose = { module = "ovh.plrapps:mapcompose", version.ref = "mapcompose" }
 
 # Iconos adicionales de Material Design
 material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
