@@ -80,8 +80,9 @@
   - _Requirements: 9.1_
 
 - [x] 4.2 Mapa con el «+» y el aviso de espera
-  - `MapScreen` suma los slots opcionales `startRunFab` (arriba a la derecha, bajo la barra de
-    estado) y `gpsWaitingNotice` (sobre el panel del recorrido)
+  - `MapScreen` suma los slots opcionales `startRunFab` y `gpsWaitingNotice`; `MapLayer` suma
+    `belowCenterButton`. De arriba hacia abajo, a la derecha: «Centrar», «+» y el panel del
+    temporizador; el aviso de espera va sobre el panel
   - Sin slots, el Mapa se ve igual que hoy
   - _Depends: 3.1, 3.2_
   - _Requirements: 8.2, 9.1_

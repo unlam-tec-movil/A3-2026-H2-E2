@@ -105,6 +105,8 @@ fun MapScreen(
             isMapCenteredOnRunner = uiState.isMapCenteredOnRunner,
             onCenterMapClicked = { viewModel.onCenterMapClicked() },
             onMapDragged = { viewModel.onMapDragged() },
+            // El «+» va entre «Centrar» y el panel del temporizador.
+            belowCenterButton = { startRunFab(Modifier) },
         ) {
             gpsWaitingNotice(Modifier.padding(bottom = Spacing.md))
             RunPanel(uiState = uiState) {
@@ -116,13 +118,6 @@ fun MapScreen(
                 )
             }
         }
-
-        startRunFab(
-            Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(Spacing.lg),
-        )
 
         if (uiState.hasActiveRun) {
             Column(

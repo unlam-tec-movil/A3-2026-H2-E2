@@ -159,8 +159,10 @@ app/src/androidTest/java/com/trazo/app/
   permiso, ir a Mapa); arma `StartRunFab` y `GpsWaitingNotice` y los pasa como slots.
 - `ui/screens/home/HomeScreen.kt` / `HomeViewModel.kt` — `HomeContent` recibe el slot
   `startRunFab`; `HomeUiState` queda con `hasRecentRuns`.
-- `ui/screens/map/MapScreen.kt` — slots opcionales `startRunFab` (arriba a la derecha) y
-  `gpsWaitingNotice` (sobre el panel).
+- `ui/screens/map/MapScreen.kt` — slots opcionales `startRunFab` y `gpsWaitingNotice`. El «+» va
+  en la columna derecha, debajo de «Centrar» y encima del panel del temporizador; el aviso, sobre el
+  panel.
+- `ui/components/layout/MapLayer.kt` — slot `belowCenterButton` debajo del botón «Centrar».
 - `res/values/strings_start_run.xml` — textos del aviso de espera.
 - Tests: `HomeViewModelTest` y `HomeContentTest` sin los casos del FAB (pasan a
   `StartRunViewModelTest` y `StartRunFabTest`).
