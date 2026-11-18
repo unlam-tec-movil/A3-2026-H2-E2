@@ -44,8 +44,7 @@ class RunSessionStatePublisherTest {
 
         override suspend fun markStopped() = transition("markStopped", setOf(RunState.ACTIVE), RunState.STOPPED)
 
-        override suspend fun markMoving() =
-            transition("markMoving", setOf(RunState.STOPPED, RunState.PERSONAL_PAUSED), RunState.ACTIVE)
+        override suspend fun markMoving() = transition("markMoving", setOf(RunState.STOPPED, RunState.PERSONAL_PAUSED), RunState.ACTIVE)
 
         override suspend fun resumeSession(): Result<Unit> {
             calls += "resumeSession"
