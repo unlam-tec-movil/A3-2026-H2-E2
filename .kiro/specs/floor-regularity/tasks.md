@@ -104,7 +104,7 @@
     `stop-detection` (su tarea 4.3) solo bindea `StopDetectionRepository` y los adaptadores, sin
     bindear `MotionSource` ni `MonotonicClock`. La 4.3 de esta spec debe proveer ambos.
 
-- [ ] 4.3 Cablear la inyección
+- [x] 4.3 Cablear la inyección
   - El flujo de muestras inyectado a ambos consumidores es el compartido; la disponibilidad, el
     adaptador de estado y el repositorio quedan enlazados
   - La compilación de Hilt pasa sin bindings duplicados
