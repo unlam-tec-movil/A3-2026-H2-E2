@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="result_goal_reached_title">¡Meta cumplida!</string>
+    <string name="result_finished_title">Recorrido finalizado</string>
+    <string name="result_goal_completed">Completaste tu meta de %1$s.</string>
+    <string name="result_incomplete">Incompleto</string>
+    <string name="result_distance">Distancia</string>
+    <string name="result_time">Tiempo</string>
+    <string name="result_regularity">Regularidad</string>
+    <string name="result_unavailable">No disponible</string>
+    <string name="result_continue">Continuar</string>
+    <string name="result_goal_check_description">Meta cumplida</string>
+</resources>
