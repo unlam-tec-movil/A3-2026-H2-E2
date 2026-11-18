@@ -59,7 +59,7 @@ class RunSessionStatePublisherTest {
     }
 
     private val repository = FakeRunSessionRepository()
-    private val publisher = RunSessionStatePublisher(repository)
+    private val publisher = RunSessionStatePublisher { repository }
 
     private fun active(
         state: RunState,
@@ -153,7 +153,7 @@ class RunSessionStatePublisherTest {
                         return repository.markMoving()
                     }
                 }
-            val racingPublisher = RunSessionStatePublisher(racing)
+            val racingPublisher = RunSessionStatePublisher { racing }
 
             assertTrue(racingPublisher.publish("run-1", RunState.ACTIVE).isFailure)
             assertEquals(RunState.PAUSED, current())
