@@ -139,7 +139,7 @@
   - _Boundary: StopDetectionViewModel_
   - _Requirements: 3.1, 3.5, 4.1, 4.5, 4.7_
 
-- [ ] 3.5 Superposición con alerta y diálogo
+- [x] 3.5 Superposición con alerta y diálogo
   - Pieza que une el estado de interfaz con la alerta y el diálogo y recibe `suppressed` por
     parámetro; sin estado propio en la parte visual, con previews
   - Con `suppressed` verdadero no existen ni la alerta ni el diálogo; falso los muestra según el
@@ -212,6 +212,7 @@
 ## Implementation Notes
 
 - 3.4: `StopDetectionViewModel` queda sin `@HiltViewModel`/`@Inject` (hay un `TODO(4.3)`): sin el binding de `StopDetectionRepository` (tarea 4.3, bloqueada hasta que Persona 3 avise) la compilación de Hilt de toda la app falla. Agregar las anotaciones al cablear la 4.3.
+- 3.5: `StopDetectionOverlay` usa `hiltViewModel()` por defecto y falla en ejecución hasta la 4.3 (`TODO(4.3)`); `StopDetectionOverlayContent` (stateless) está probado en `StopDetectionOverlayTest` (emulador, pasa).
 - 3.2 y 3.3: los tests instrumentados (`BrakeAlertTest`, `StopClassificationDialogTest`) se corrieron y pasaron en el emulador (commit 72a8408).
 - `FrozenRunSummary`: acordado con Persona 3. Ella agrega y define los campos de frenadas y regularidad; HU-05 produce el conteo de frenadas y HU-05.2 la regularidad. Queda abierto solo cómo llega el dato al resumen en `finishSession()` (si lo lee desde `StopDetectionRepository` o se lo pasa quien finaliza), a definir con Persona 3 al integrar. No bloquea ninguna tarea de esta spec; ver `design.md`.
 
