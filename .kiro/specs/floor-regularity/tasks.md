@@ -112,7 +112,7 @@
   - _Depends: 2.2, 2.3, 2.4, 4.1, 4.2_
   - _Requirements: 6.1, 6.7_
 
-- [ ] 4.4 Prueba de ciclo de vida con ambos consumidores
+- [x] 4.4 Prueba de ciclo de vida con ambos consumidores
   - Con el sensor compartido real sobre un origen falso, `stop-detection` y regularidad activos: un
     único listener en activo; cero en pausa manual; uno al reanudar; cero al finalizar y al descartar
   - La prueba pasa y cubre los escenarios E8 a E12
