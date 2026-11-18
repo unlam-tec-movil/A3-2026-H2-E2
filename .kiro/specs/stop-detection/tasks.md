@@ -149,7 +149,7 @@
 
 - [ ] 4. Integración con HU-04 y Mapa (4.1 desbloqueada; 4.2 a 4.4 bloqueadas hasta que Persona 3 avise que sus cambios (D1–D3, acordados) están en `develop`)
 
-- [ ] 4.1 Adaptar el recorrido y la ubicación de HU-04
+- [x] 4.1 Adaptar el recorrido y la ubicación de HU-04
   - El «recorrido en curso» entrega el id mientras la sesión está activa, detenida o en pausa
     personal, y `null` en reposo, pausa manual o finalizada (la sesión finalizada es `Idle`; no
     existe `RunState.FINISHED`)
