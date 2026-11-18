@@ -7,7 +7,7 @@
 
 - [ ] 1. Fundaciones: modelos, configuración y puertos del dominio
 
-- [ ] 1.1 Definir los modelos, la configuración y los puertos de la regularidad
+- [x] 1.1 Definir los modelos, la configuración y los puertos de la regularidad
   - Configuración con tramo de 10 s, umbral de vibración baja (valor inicial provisional, marcado
     como sin respaldo) y hueco máximo entre muestras
   - Clase de tramo (vibración baja o alta), instantánea del recorrido en curso (id y estado) y estado
