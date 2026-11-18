@@ -1,4 +1,4 @@
-package com.trazo.app.ui.screens.home.components
+package com.trazo.app.ui.components.common
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
@@ -41,8 +41,9 @@ private const val DISABLED_CONTAINER_ALPHA = 0.12f
 private const val DISABLED_CONTENT_ALPHA = 0.38f
 
 /**
- * FAB "+" de Inicio. Al tocarlo, la pantalla decide mostrar la opción "Iniciar un recorrido",
- * que se dibuja en un [Popup] focusable: cualquier toque fuera de ella la cierra.
+ * FAB "+" de Inicio y Mapa. Al tocarlo, `StartRunViewModel` decide mostrar la opción
+ * "Iniciar un recorrido", que se dibuja en un [Popup] focusable: cualquier toque fuera de ella la
+ * cierra.
  * No guarda estado propio; todos los eventos salen por parámetro.
  */
 @Composable

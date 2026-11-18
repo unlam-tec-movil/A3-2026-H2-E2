@@ -16,8 +16,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trazo.app.R
+import com.trazo.app.ui.components.common.StartRunFab
 import com.trazo.app.ui.screens.home.components.EmptyState
-import com.trazo.app.ui.screens.home.components.StartRunFab
 import com.trazo.app.ui.screens.home.components.TrazoTopBar
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme
@@ -25,12 +25,12 @@ import com.trazo.app.ui.theme.TrazoTheme
 /**
  * Conecta [HomeViewModel] con [HomeContent]. No dibuja nada propio.
  *
- * @param onStartRunClick se invoca al elegir "Iniciar un recorrido", después de cerrar la opción.
+ * @param startRunFab botón «+» ya armado por `TrazoApp` (su lógica vive en `StartRunViewModel`).
  * @param onSettingsClick se invoca al tocar el botón de Configuración de la barra superior.
  */
 @Composable
 fun HomeScreen(
-    onStartRunClick: () -> Unit,
+    startRunFab: @Composable (Modifier) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
@@ -39,12 +39,7 @@ fun HomeScreen(
     HomeContent(
         state = state,
         onSettingsClick = onSettingsClick,
-        onStartRunFabClick = viewModel::onStartRunFabClick,
-        onStartRunOptionDismiss = viewModel::onStartRunOptionDismiss,
-        onStartRunOptionClick = {
-            viewModel.onStartRunOptionClick()
-            onStartRunClick()
-        },
+        startRunFab = startRunFab,
         modifier = modifier,
     )
 }
@@ -52,15 +47,13 @@ fun HomeScreen(
 /**
  * Contenido de Inicio. Se dibuja solo a partir de [state]; no guarda estado propio.
  * Arriba va la barra superior con "Trazo" y Configuración. Sin recorridos muestra el estado
- * vacío; con recorridos, en esta versión no dibuja cards.
+ * vacío; con recorridos, en esta versión no dibuja cards. Abajo a la derecha dibuja [startRunFab].
  */
 @Composable
 fun HomeContent(
     state: HomeUiState,
     onSettingsClick: () -> Unit,
-    onStartRunFabClick: () -> Unit,
-    onStartRunOptionDismiss: () -> Unit,
-    onStartRunOptionClick: () -> Unit,
+    startRunFab: @Composable (Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -89,16 +82,10 @@ fun HomeContent(
                 )
             }
 
-            StartRunFab(
-                enabled = state.isStartRunEnabled,
-                isOptionVisible = state.isStartRunOptionVisible,
-                onFabClick = onStartRunFabClick,
-                onOptionDismiss = onStartRunOptionDismiss,
-                onOptionClick = onStartRunOptionClick,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(Spacing.lg),
+            startRunFab(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(Spacing.lg),
             )
         }
     }
@@ -111,9 +98,16 @@ private fun HomeContentEmptyPreview() {
         HomeContent(
             state = HomeUiState(),
             onSettingsClick = {},
-            onStartRunFabClick = {},
-            onStartRunOptionDismiss = {},
-            onStartRunOptionClick = {},
+            startRunFab = { modifier ->
+                StartRunFab(
+                    enabled = true,
+                    isOptionVisible = false,
+                    onFabClick = {},
+                    onOptionDismiss = {},
+                    onOptionClick = {},
+                    modifier = modifier,
+                )
+            },
         )
     }
 }
@@ -123,11 +117,18 @@ private fun HomeContentEmptyPreview() {
 private fun HomeContentOptionVisiblePreview() {
     TrazoTheme {
         HomeContent(
-            state = HomeUiState(isStartRunOptionVisible = true),
+            state = HomeUiState(),
             onSettingsClick = {},
-            onStartRunFabClick = {},
-            onStartRunOptionDismiss = {},
-            onStartRunOptionClick = {},
+            startRunFab = { modifier ->
+                StartRunFab(
+                    enabled = true,
+                    isOptionVisible = true,
+                    onFabClick = {},
+                    onOptionDismiss = {},
+                    onOptionClick = {},
+                    modifier = modifier,
+                )
+            },
         )
     }
 }

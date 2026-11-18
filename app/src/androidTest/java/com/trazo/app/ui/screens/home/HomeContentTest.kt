@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.trazo.app.R
+import com.trazo.app.ui.components.common.StartRunFab
 import com.trazo.app.ui.theme.TrazoTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -35,15 +36,26 @@ class HomeContentTest {
         @StringRes id: Int,
     ): String = InstrumentationRegistry.getInstrumentation().targetContext.getString(id)
 
-    private fun setContent(state: HomeUiState) {
+    /** El «+» llega como slot desde `TrazoApp`; acá se arma con contadores. */
+    private fun setContent(
+        state: HomeUiState,
+        isOptionVisible: Boolean = false,
+    ) {
         composeTestRule.setContent {
             TrazoTheme {
                 HomeContent(
                     state = state,
                     onSettingsClick = { settingsClicks++ },
-                    onStartRunFabClick = { fabClicks++ },
-                    onStartRunOptionDismiss = { optionDismissals++ },
-                    onStartRunOptionClick = { optionClicks++ },
+                    startRunFab = { modifier ->
+                        StartRunFab(
+                            enabled = true,
+                            isOptionVisible = isOptionVisible,
+                            onFabClick = { fabClicks++ },
+                            onOptionDismiss = { optionDismissals++ },
+                            onOptionClick = { optionClicks++ },
+                            modifier = modifier,
+                        )
+                    },
                 )
             }
         }
@@ -92,7 +104,7 @@ class HomeContentTest {
     // 3.3
     @Test
     fun optionVisible_showsStartRunOption_andClickNotifiesSelection() {
-        setContent(HomeUiState(isStartRunOptionVisible = true))
+        setContent(HomeUiState(), isOptionVisible = true)
 
         composeTestRule
             .onNodeWithText(string(R.string.home_start_run))
@@ -106,7 +118,7 @@ class HomeContentTest {
     // 3.4
     @Test
     fun optionVisible_tapOutside_notifiesDismissAndNotSelection() {
-        setContent(HomeUiState(isStartRunOptionVisible = true))
+        setContent(HomeUiState(), isOptionVisible = true)
         composeTestRule.onNodeWithText(string(R.string.home_start_run)).assertIsDisplayed()
 
         // El toque se inyecta a nivel de sistema (como un dedo real) sobre el mensaje vacío, fuera

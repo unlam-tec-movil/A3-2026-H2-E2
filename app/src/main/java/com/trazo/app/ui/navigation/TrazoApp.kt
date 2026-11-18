@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -20,16 +22,19 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.trazo.app.R
 import com.trazo.app.data.location.locationSettingsIntent
-import com.trazo.app.data.location.readLocationStatus
-import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.ui.components.common.LocationIssueDialog
 import com.trazo.app.ui.components.common.StartRunDialog
+import com.trazo.app.ui.components.common.StartRunFab
 import com.trazo.app.ui.screens.history.HistoryScreen
 import com.trazo.app.ui.screens.home.HomeScreen
 import com.trazo.app.ui.screens.map.MapScreen
 import com.trazo.app.ui.screens.result.ResultScreen
+import com.trazo.app.ui.screens.startrun.StartRunEffect
 import com.trazo.app.ui.screens.startrun.StartRunViewModel
+import com.trazo.app.ui.screens.startrun.components.GpsWaitingNotice
+import kotlin.math.roundToInt
 
 private const val RESULT_ROUTE = "result/{runId}"
 
@@ -52,20 +57,44 @@ fun TrazoApp() {
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions(),
         ) {
-            startRunViewModel.onStartRunRequested(readLocationStatus(context))
+            startRunViewModel.onPermissionResult()
         }
 
-    val requestStartRun: () -> Unit = {
-        val status = readLocationStatus(context)
-        if (status == LocationStatus.PERMISSION_DENIED) {
-            permissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                ),
+    // La lógica del inicio vive en StartRunViewModel; acá solo se ejecutan sus efectos.
+    LaunchedEffect(startRunViewModel) {
+        startRunViewModel.uiEffect.collect { effect ->
+            when (effect) {
+                StartRunEffect.RequestLocationPermission ->
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ),
+                    )
+                StartRunEffect.NavigateToMap -> navigateTo(TrazoDestination.MAP)
+            }
+        }
+    }
+
+    // Mismo «+» en Inicio y en Mapa (start-run, requisito 9).
+    val startRunFab: @Composable (Modifier) -> Unit = { fabModifier ->
+        StartRunFab(
+            enabled = startRunState.isFabEnabled,
+            isOptionVisible = startRunState.isOptionVisible,
+            onFabClick = startRunViewModel::onFabClick,
+            onOptionDismiss = startRunViewModel::onOptionDismiss,
+            onOptionClick = startRunViewModel::onOptionClick,
+            modifier = fabModifier,
+        )
+    }
+
+    val gpsWaitingNotice: @Composable (Modifier) -> Unit = { noticeModifier ->
+        startRunState.waitingGoal?.let { goal ->
+            GpsWaitingNotice(
+                goalLabel = stringResource(R.string.start_run_goal_km, goal.distanceKm.roundToInt()),
+                onCancel = startRunViewModel::onCancelWaiting,
+                modifier = noticeModifier,
             )
-        } else {
-            startRunViewModel.onStartRunRequested(status)
         }
     }
 
@@ -90,16 +119,18 @@ fun TrazoApp() {
         ) {
             composable(TrazoDestination.HOME.route) {
                 HomeScreen(
-                    onStartRunClick = requestStartRun,
+                    startRunFab = startRunFab,
                     onSettingsClick = {},
                 )
             }
             composable(TrazoDestination.MAP.route) {
                 MapScreen(
-                    onStartRunClick = requestStartRun,
+                    onStartRunClick = startRunViewModel::onOptionClick,
                     onNavigateToResults = { summary ->
                         navController.navigate("result/${summary.id}") { launchSingleTop = true }
                     },
+                    startRunFab = startRunFab,
+                    gpsWaitingNotice = gpsWaitingNotice,
                 )
             }
             composable(
@@ -127,11 +158,7 @@ fun TrazoApp() {
         StartRunDialog(
             selectedGoal = startRunState.selectedGoal,
             onGoalSelected = startRunViewModel::onGoalSelected,
-            onConfirm = {
-                if (startRunViewModel.onConfirm() != null) {
-                    navigateTo(TrazoDestination.MAP)
-                }
-            },
+            onConfirm = startRunViewModel::onConfirm,
             onDismiss = startRunViewModel::onDismiss,
         )
     }

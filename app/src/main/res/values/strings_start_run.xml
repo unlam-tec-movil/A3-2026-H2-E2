@@ -6,6 +6,8 @@
     <string name="start_run_hint">Elegí una meta para continuar</string>
     <string name="start_run_cancel">Cancelar</string>
     <string name="start_run_confirm">Comenzar</string>
+    <string name="start_run_waiting_gps">Esperando señal GPS</string>
+    <string name="start_run_waiting_goal">Meta: %1$s</string>
     <string name="location_issue_permission_title">Necesitamos tu ubicación</string>
     <string name="location_issue_permission_message">Trazo usa tu ubicación para registrar el recorrido. Activá el permiso en Configuración.</string>
     <string name="location_issue_approximate_title">Necesitamos la ubicación precisa</string>

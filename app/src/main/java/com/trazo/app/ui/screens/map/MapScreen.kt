@@ -40,6 +40,9 @@ fun MapScreen(
     onNavigateToResults: (FrozenRunSummary) -> Unit,
     modifier: Modifier = Modifier,
     shortRunNotice: (@Composable (onDiscard: () -> Unit, onReturn: () -> Unit) -> Unit)? = null,
+    // Piezas de start-run armadas por TrazoApp: el botón «+» y el aviso «Esperando señal GPS».
+    startRunFab: @Composable (Modifier) -> Unit = {},
+    gpsWaitingNotice: @Composable (Modifier) -> Unit = {},
     viewModel: LiveRouteTrackingViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -103,6 +106,7 @@ fun MapScreen(
             onCenterMapClicked = { viewModel.onCenterMapClicked() },
             onMapDragged = { viewModel.onMapDragged() },
         ) {
+            gpsWaitingNotice(Modifier.padding(bottom = Spacing.md))
             RunPanel(uiState = uiState) {
                 RunControls(
                     uiState = uiState,
@@ -112,6 +116,13 @@ fun MapScreen(
                 )
             }
         }
+
+        startRunFab(
+            Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(Spacing.lg),
+        )
 
         if (uiState.hasActiveRun) {
             Column(
