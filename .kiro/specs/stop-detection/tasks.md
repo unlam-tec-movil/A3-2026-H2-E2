@@ -1,10 +1,9 @@
 # Implementation Plan
 
 > **Orden de trabajo:** dominio, sensor y UI no dependen de HU-04 (tareas 1 a 3). HU-04 ya está en
-> `develop` y el contrato se verificó contra el código. La 4.1 está desbloqueada. Las tareas 4.2 a
-> 4.4 siguen bloqueadas hasta que Persona 3 avise: las discrepancias D1–D3 de `design.md`
-> («Discrepancias con el código real») ya están acordadas con ella, pero los cambios en
-> `RunSessionRepository` todavía no están en `develop`.
+> `develop` y el contrato se verificó contra el código. La 4.1 está desbloqueada. La 4.3 se
+> implementa ahora; la 4.4 y la verificación manual de transiciones esperan los cambios de Persona 3
+> en `develop` (discrepancias D1–D3 de `design.md`, «Discrepancias con el código real»).
 
 - [ ] 1. Fundaciones: utilidad compartida, pruebas con tiempo virtual y contratos del dominio
 
@@ -147,7 +146,7 @@
   - _Depends: 3.2, 3.3, 3.4_
   - _Requirements: 3.1, 4.1_
 
-- [ ] 4. Integración con HU-04 y Mapa (4.1 desbloqueada; 4.2 a 4.4 bloqueadas hasta que Persona 3 avise que sus cambios (D1–D3, acordados) están en `develop`)
+- [ ] 4. Integración con HU-04 y Mapa (La 4.3 se implementa ahora; la 4.4 y la verificación manual de transiciones esperan los cambios de Persona 3 en `develop`)
 
 - [x] 4.1 Adaptar el recorrido y la ubicación de HU-04
   - El «recorrido en curso» entrega el id mientras la sesión está activa, detenida o en pausa
@@ -178,8 +177,9 @@
   - _Depends: 2.5, 4.1_
   - _Requirements: 2.1, 4.3_
 
-- [ ] 4.3 Cablear la inyección del repositorio de detección
-  - Bloqueada por dependencia con la 4.2: espera el aviso de Persona 3 (cambios D1–D3 en `develop`)
+- [x] 4.3 Cablear la inyección del repositorio de detección
+  - La 4.3 se implementa ahora; la 4.4 y la verificación manual de transiciones esperan los cambios de Persona 3 en `develop`
+  - Los adaptadores sobre `RunSessionRepository` inyectan `Provider<RunSessionRepository>` y lo obtienen al usarse, para evitar un ciclo de Hilt cuando `RunSessionRepositoryImpl` inyecte `Optional<StopDetectionRepository>`
   - Módulo con solo los enlaces de `StopDetectionRepository` y de los adaptadores; usa el
     `@ApplicationScope` ya existente
   - Decisión (4.2 de `floor-regularity`): `MotionSource` (`SharedMotionSource`) y `MonotonicClock`
@@ -211,8 +211,8 @@
 
 ## Implementation Notes
 
-- 3.4: `StopDetectionViewModel` queda sin `@HiltViewModel`/`@Inject` (hay un `TODO(4.3)`): sin el binding de `StopDetectionRepository` (tarea 4.3, bloqueada hasta que Persona 3 avise) la compilación de Hilt de toda la app falla. Agregar las anotaciones al cablear la 4.3.
-- 3.5: `StopDetectionOverlay` usa `hiltViewModel()` por defecto y falla en ejecución hasta la 4.3 (`TODO(4.3)`); `StopDetectionOverlayContent` (stateless) está probado en `StopDetectionOverlayTest` (emulador, pasa).
+- 3.4: `StopDetectionViewModel` quedó sin `@HiltViewModel`/`@Inject` hasta la 4.3; la 4.3 agregó las anotaciones y el binding de `StopDetectionRepository`.
+- 3.5: `StopDetectionOverlay` usa `hiltViewModel()` por defecto; con el cableado de la 4.3 ya resuelve el ViewModel (el `TODO(4.3)` se quitó). `StopDetectionOverlayContent` (stateless) está probado en `StopDetectionOverlayTest` (emulador, pasa).
 - 3.2 y 3.3: los tests instrumentados (`BrakeAlertTest`, `StopClassificationDialogTest`) se corrieron y pasaron en el emulador (commit 72a8408).
 - `FrozenRunSummary`: acordado con Persona 3. Ella agrega y define los campos de frenadas y regularidad; HU-05 produce el conteo de frenadas y HU-05.2 la regularidad. Queda abierto solo cómo llega el dato al resumen en `finishSession()` (si lo lee desde `StopDetectionRepository` o se lo pasa quien finaliza), a definir con Persona 3 al integrar. No bloquea ninguna tarea de esta spec; ver `design.md`.
 

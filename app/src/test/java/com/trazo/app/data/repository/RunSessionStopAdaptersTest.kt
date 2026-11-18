@@ -43,8 +43,8 @@ class RunSessionStopAdaptersTest {
     }
 
     private val repository = FakeRunSessionRepository()
-    private val runningRun = RunSessionRunningRunSource(repository)
-    private val location = RunSessionStopLocationProvider(repository)
+    private val runningRun = RunSessionRunningRunSource { repository }
+    private val location = RunSessionStopLocationProvider { repository }
 
     private fun active(
         state: RunState,
