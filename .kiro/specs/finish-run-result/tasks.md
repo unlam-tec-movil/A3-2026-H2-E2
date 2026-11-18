@@ -70,7 +70,7 @@
   - _Requirements: 5.1, 5.2, 5.3, 5.5, 6.4_
 
 - [ ] 4. Resultado: pantalla
-- [ ] 4.1 Pantalla y tarjeta de resultado
+- [x] 4.1 Pantalla y tarjeta de resultado
   - `ResultScreen` + `ResultContent` stateless: fondo primario, `GoalReachedCard` con título «¡Meta cumplida!» (check animado una vez) o «Recorrido finalizado» sin animación y marca «Incompleto»; recuadros de distancia, tiempo y regularidad («No disponible» sin dato); botón «Continuar» a todo el ancho; frenadas no se muestran
   - «Completaste tu meta de X.» usa `goalLabel(goal)` de `ui/components/layout/GoalLabel.kt`
   - Con `rememberReduceMotion()` (de `ui/theme/ReduceMotion.kt`) la tarjeta de meta cumplida se ve estática con el mismo contenido; sin botón de volver y con «atrás» sin efecto; título como encabezado accesible

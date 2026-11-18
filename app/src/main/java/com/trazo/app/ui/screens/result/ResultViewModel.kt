@@ -42,6 +42,9 @@ class ResultViewModel
         private val _effect = Channel<ResultEffect>(Channel.BUFFERED)
         val effect: Flow<ResultEffect> = _effect.receiveAsFlow()
 
+        /** Id del recorrido que se muestra; lo recibe «Continuar» para pasar a «Guardar recorrido». */
+        val runId: String = savedStateHandle.get<String>(RUN_ID_KEY).orEmpty()
+
         init {
             val summary = savedStateHandle.get<String>(RUN_ID_KEY)?.let(getFinishedRunSummary::invoke)
             if (summary == null) {
