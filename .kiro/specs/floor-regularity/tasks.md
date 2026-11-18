@@ -82,7 +82,7 @@
 
 - [ ] 4. Integración
 
-- [ ] 4.1 Adaptar el estado del recorrido de HU-04
+- [x] 4.1 Adaptar el estado del recorrido de HU-04
   - Convierte la sesión activa en instantánea con id y estado, y la sesión inactiva en ausencia de
     recorrido
   - No publica ni cambia estados: solo lee
