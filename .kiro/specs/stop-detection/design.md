@@ -241,7 +241,7 @@ app/src/main/java/com/trazo/app/
 │   │   ├── RunSessionRunningRunSource.kt      # adapta RunSessionRepository (requiere HU-04)
 │   │   ├── RunSessionStopLocationProvider.kt  # último routePoint (requiere HU-04)
 │   │   └── RunSessionStatePublisher.kt        # llama markStopped / pausePersonally / markMoving
-│   └── di/StopDetectionModule.kt              # binds + CoroutineScope + MonotonicClock (requiere HU-04)
+│   └── di/StopDetectionModule.kt              # solo binds de repositorio y adaptadores (requiere HU-04)
 └── ui/
     ├── theme/ReduceMotion.kt                  # rememberReduceMotion(): la crea esta spec; la usan
     │                                          # stop-detection, finish-run-result y la celebración (P3)
@@ -552,9 +552,11 @@ son P0: sin ellos el repositorio no puede operar.
 
 **Implementation Notes**
 
-- Integración: el módulo `StopDetectionModule` provee
-  `MonotonicClock { SystemClock.elapsedRealtime() }`, el `CoroutineScope` (`@ApplicationScope`, ya
-  existente en `di/`) y los `@Binds`. HU-04 ya está en `develop`; se escribe en la tarea 4.3.
+- Integración: el módulo `StopDetectionModule` solo hace los `@Binds` de `StopDetectionRepository` y
+  los adaptadores, y usa el `CoroutineScope` `@ApplicationScope` (ya existente en `di/`).
+  `MotionSource` (`SharedMotionSource`) y `MonotonicClock { SystemClock.elapsedRealtime() }` los
+  provee únicamente `MotionSensorModule` de `floor-regularity` (decisión de su tarea 4.2). HU-04 ya
+  está en `develop`; se escribe en la tarea 4.3.
 - Validación: pruebas con `runTest` y reloj falso atado a `testScheduler.currentTime`.
 - Riesgos: ver «Riesgos y preguntas abiertas».
 

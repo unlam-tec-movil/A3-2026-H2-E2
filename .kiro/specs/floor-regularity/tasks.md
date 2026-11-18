@@ -2,7 +2,8 @@
 
 > **Orden de trabajo:** el dominio, el sensor compartido y el aviso no dependen de otras personas
 > (tareas 1 a 3). La integración (tarea 4) necesita acuerdos abiertos: el binding de `MotionSource` y
-> `MonotonicClock` con el módulo de `stop-detection` (su tarea 4.3) y el adaptador del estado del
+> `MonotonicClock` con el módulo de `stop-detection` (su tarea 4.3; resuelto en la 4.2: los provee
+> `MotionSensorModule`) y el adaptador del estado del
 > recorrido de HU-04. Esta spec no modifica `stop-detection`, `FrozenRunSummary` ni `MapScreen`.
 
 - [ ] 1. Fundaciones: modelos, configuración y puertos del dominio
@@ -91,13 +92,17 @@
   - _Depends: 1.1_
   - _Requirements: 1.4, 3.5_
 
-- [ ] 4.2 Coordinar el binding del sensor y del reloj con stop-detection
+- [x] 4.2 Coordinar el binding del sensor y del reloj con stop-detection
   - Acordar con quien tenga `stop-detection` (Persona 4) que su módulo de inyección no bindee el
     flujo de muestras y que el reloj monotónico tenga un único proveedor
   - Dejar anotado el resultado en este archivo antes de seguir con la 4.3
   - La decisión queda registrada y `stop-detection` tiene un único binding de muestras
   - _Boundary: coordinación (sin código)_
   - _Requirements: 6.1_
+  - **Nota 4.2 (decisión registrada):** `MotionSensorModule` de `floor-regularity` es el único
+    proveedor de `MotionSource` (`SharedMotionSource`) y de `MonotonicClock`. El módulo de
+    `stop-detection` (su tarea 4.3) solo bindea `StopDetectionRepository` y los adaptadores, sin
+    bindear `MotionSource` ni `MonotonicClock`. La 4.3 de esta spec debe proveer ambos.
 
 - [ ] 4.3 Cablear la inyección
   - El flujo de muestras inyectado a ambos consumidores es el compartido; la disponibilidad, el

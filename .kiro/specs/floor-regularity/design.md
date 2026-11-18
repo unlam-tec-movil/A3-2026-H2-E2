@@ -55,8 +55,8 @@ encendida y la app visible.
 - `FrozenRunSummary` y `FinishRunUseCase` (Persona 3): esta spec no los toca.
 - Presentación de la regularidad y ubicación del aviso (HU-06, `save-run`, Historial, Mapa).
 - Frenadas «sin dato» en el resumen: se entrega la señal; el valor lo decide Persona 3 / `save-run`.
-- Proveer `MonotonicClock` y `@ApplicationScope`: `@ApplicationScope` ya existe;
-  `MonotonicClock` lo provee `stop-detection` (ver Allowed Dependencies).
+- Proveer `@ApplicationScope`: ya existe. `MonotonicClock` sí lo provee esta spec, vía
+  `MotionSensorModule` (ver Allowed Dependencies).
 
 ### Allowed Dependencies
 
@@ -64,9 +64,8 @@ encendida y la app visible.
   `ui/screens` depende de `domain`, nunca de `data`; `ui/components` solo de `ui/theme`.
 - `MotionSource`, `MotionSample` y `AccelerometerMotionSource` de `stop-detection` (se reutilizan sin
   cambios; `AccelerometerMotionSource` pasa a ser el origen del decorador).
-- `MonotonicClock` (puerto existente). Su binding Hilt lo crea `stop-detection` en su tarea 4.3;
-  si esta spec se integra antes, lo provee `MotionSensorModule` y `stop-detection` lo retira de su
-  módulo. Un solo provider en total.
+- `MonotonicClock` (puerto existente). Su único binding Hilt lo provee `MotionSensorModule`
+  (decisión de la tarea 4.2); `stop-detection` no lo bindea en su módulo.
 - `RunSessionRepository.activeSession` y `RunState` (HU-04) solo desde el adaptador
   `RunSessionActiveRunStateSource`.
 - `@ApplicationScope` (`di/ApplicationScope.kt`), ya existente.
@@ -421,8 +420,9 @@ fun interface MotionSensorAvailability {
 #### MotionSensorModule
 
 - `@Provides @Singleton MotionSource` = `SharedMotionSource(AccelerometerMotionSource, @ApplicationScope)`.
+- `@Provides @Singleton MonotonicClock { SystemClock.elapsedRealtime() }`: único proveedor.
 - `@Binds` de `MotionSensorAvailability`, `ActiveRunStateSource` y `RegularityRepository`.
-- `stop-detection` **no debe** bindear `MotionSource` en su módulo (acuerdo abierto).
+- `stop-detection` **no bindea** `MotionSource` ni `MonotonicClock` en su módulo (decidido en la 4.2).
 
 ### UI
 
@@ -494,7 +494,7 @@ de `save-run`. Invariantes: `lowVibrationSegments <= completedSegments`; `percen
 - **Redondeo** al entero más cercano: supuesto a validar.
 - **Frenadas sin acelerómetro** («sin dato» o 0): a acordar con `save-run` y Persona 3.
 - **Doble binding Hilt** de `MotionSource` y `MonotonicClock` con el módulo de `stop-detection`:
-  acordar antes de integrar.
+  resuelto en la 4.2 (proveedor único: `MotionSensorModule`); verificar que no reaparezca.
 - **Cómo llega el valor al resumen en `finishSession()`** (Persona 3) y **cuándo lo lee `save-run`**:
   abiertos; el diseño garantiza que el valor está disponible antes de armar el resumen y hasta el
   siguiente recorrido.

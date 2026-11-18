@@ -182,10 +182,11 @@
 
 - [ ] 4.3 Cablear la inyección del repositorio de detección
   - Bloqueada por dependencia con la 4.2: espera el aviso de Persona 3 (cambios D1–D3 en `develop`)
-  - Módulo con el reloj monotónico, el alcance de aplicación de HU-04 (`@ApplicationScope`) y los
-    enlaces de repositorio, sensor y adaptadores
-  - El binding de `MotionSource` y de `MonotonicClock` lo provee `floor-regularity`
-    (`SharedMotionSource`); esta 4.3 solo bindea `StopDetectionRepository`
+  - Módulo con solo los enlaces de `StopDetectionRepository` y de los adaptadores; usa el
+    `@ApplicationScope` ya existente
+  - Decisión (4.2 de `floor-regularity`): `MotionSource` (`SharedMotionSource`) y `MonotonicClock`
+    los provee únicamente el `MotionSensorModule` de `floor-regularity`; esta 4.3 no bindea ninguno
+    de los dos
   - La app compila y el repositorio se inyecta como único en toda la aplicación
   - _Depends: 2.6, 4.1, 4.2_
   - _Requirements: 1.4_
