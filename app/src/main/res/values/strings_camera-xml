@@ -5,4 +5,10 @@
     <string name="camera_permission_denied_message">Sin el permiso de cámara no podemos sacar la foto. Podés activarlo desde la configuración.</string>
     <string name="camera_open_settings">Ir a configuración</string>
     <string name="camera_ready">Cámara lista</string>
+
+    <string name="camera_take_photo">Sacar foto</string>
+    <string name="camera_retake">Repetir</string>
+    <string name="camera_use_photo">Usar foto</string>
+    <string name="camera_capture_error">No pudimos sacar la foto. Proba de nuevo.</string>
+    <string name="camera_photo_description">Foto del recorrido</string>
 </resources>
