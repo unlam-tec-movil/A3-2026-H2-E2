@@ -9,8 +9,10 @@ urbano que registra un recorrido con Trazo. Ve una alerta animada a los 8 s de q
 detención supera los 20 s, un mensaje para clasificarla. **Impacto**: hoy `domain/` y `data/` están
 vacíos y `MapScreen` es un placeholder. El diseño agrega un núcleo de dominio puro (máquina de
 estados con reloj inyectado), un adaptador del acelerómetro, un repositorio que orquesta ambos y una
-capa de UI (`BrakeAlert`, `StopClassificationDialog`) montada como superposición sobre `MapScreen`,
-sin tocar el futuro `MapViewModel` de HU-04.
+capa de UI (`BrakeAlert`, `StopClassificationDialog`) montada como superposición sobre `MapScreen`
+(que es de Persona 3: la pieza se monta por parámetro), sin tocar el `MapViewModel` de HU-04.
+**Supuesto de ejecución (decisión del equipo C8)**: no hay servicio en segundo plano; la detección
+funciona con la pantalla encendida y la app visible.
 
 ### Goals
 
@@ -30,7 +32,9 @@ sin tocar el futuro `MapViewModel` de HU-04.
 - Conteo y presentación de frenadas en resultados, guardado e historial (`save-run`, HU-06).
 - Pin de frenada en el mapa (queda para HU-04; esta spec solo expone la lista de frenadas con
   ubicación).
-- Persistencia de las frenadas y servicio en primer plano para el rastreo (HU-04).
+- Persistencia de las frenadas (HU-04 / `save-run`). No existe servicio en segundo plano: la
+  detección con pantalla apagada queda fuera de alcance.
+- Modo demo (`isDemoMode`): `stop-detection` no lo usa.
 
 ## Boundary Commitments
 
@@ -40,18 +44,21 @@ sin tocar el futuro `MapViewModel` de HU-04.
   reanudación y exclusión de pausas personales.
 - El modelo `StopDetectionState` / `BrakeEvent` y la lista de frenadas del recorrido en curso
   (autoridad única hasta el fin del recorrido).
-- Los puertos `MotionSource`, `StopLocationProvider`, `RunningRunSource`, `MonotonicClock` y el
-  contrato de salida `StopDetectionRepository`.
+- Los puertos `MotionSource`, `StopLocationProvider`, `RunningRunSource`, `RunStatePublisher`,
+  `MonotonicClock` y el contrato de salida `StopDetectionRepository`.
 - La lectura del acelerómetro mientras hay un recorrido en curso (`AccelerometerMotionSource`).
-- La UI de la alerta de frenada y del mensaje de clasificación, y la utilidad
-  `rememberReduceMotion()`.
+- La UI de la alerta de frenada y del mensaje de clasificación (incluido el parámetro `suppressed`).
+- La utilidad compartida `ui/theme/ReduceMotion.kt` con `rememberReduceMotion()`: la crea esta spec
+  y la reutilizan `finish-run-result` y la celebración de «Meta cumplida» de Persona 3.
 
 ### Out of Boundary
 
-- Estado del recorrido (`RunState`), pausa/reanudación, ubicación y trazado: pertenecen a HU-04 y
-  HU-05.2.
+- La definición de `RunState`, `RunSession` y de las funciones de `RunSessionRepository`, la
+  pausa manual (`PAUSED`), la ubicación y el trazado: pertenecen a HU-04 (Persona 3) y HU-05.2.
 - Qué se hace con las frenadas al finalizar (contarlas, guardarlas, mostrarlas): `save-run`, HU-06.
-- Servicio en primer plano y permisos de ubicación.
+- Permisos de ubicación. No hay servicio en segundo plano (decisión C8).
+- Cuándo se debe ocultar la alerta durante el cierre: lo decide HU-06 (requisito 7); esta spec solo
+  expone el parámetro `suppressed`.
 - Medición de regularidad del piso (HU-05.2) aunque comparta el acelerómetro.
 
 ### Allowed Dependencies
@@ -59,24 +66,62 @@ sin tocar el futuro `MapViewModel` de HU-04.
 - `domain` no importa nada de Android, de `data` ni de `ui`. `data` implementa los puertos de
   `domain`. `ui/screens` depende de `domain` (nunca de `data`), `ui/components` solo de `ui/theme`
   (steering `design-system.md`).
-- **Dependencia dura con HU-04 (P0)**: los adaptadores `RunSessionRunningRunSource` y
-  `RunSessionStopLocationProvider`, el módulo Hilt y el montaje en `MapScreen` requieren
-  `RunSessionRepository` (`activeSession`, `RunState.RUNNING`, `routePoints`) y `@ApplicationScope`
-  de la rama `origin/HU-04-map`. El dominio, el sensor, el repositorio y la UI con previews no
-  dependen de HU-04.
+- **Dependencia con HU-04 (P0; ya integrada en `develop` y verificada contra el código real)**: los
+  adaptadores `RunSessionRunningRunSource`, `RunSessionStopLocationProvider` y
+  `RunSessionStatePublisher`, el módulo Hilt y el montaje en `MapScreen` usan lo que existe en
+  `RunSessionRepository` / `RunSessionRepositoryImpl`: `RunSession` sellada (`Idle` /
+  `ActiveSession`, nunca nula), `activeSession: StateFlow<RunSession>`,
+  `isRunInProgress: StateFlow<Boolean>`, `RunState` (`IDLE`, `ACTIVE`, `PAUSED`, `STOPPED`,
+  `PERSONAL_PAUSED`), `routePoints` y `@ApplicationScope`. **`RunState` no tiene `FINISHED`**:
+  `finishSession()` deja la sesión en `RunSession.Idle` y `isRunInProgress` en `false`. El dominio,
+  el sensor, el repositorio y la UI con previews no dependen de HU-04.
+- **Estados del recorrido (verificados en `RunState.kt`)**:
+
+  | `RunState`        | Significado                                                   |
+  |-------------------|---------------------------------------------------------------|
+  | `ACTIVE`          | Recorrido en curso                                            |
+  | `STOPPED`         | Frenada detectada automáticamente                             |
+  | `PERSONAL_PAUSED` | Pausa personal (elegida en la consulta de 20 s)               |
+  | `PAUSED`          | Pausa manual del corredor; se mantiene (esta spec no la toca) |
+
+- **Transiciones de `RunSessionRepository` (acordadas con Persona 3)**. Todas son `suspend`,
+  devuelven `Result<Unit>` (`FrozenRunSummary` en `finishSession`) y fallan con
+  `Result.failure(IllegalStateException)` si el origen no es el permitido. **Los orígenes de la
+  columna «Origen acordado» son un acuerdo con Persona 3: ella hace los cambios y todavía no están
+  en `develop`** (hoy `pausePersonally()` solo acepta `ACTIVE`, `markMoving()` solo `STOPPED` y
+  `markStopped()` detiene temporizador y GPS):
+
+  | Función             | Origen acordado                                 | Destino           | Efecto sobre temporizador y GPS                       | Cambio pendiente en `develop` |
+  |---------------------|-------------------------------------------------|-------------------|--------------------------------------------------------|-------------------------------|
+  | `markStopped()`     | `ACTIVE`                                        | `STOPPED`         | Siguen corriendo, también en `STOPPED` (D3)            | Sí (hoy los detiene)          |
+  | `pausePersonally()` | `ACTIVE` o `STOPPED` (D1)                       | `PERSONAL_PAUSED` | Se detienen                                            | Sí (hoy solo `ACTIVE`)        |
+  | `markMoving()`      | `STOPPED` o `PERSONAL_PAUSED`; **no** `PAUSED` (D2) | `ACTIVE`      | Reanuda lo que esté detenido (`PERSONAL_PAUSED`)       | Sí (hoy solo `STOPPED`)       |
+  | `resumeSession()`   | `PAUSED` o `PERSONAL_PAUSED`                    | `ACTIVE`          | —                                                      | No; esta spec ya no la usa    |
+  | `finishSession()`   | `ACTIVE`, `PAUSED`, `STOPPED` y `PERSONAL_PAUSED` | `Idle`          | —                                                      | Acordado para los cuatro      |
+
+  `isRunInProgress` queda en `true` en `ACTIVE`, `STOPPED`, `PERSONAL_PAUSED` y `PAUSED`, y pasa a
+  `false` solo con `finishSession()` o `resetToIdle()`. La pausa manual sigue por `pauseSession()` /
+  `resumeSession()` (solo desde `ACTIVE`) y no es parte de esta spec. Las discrepancias D1–D4, ya
+  acordadas, se detallan en «Discrepancias con el código real» (sección Riesgos).
 - Android framework: `SensorManager`, `Settings.Global`. Sin dependencias nuevas de producción; en
-  pruebas, `kotlinx-coroutines-test`.
+  pruebas, `kotlinx-coroutines-test`, que **ya agregó Persona 3** al catálogo (`gradle/libs.versions.toml`):
+  esta spec solo lo usa.
 
 ### Revalidation Triggers
 
 - Cambio de forma de `StopDetectionState`, `BrakeEvent` o `StopLocation` (consumen `save-run` y
   HU-06).
 - Que HU-05.2 tome la propiedad del registro/baja del acelerómetro o cambie su frecuencia.
-- Que HU-04 cambie `RunSession.id`, la semántica de `RunState.RUNNING` / `PAUSED` o el origen de
-  `routePoints`.
+- Que HU-04 cambie `RunSession.id`, la semántica de `ACTIVE` / `STOPPED` / `PERSONAL_PAUSED` /
+  `PAUSED`, la forma sellada de `RunSession` o el origen de `routePoints`.
+- Que cambien los nombres, los orígenes permitidos o el `Result` de `markStopped()`,
+  `pausePersonally()`, `markMoving()` y `resumeSession()`, o que se resuelvan de otra forma las
+  discrepancias D1–D3 (ver Riesgos).
+- Que cambie la firma de `rememberReduceMotion()` (la usan tres consumidores).
 - Que `save-run` lea las frenadas en un momento distinto a «antes de iniciar el siguiente
   recorrido».
-- Que se pida detección con pantalla apagada (exige servicio en primer plano; ver Riesgos).
+- Que se pida detección con pantalla apagada o app en segundo plano (hoy fuera de alcance: no hay
+  servicio; ver Riesgos).
 
 ## Architecture
 
@@ -85,10 +130,11 @@ sin tocar el futuro `MapViewModel` de HU-04.
 - Arquitectura por capas `ui → domain ← data` con Hilt; `HomeViewModel` + `HomeContent` con
   `@Preview` es el patrón de pantalla. Un componente nace en `screens/<pantalla>/components/`,
   recibe estado y eventos por parámetro y lleva su `@Preview` con `TrazoTheme`.
-- En esta rama no existen modelos, repositorios, sensores ni módulos Hilt de dominio. En
-  `origin/HU-04-map` ya hay `RunSession`,
-  `RunSessionRepository.activeSession: StateFlow<RunSession?>`, `RoutePoint` y `ApplicationScope`,
-  que el diseño reutiliza sin copiarlos.
+- En esta rama no existen modelos, repositorios, sensores ni módulos Hilt de dominio. El diseño
+  reutiliza, sin copiarlos, los tipos del contrato acordado de HU-04 (`live-route-tracking`):
+  `RunSession` sellada, `RunSessionRepository.activeSession: StateFlow<RunSession>`, `RoutePoint` y
+  `@ApplicationScope`. La rama vieja `origin/HU-04-map` (con `RUNNING` y `RunSession?`) ya no es la
+  referencia.
 - Testing hoy: JUnit 4 sin coroutines-test, sin MockK. Se mantiene JUnit 4 con fakes escritos a
   mano.
 
@@ -109,6 +155,7 @@ graph TB
         MotionSource
         StopLocationProvider
         RunningRunSource
+        RunStatePublisher
         MonotonicClock
     end
     subgraph Data
@@ -116,6 +163,7 @@ graph TB
         AccelerometerMotionSource
         RunSessionRunningRunSource
         RunSessionStopLocationProvider
+        RunSessionStatePublisher
     end
     StopDetectionViewModel --> StopDetectionRepository
     StopDetectionRepositoryImpl -. implements .-> StopDetectionRepository
@@ -124,12 +172,15 @@ graph TB
     StopDetectionRepositoryImpl --> MotionSource
     StopDetectionRepositoryImpl --> StopLocationProvider
     StopDetectionRepositoryImpl --> RunningRunSource
+    StopDetectionRepositoryImpl --> RunStatePublisher
     StopDetectionRepositoryImpl --> MonotonicClock
     AccelerometerMotionSource -. implements .-> MotionSource
     RunSessionRunningRunSource -. implements .-> RunningRunSource
     RunSessionStopLocationProvider -. implements .-> StopLocationProvider
+    RunSessionStatePublisher -. implements .-> RunStatePublisher
     RunSessionRunningRunSource --> HU04RunSessionRepository
     RunSessionStopLocationProvider --> HU04RunSessionRepository
+    RunSessionStatePublisher --> HU04RunSessionRepository
 ```
 
 **Architecture Integration**:
@@ -155,7 +206,7 @@ graph TB
 | Presentación   | `androidx.lifecycle` ViewModel + Hilt 2.60.1                       | `StopDetectionViewModel`                        | `collectAsStateWithLifecycle` ya disponible                  |
 | Dominio        | Kotlin 2.3.21 puro + corrutinas                                    | `StopDetector`, `StillnessEstimator`            | Sin Android                                                  |
 | Datos / Sensor | `SensorManager` (`TYPE_ACCELEROMETER`)                             | `AccelerometerMotionSource` como `callbackFlow` | Sin permiso; `SENSOR_DELAY_UI` (~16 Hz)                      |
-| Pruebas        | JUnit 4.13.2 + `kotlinx-coroutines-test` 1.10.2 (nueva, solo test) | Tiempo virtual para 8 s / 20 s                  | Se agrega a `libs.versions.toml`                             |
+| Pruebas        | JUnit 4.13.2 + `kotlinx-coroutines-test` 1.10.2 (solo test)        | Tiempo virtual para 8 s / 20 s                  | Ya agregada al catálogo por Persona 3                        |
 
 ## File Structure Plan
 
@@ -177,7 +228,8 @@ app/src/main/java/com/trazo/app/
 │   │   ├── StopDetectionRepository.kt   # contrato de salida (state, classifyCurrentStop)
 │   │   ├── MotionSource.kt              # puerto: flujo de MotionSample
 │   │   ├── StopLocationProvider.kt      # puerto: última ubicación conocida
-│   │   ├── RunningRunSource.kt          # puerto: id del recorrido mientras está RUNNING
+│   │   ├── RunningRunSource.kt          # puerto: id del recorrido mientras la detección aplica
+│   │   ├── RunStatePublisher.kt         # puerto: publica ACTIVE / STOPPED / PERSONAL_PAUSED
 │   │   └── MonotonicClock.kt            # puerto: ms monotónicos
 │   └── usecases/
 │       ├── StillnessEstimator.kt     # ventana deslizante -> ¿quieto?
@@ -187,10 +239,12 @@ app/src/main/java/com/trazo/app/
 │   ├── repository/
 │   │   ├── StopDetectionRepositoryImpl.kt     # orquestación, reloj y StateFlow
 │   │   ├── RunSessionRunningRunSource.kt      # adapta RunSessionRepository (requiere HU-04)
-│   │   └── RunSessionStopLocationProvider.kt  # último routePoint (requiere HU-04)
-│   └── di/StopDetectionModule.kt              # binds + CoroutineScope + MonotonicClock (requiere HU-04)
+│   │   ├── RunSessionStopLocationProvider.kt  # último routePoint (requiere HU-04)
+│   │   └── RunSessionStatePublisher.kt        # llama markStopped / pausePersonally / markMoving
+│   └── di/StopDetectionModule.kt              # solo binds de repositorio y adaptadores (requiere HU-04)
 └── ui/
-    ├── theme/ReduceMotion.kt                  # rememberReduceMotion(): utilidad compartida
+    ├── theme/ReduceMotion.kt                  # rememberReduceMotion(): la crea esta spec; la usan
+    │                                          # stop-detection, finish-run-result y la celebración (P3)
     └── screens/map/
         ├── StopDetectionViewModel.kt          # estado de UI, cierre de alerta a los 4 s
         └── components/
@@ -203,11 +257,11 @@ app/src/test/java/com/trazo/app/... (ver Testing Strategy)
 
 ### Modified Files
 
-- `ui/screens/map/MapScreen.kt` — monta `StopDetectionOverlay` sobre el contenido; se hace en la
-  tarea de integración con HU-04 para no chocar con su `MapScreen`.
-- `res/values/strings.xml` — textos de alerta y de diálogo.
-- `gradle/libs.versions.toml` y `app/build.gradle.kts` — `kotlinx-coroutines-test` como
-  `testImplementation`.
+- `ui/screens/map/MapScreen.kt` — es de Persona 3. Se monta `StopDetectionOverlay` por parámetro
+  (con `suppressed`) en la tarea de integración con HU-04, avisando antes para no chocar.
+- `res/values/strings.xml` — textos de alerta y de diálogo, con el prefijo `map_`.
+- `gradle/libs.versions.toml` y `app/build.gradle.kts` — sin cambios de esta spec:
+  `kotlinx-coroutines-test` ya fue agregada por Persona 3 (tarea 1.2 hecha).
 
 ## System Flows
 
@@ -241,9 +295,29 @@ con `query: NotDue | Pending | Answered`; `Still` y `PersonalPause` llevan `sinc
 - **Pausa personal**: elimina la frenada de la lista (4.3, 4.4) y la fase pasa a `PersonalPause`,
   que impide volver a registrar la misma detención. El estado expuesto sigue siendo «Movimiento
   continuo».
-- **Recorrido que deja de estar RUNNING** (pausa, fin): la fase vuelve a `Moving`, la consulta
-  pendiente se cierra, se deja de leer el sensor y **la lista de frenadas se conserva**. Se vacía
-  solo cuando arranca un recorrido con distinto id (no al reanudar el mismo).
+- **Fases y estados del recorrido** (`RunState` de HU-04). El repositorio publica el estado
+  correspondiente a la fase cada vez que esta cambia de categoría:
+
+  | Fase (`StopPhase`)                           | `RunState` publicado |
+  |----------------------------------------------|----------------------|
+  | `Moving`, `Still`                            | `ACTIVE`             |
+  | `Braking` (`NOT_DUE`, `PENDING`, `ANSWERED`) | `STOPPED`            |
+  | `PersonalPause`                              | `PERSONAL_PAUSED`    |
+
+  Al retomar el movimiento (movimiento sostenido) se vuelve a `ACTIVE`. La detección solo está
+  activa con el recorrido en `ACTIVE`, `STOPPED` o `PERSONAL_PAUSED`: los dos últimos los produce
+  esta misma spec y hay que seguir leyendo el sensor para saber cuándo el corredor retoma.
+- **Pausa manual (`PAUSED`) y fin**: si el corredor pausa a mano, o el recorrido termina (la sesión
+  pasa a `Idle`; no existe `RunState.FINISHED`), el recorrido deja de estar en los estados de
+  detección: la fase vuelve a `Moving`, la
+  consulta pendiente se cierra, se deja de leer el sensor y **la lista de frenadas se conserva**. La
+  pausa manual se mantiene: esta spec **nunca** publica `ACTIVE` sobre `PAUSED` (la publicación es
+  condicional al estado actual; ver «Discrepancias con el código real»). En `PAUSED` el detector no
+  publica nada (el id del recorrido pasa a `null` y se deja de leer el sensor), así que no llama a
+  `markMoving()`; además `markMoving()` no acepta `PAUSED` (D2). Finalizar es posible desde los
+  cuatro estados (acordado con Persona 3: `finishSession()` funciona desde `ACTIVE`, `PAUSED`,
+  `STOPPED` y `PERSONAL_PAUSED`). La lista se vacía solo cuando
+  arranca un recorrido con distinto id (no al reanudar el mismo).
 
 ## Requirements Traceability
 
@@ -252,7 +326,7 @@ con `query: NotDue | Pending | Answered`; `Still` y `PersonalPause` llevan `sinc
 | 1.1 | Mantener «Movimiento continuo» en movimiento           | StillnessEstimator, StopDetector                                         | `advance`, `StopDetectionState.movement`                | Moving                          |
 | 1.2 | Sin frenada en movimiento continuo                     | StopDetector                                                             | `advance` (solo `Still`→`Braking` registra)             | Moving, Still                   |
 | 1.3 | <8 s y retoma: sin frenada                             | StopDetector                                                             | `advance`, `resumeConfirmMillis`                        | Still → Moving                  |
-| 1.4 | Sin recorrido en curso no detecta                      | StopDetectionRepositoryImpl, RunningRunSource, AccelerometerMotionSource | `RunningRunSource.runningRunId`, `flatMapLatest`        | cierre por fin de recorrido     |
+| 1.4 | Sin recorrido en curso no detecta                      | StopDetectionRepositoryImpl, RunningRunSource, AccelerometerMotionSource | `RunningRunSource.runningRunId`, `flatMapLatest`        | `PAUSED`, fin de recorrido      |
 | 2.1 | A los 8 s pasa a «Frenada»                             | StopDetector                                                             | `advance`, `brakeAfterMillis`                           | Still → Braking                 |
 | 2.2 | Registrar ubicación                                    | StopDetector, StopLocationProvider                                       | `BrakeEvent.location`, `StopLocationProvider.lastKnown` | Still → Braking                 |
 | 2.3 | Una frenada por detención continua                     | StopDetector                                                             | Fase `Braking`/`PersonalPause` + `resumeConfirmMillis`  | Braking, PersonalPause          |
@@ -262,6 +336,7 @@ con `query: NotDue | Pending | Answered`; `Still` y `PersonalPause` llevan `sinc
 | 3.3 | Anunciar a accesibilidad                               | BrakeAlert                                                               | `liveRegion = Polite`                                   | alerta                          |
 | 3.4 | Texto + ícono, no solo color                           | BrakeAlert, `ic_brake.xml`                                               | —                                                       | alerta                          |
 | 3.5 | Cierre a los 4 s                                       | StopDetectionViewModel                                                   | `ALERT_DURATION_MILLIS`                                 | alerta                          |
+| —   | Ocultar alerta y consulta durante el cierre (HU-06 R7) | StopDetectionOverlay, StopDetectionViewModel                             | parámetro `suppressed`                                  | alerta, consulta                |
 | 4.1 | Consulta a >20 s desde la quietud                      | StopDetector, StopClassificationDialog                                   | `pendingClassificationBrakeId`, `classifyAfterMillis`   | Braking → BrakingAsked          |
 | 4.2 | «Frenada» mantiene el registro                         | StopDetector, StopDetectionRepositoryImpl                                | `classifyCurrentStop(BRAKE)`                            | BrakingAsked → BrakingConfirmed |
 | 4.3 | «Pausa personal» no es frenada                         | StopDetector                                                             | `classifyCurrentStop(PERSONAL_PAUSE)`                   | BrakingAsked → PersonalPause    |
@@ -277,10 +352,10 @@ con `query: NotDue | Pending | Answered`; `Still` y `PersonalPause` llevan `sinc
 | StopDetector                                                | Domain | Reductor puro de la máquina de estados                                        | 1.1–1.3, 2.1–2.4, 4.1–4.4, 4.7 | StopDetectionConfig (P0)                                                  | Service, State |
 | StillnessEstimator                                          | Domain | Decide «quieto/en movimiento» con la desviación de la magnitud en una ventana | 1.1, 1.2                       | StopDetectionConfig (P0)                                                  | Service        |
 | StopDetectionRepository                                     | Domain | Contrato de salida: estado y clasificación                                    | 2.4, 4.2–4.3                   | —                                                                         | Service, State |
-| StopDetectionRepositoryImpl                                 | Data   | Orquesta sensor, reloj, ubicación y recorrido                                 | 1.4, 2.1–2.4                   | MotionSource, RunningRunSource, StopLocationProvider, MonotonicClock (P0) | Service, State |
+| StopDetectionRepositoryImpl                                 | Data   | Orquesta sensor, reloj, ubicación y recorrido                                 | 1.4, 2.1–2.4                   | MotionSource, RunningRunSource, StopLocationProvider, RunStatePublisher, MonotonicClock (P0) | Service, State |
 | AccelerometerMotionSource                                   | Data   | `callbackFlow` sobre `TYPE_ACCELEROMETER`                                     | 1.1, 1.4                       | SensorManager (P0)                                                        | Service        |
-| RunSessionRunningRunSource / RunSessionStopLocationProvider | Data   | Adaptan `RunSessionRepository` de HU-04                                       | 1.4, 2.2                       | HU-04 `RunSessionRepository` (P0)                                         | Service        |
-| StopDetectionViewModel                                      | UI     | Estado de UI y cierre de alerta                                               | 3.1, 3.5, 4.5                  | StopDetectionRepository (P0)                                              | State          |
+| RunSessionRunningRunSource / RunSessionStopLocationProvider / RunSessionStatePublisher | Data | Adaptan `RunSessionRepository` de HU-04 | 1.4, 2.2 | HU-04 `RunSessionRepository` (P0)                                         | Service        |
+| StopDetectionViewModel                                      | UI     | Estado de UI, cierre de alerta y `suppressed`                                 | 3.1, 3.5, 4.5                  | StopDetectionRepository (P0)                                              | State          |
 | BrakeAlert, StopClassificationDialog, StopDetectionOverlay  | UI     | Presentación                                                                  | 3.1–3.4, 4.1, 4.6              | `ui/theme` (P0)                                                           | —              |
 
 ### Domain
@@ -322,8 +397,8 @@ class StopDetector(
 }
 ```
 
-- Precondiciones: `advance` se invoca solo mientras hay un recorrido RUNNING; `nowMillis` no
-  decrece.
+- Precondiciones: `advance` se invoca solo mientras el recorrido está en `ACTIVE`, `STOPPED` o
+  `PERSONAL_PAUSED`; `nowMillis` no decrece.
 - Postcondiciones: `advance` no muta `brakes` salvo en `Still → Braking` (agrega una) ; `classify`
   sin consulta pendiente devuelve el mismo estado (idempotente).
 - `onRunStopped` devuelve fase `Moving` y conserva `brakes`.
@@ -390,6 +465,7 @@ data class StopDetectionConfig(
     val classifyAfterMillis: Long = 20_000,    // 4.1, estricto (>)
     val resumeConfirmMillis: Long = 1_500,
     val tickIntervalMillis: Long = 500,
+    val sampleStaleMillis: Long = 2_000,       // sin muestras por más de esto = sin evidencia
 )
 ```
 
@@ -407,8 +483,8 @@ interface StopDetectionRepository {
 ```
 
 - Contrato para `save-run`: `state.value.brakes` contiene las frenadas válidas (sin pausas
-  personales) del último recorrido y es estable desde que el recorrido deja de estar RUNNING hasta
-  que arranca otro recorrido con distinto id.
+  personales) del último recorrido y es estable desde que el recorrido deja de estar en los estados
+  de detección (`PAUSED`, `Idle`) hasta que arranca otro recorrido con distinto id.
 
 #### Puertos
 
@@ -418,14 +494,23 @@ interface MotionSource {
 }       // frío: registra el sensor al colectar
 interface RunningRunSource {
     val runningRunId: Flow<String?>
-}      // id mientras RunState == RUNNING, null si no
+}      // id mientras el estado es ACTIVE, STOPPED o PERSONAL_PAUSED; null si no
 interface StopLocationProvider {
     fun lastKnown(): StopLocation?
 }  // null si no hay fix
+interface RunStatePublisher {
+    suspend fun publish(runId: String, state: RunState): Result<Unit>
+}  // solo ACTIVE, STOPPED, PERSONAL_PAUSED; Result.failure si el recorrido cambió o el origen no es válido
 fun interface MonotonicClock {
     fun nowMillis(): Long
 }
 ```
+
+`RunStatePublisher` es el puerto de salida con el que el dominio informa el estado agregado por
+esta spec. Es `suspend` porque las funciones de `RunSessionRepository` que usa su adaptador
+(`markStopped()`, `pausePersonally()`, `markMoving()`, `resumeSession()`) lo son; el repositorio de
+detección lo invoca desde su corrutina. Ver «Adaptadores de HU-04» para la traducción de estados y
+«Discrepancias con el código real» para los puntos que hoy no coinciden.
 
 Los puertos viven en `domain/repository/` (misma convención que `LocationClient` en HU-04). Todos
 son P0: sin ellos el repositorio no puede operar.
@@ -443,9 +528,18 @@ son P0: sin ellos el repositorio no puede operar.
 
 - Colecta `runningRunId`; con un id no nulo usa `flatMapLatest` para colectar
   `MotionSource.samples()` y un ticker (`tickIntervalMillis`), y cancela ambos cuando el id pasa a
-  nulo (1.4: no se lee el sensor sin recorrido en curso).
+  nulo (1.4: no se lee el sensor sin recorrido en curso ni con pausa manual).
+- Tras cada transición de `StopPhase` que cambia de categoría (tabla de «Fases y estados del
+  recorrido»), invoca `RunStatePublisher.publish(runId, estado)`. La publicación es condicional: no
+  sobreescribe `PAUSED` ni estados finales. Si la transición devuelve `Result.failure`, el repositorio
+  la ignora (no altera la fase del detector) y, como no la registra como publicada, vuelve a
+  intentarla en el siguiente ciclo (tick) mientras la fase siga requiriendo ese estado.
 - Cada muestra pasa por `StillnessEstimator`; el último booleano se reevalúa en cada tick para que
-  los 8 s y 20 s se cumplan aunque el sensor no emita muestras nuevas. Cada observación usa
+  los 8 s y 20 s se cumplan aunque el sensor no emita muestras nuevas, **salvo que el último dato
+  sea viejo**: si pasaron más de `sampleStaleMillis` (2 000 ms) desde la última muestra, el tick
+  observa `isStill = false` (sin evidencia = «en movimiento»). Así, si el sensor se corta (pantalla
+  apagada o cambio de app) no se arrastra un «quieto» viejo y no se registra una frenada falsa al
+  volver (1.3, 2.1). Cada observación usa
   `MonotonicClock.nowMillis()` (no el timestamp del `SensorEvent`) para unificar la base de tiempo.
 - Si el id del recorrido difiere del último id visto, parte de `StopDetector.initial()`. Si es el
   mismo (reanudación), conserva `brakes`. Al pasar a nulo aplica `onRunStopped`.
@@ -458,9 +552,11 @@ son P0: sin ellos el repositorio no puede operar.
 
 **Implementation Notes**
 
-- Integración: el módulo `StopDetectionModule` provee
-  `MonotonicClock { SystemClock.elapsedRealtime() }`, el `CoroutineScope` y los `@Binds`. Se escribe
-  cuando HU-04 esté integrada.
+- Integración: el módulo `StopDetectionModule` solo hace los `@Binds` de `StopDetectionRepository` y
+  los adaptadores, y usa el `CoroutineScope` `@ApplicationScope` (ya existente en `di/`).
+  `MotionSource` (`SharedMotionSource`) y `MonotonicClock { SystemClock.elapsedRealtime() }` los
+  provee únicamente `MotionSensorModule` de `floor-regularity` (decisión de su tarea 4.2). HU-04 ya
+  está en `develop`; se escribe en la tarea 4.3.
 - Validación: pruebas con `runTest` y reloj falso atado a `testScheduler.currentTime`.
 - Riesgos: ver «Riesgos y preguntas abiertas».
 
@@ -475,17 +571,40 @@ son P0: sin ellos el repositorio no puede operar.
   baja en `awaitClose`; calcula `magnitude = sqrt(x² + y² + z²)`. Sin permisos.
 - Sin acelerómetro (`getDefaultSensor == null`): el flujo no emite y se registra un aviso en log; la
   detección queda inactiva sin afectar el recorrido (decisión de degradación elegante).
-- Propiedad del sensor: esta spec solo lo registra mientras hay recorrido RUNNING. Si HU-05.2
+- Propiedad del sensor: esta spec solo lo registra mientras el recorrido está en `ACTIVE`,
+  `STOPPED` o `PERSONAL_PAUSED`. Si HU-05.2
   centraliza la gestión del sensor, reemplaza esta clase detrás de `MotionSource` sin tocar el
   dominio (ver Revalidation Triggers).
 
 #### Adaptadores de HU-04
 
-- `RunSessionRunningRunSource`:
-  `activeSession.map { s -> s?.takeIf { it.state == RunState.RUNNING }?.id }.distinctUntilChanged()`.
-  Solo `RUNNING` cuenta como «en curso»; `PAUSED` no (decisión de diseño; HU-05.2 define la pausa).
-- `RunSessionStopLocationProvider`: `activeSession.value?.routePoints?.lastOrNull()` convertido a
-  `StopLocation`; `null` si no hay puntos.
+- `RunSessionRunningRunSource` (con `RunSession` sellada y nunca nula):
+  `activeSession.map { s -> (s as? ActiveSession)?.takeIf { it.state in DETECTION_STATES }?.id }.distinctUntilChanged()`
+  con `DETECTION_STATES = setOf(RunState.ACTIVE, RunState.STOPPED, RunState.PERSONAL_PAUSED)`.
+  `Idle` (incluye el recorrido ya finalizado) y `PAUSED` (pausa manual) no cuentan como «en curso».
+  Se incluyen `STOPPED` y
+  `PERSONAL_PAUSED` y no solo `ACTIVE` porque los publica esta misma spec: si el id pasara a `null`
+  al detectar la frenada, se cortaría el sensor y nunca se detectaría el movimiento.
+- `RunSessionStopLocationProvider`: `(activeSession.value as? ActiveSession)?.routePoints?.lastOrNull()`
+  convertido a `StopLocation`; `null` si es `Idle` o no hay puntos.
+- `RunSessionStatePublisher`: implementa `RunStatePublisher` llamando a las funciones `suspend` de
+  `RunSessionRepository` y devolviendo su `Result<Unit>` tal cual. Es condicional: lee
+  `activeSession.value` y solo aplica si es `ActiveSession` con ese `runId`; si no, devuelve
+  `Result.failure` sin llamar al repositorio. Traducción según el código real:
+
+  | `publish(runId, …)` | Estado actual de la sesión | Llamada                                   |
+  |---------------------|----------------------------|-------------------------------------------|
+  | `STOPPED`           | `ACTIVE`                   | `markStopped()`                           |
+  | `PERSONAL_PAUSED`   | `STOPPED`                  | `pausePersonally()` (D1 acordada: acepta `ACTIVE` y `STOPPED`) |
+  | `ACTIVE`            | `STOPPED`                  | `markMoving()`                            |
+  | `ACTIVE`            | `PERSONAL_PAUSED`          | `markMoving()` (D2 acordada: acepta `STOPPED` y `PERSONAL_PAUSED`) |
+  | cualquier otro      | —                          | `Result.failure` sin llamar               |
+
+  Con el acuerdo D2 el adaptador ya no usa `resumeSession()`: `markMoving()` no acepta `PAUSED`, así
+  que una pausa manual nunca se reanuda por error y desaparece la ventana de carrera. Se mantiene la
+  lectura previa de `activeSession.value`. Hasta que Persona 3 integre los cambios en `develop`, las
+  filas `PERSONAL_PAUSED` fallan contra el código actual. Los `Result.failure` los ignora el
+  repositorio de detección, que reintenta en el siguiente tick.
 
 ### UI
 
@@ -504,6 +623,7 @@ class StopDetectionViewModel @Inject constructor(
 ) : ViewModel() {
     val uiState: StateFlow<StopDetectionUiState>
     fun onClassify(kind: StopKind)
+    fun onSuppressedChanged(suppressed: Boolean)
 }
 ```
 
@@ -512,6 +632,23 @@ class StopDetectionViewModel @Inject constructor(
   pendiente o la frenada deja de existir.
 - `classificationVisible = state.pendingClassificationBrakeId != null` (4.1, 4.5, 4.7). Cumple la
   restricción de que la alerta (8–12 s) ya no está visible cuando aparece la consulta (>20 s).
+
+**Parámetro `suppressed` (HU-06 requisito 7)**: lo alimenta el cierre de HU-06 mientras hay un
+aviso o diálogo de cierre visible. Se agrega a `StopDetectionOverlay(suppressed: Boolean, ...)` y se
+reenvía al ViewModel con `onSuppressedChanged`. Con `suppressed == true`:
+
+- `BrakeAlert` y `StopClassificationDialog` **no se muestran** (`alert = null` y
+  `classificationVisible = false` en `StopDetectionUiState`). El `Content` también recibe
+  `suppressed` y no dibuja nada, para que no parpadee un cuadro antes de que llegue el estado del
+  ViewModel.
+- La frenada **igual se registra**: el repositorio no conoce `suppressed`, así que la detección, el
+  registro de ubicación y la publicación de `STOPPED` no cambian (HU-06 7.2).
+- Una consulta pendiente **se resuelve como frenada**: al activarse `suppressed` (o al volverse
+  pendiente mientras está activo) el ViewModel llama a `repository.classifyCurrentStop(StopKind.BRAKE)`
+  (HU-06 7.3). Se hace en el ViewModel y no en el repositorio para que el dominio no dependa de
+  la UI.
+- Una frenada registrada durante la supresión no genera una alerta tardía al volver a `false`: el
+  ViewModel solo muestra alertas de frenadas que aparecen mientras `suppressed == false`.
 
 #### BrakeAlert (resumen)
 
@@ -533,8 +670,11 @@ elegir o cuando la detención termina (4.5, 4.7).
 #### ReduceMotion
 
 `@Composable fun rememberReduceMotion(): Boolean` lee
-`Settings.Global.ANIMATOR_DURATION_SCALE == 0f` desde `LocalContext.current.contentResolver`. Vive
-en `ui/theme/ReduceMotion.kt` porque también la usará la celebración de «Meta cumplida».
+`Settings.Global.ANIMATOR_DURATION_SCALE == 0f` desde `LocalContext.current.contentResolver`. Esta
+spec **crea** `ui/theme/ReduceMotion.kt` y es la única dueña de la función; la reutilizan
+`stop-detection` (`BrakeAlert`), `finish-run-result` y la celebración de «Meta cumplida» de Persona
+3. Cualquier cambio de firma se avisa a las tres (ver Revalidation Triggers). Se entrega antes que la
+alerta para que las otras dos puedan depender de ella.
 
 ## Data Models
 
@@ -554,8 +694,13 @@ en `ui/theme/ReduceMotion.kt` porque también la usará la celebración de «Met
   igual y los consumidores deben tolerar `null` al dibujar pines. Ver Riesgos.
 - **`classifyCurrentStop` sin consulta pendiente** (doble toque, cierre concurrente): no-op
   idempotente.
-- **Recorrido que termina con consulta o alerta visibles**: la fase vuelve a `Moving`, ambos
-  elementos desaparecen por derivación del estado.
+- **Recorrido que termina o se pausa a mano con consulta o alerta visibles**: la fase vuelve a
+  `Moving`, ambos elementos desaparecen por derivación del estado.
+- **Publicación de estado rechazada** (`Result.failure`: el recorrido cambió, está en `PAUSED`,
+  ya terminó (`Idle`) u origen no permitido): el detector la ignora y reevalúa en el siguiente
+  ciclo; el estado del recorrido manda sobre el de esta spec. Contra el código actual de `develop`,
+  D1 y D2 fallarían de forma permanente y se reintentarían en cada tick de 500 ms sin avanzar: por
+  eso 4.2 a 4.4 siguen bloqueadas hasta que Persona 3 avise de que sus cambios están en `develop`.
 - Errores del sensor/log: solo logging; no hay mensajes al usuario porque los requisitos no los
   definen.
 
@@ -582,10 +727,21 @@ en `ui/theme/ReduceMotion.kt` porque también la usará la celebración de «Met
   cambia (1.4); muestras quietas + tiempo virtual 8 s → una frenada con ubicación (2.1, 2.2); pausa
   y reanudación con el mismo id conservan `brakes`; un id distinto las vacía; fin del recorrido
   conserva `brakes` y cancela la colección; `classifyCurrentStop` concurrente con ticks no pierde
-  actualizaciones.
+  actualizaciones; con el sensor sin emitir más de `sampleStaleMillis` tras un «quieto», los ticks
+  observan «en movimiento» y, al reanudar el tiempo, no se registra una frenada falsa (1.3, 2.1).
+  Con un `RunStatePublisher` falso: `Still → Braking` publica `STOPPED`,
+  `PersonalPause` publica `PERSONAL_PAUSED`, retomar publica `ACTIVE`; con el recorrido en `PAUSED`
+  (pausa manual) se deja de colectar el sensor y no se publica `ACTIVE`.
 - `StopDetectionViewModelTest`: alerta aparece al registrarse la frenada y se limpia a los 4 000 ms
   virtuales (3.1, 3.5); `classificationVisible` sigue a `pendingClassificationBrakeId` (4.1, 4.5,
-  4.7).
+  4.7). Con `suppressed = true`: la alerta y la consulta no se muestran; una frenada ocurrida
+  durante la supresión queda registrada y no genera alerta al volver a `false`; una consulta
+  pendiente se resuelve como `BRAKE` (HU-06 7.1–7.3).
+- `RunSessionRunningRunSourceTest`: `Idle` y `PAUSED` → `null`; `ACTIVE`, `STOPPED` y
+  `PERSONAL_PAUSED` → el id de la sesión.
+- `RunSessionStatePublisherTest` (repositorio falso con los mismos orígenes permitidos que
+  `RunSessionRepositoryImpl`): cada fila de la tabla de traducción; no llama `resumeSession()` sobre
+  `PAUSED`; propaga `Result.failure`.
 
 ### UI Tests (Compose, `androidTest`)
 
@@ -593,6 +749,7 @@ en `ui/theme/ReduceMotion.kt` porque también la usará la celebración de «Met
   `liveRegion` Polite (3.1, 3.3, 3.4).
 - `StopClassificationDialogTest`: los dos botones existen, miden ≥ 48 dp de alto y no se truncan con
   `fontScale = 2f`; el clic dispara `onClassify` con `StopKind` correcto (4.1, 4.6).
+- `StopDetectionOverlayTest`: con `suppressed = true` no existen ni la alerta ni el diálogo.
 - Verificación manual en dispositivo: «Quitar animaciones» activo → la alerta aparece sin transición
   (3.2); TalkBack anuncia la alerta (3.3); calibración del umbral caminando, trotando y parado en un
   semáforo.
@@ -612,10 +769,74 @@ en `ui/theme/ReduceMotion.kt` porque también la usará la celebración de «Met
 - **Calibración del umbral (riesgo medio)**: el valor 0,5 m/s² es una hipótesis. Trotar en el lugar
   o llevar el teléfono en brazalete puede subir la desviación; mitigación: `StopDetectionConfig`
   central y una tarea de calibración en dispositivo antes de dar por cerrada la spec.
-- **Ejecución con pantalla apagada (riesgo alto si se exige)**: desde Android 9 las apps en segundo
-  plano no reciben eventos de sensores continuos; solo un servicio en primer plano lo evita. Se
-  asume que HU-04 mantiene el servicio de rastreo. Si no, la detección solo funciona con la app
-  visible; la decisión se eleva a HU-04.
+- **Sin servicio en segundo plano (decisión C8; riesgo bajo, aceptado)**: no hay servicio y la
+  pantalla queda encendida, así que la detección solo funciona con la app visible. Desde Android 9
+  las apps en segundo plano no reciben eventos de sensores continuos; si el corredor apaga la
+  pantalla o cambia de app, la detección se interrumpe y no hay evidencia durante ese tiempo.
+  Mitigación (ya parte del diseño): `sampleStaleMillis` en `StopDetectionConfig`; sin muestras
+  recientes el repositorio observa «en movimiento» (ver `StopDetectionRepositoryImpl`). Pedir
+  detección con pantalla apagada reabriría el tema (Revalidation Triggers).
+- **Contrato de `RunSessionRepository` (confirmado)**: los nombres `markStopped()`,
+  `pausePersonally()` y `markMoving()` (todas `suspend`, `Result<Unit>`), `activeSession` e
+  `isRunInProgress` existen tal como se esperaba. Los orígenes permitidos de `develop` no coinciden
+  del todo con el diseño; se acordaron con Persona 3 los cambios D1–D3 (ver más abajo), que aún no
+  están en `develop`.
+- **Decisiones confirmadas por Rocío / acordadas con Persona 3** (ya no son supuestos):
+  - En `STOPPED` el temporizador y el GPS siguen corriendo; en `PERSONAL_PAUSED` el temporizador y
+    el GPS se detienen (igual que en la pausa manual).
+  - Se puede finalizar el recorrido desde los cuatro estados (`ACTIVE`, `STOPPED`,
+    `PERSONAL_PAUSED`, `PAUSED`).
+  - Los controles de pantalla por estado van acordes a los escenarios de los requisitos
+    (confirmado por Rocío; no verificado en código: `LiveRouteTrackingViewModel` solo expone
+    `runState` y `areControlActionsAllowed = true` en cualquier sesión activa, los controles por
+    estado los resuelve la UI).
+- **Modo demo**: `FrozenRunSummary` ya trae `isDemoMode` con valor por defecto `false` y
+  `RunSessionRepositoryImpl` lo copia de la sesión; `stop-detection` no lo usa ni lo condiciona.
+
+### Discrepancias con el código real
+
+Detectadas al contrastar este diseño con `RunSessionRepositoryImpl` (`develop`). **D1 a D3 pasaron
+de abiertas a acordadas con Persona 3**: ella hace los cambios en `RunSessionRepository` y todavía
+no están en `develop`. No se modificó código ni requisitos (`requirements.md` no contradice nada).
+
+- **D1 — `pausePersonally()` acepta `ACTIVE` y `STOPPED` (acordada)**. Hoy solo acepta `ACTIVE`
+  (`check(session.state == RunState.ACTIVE)`); el corredor elige «Pausa personal» cuando la fase
+  `Braking` ya publicó `STOPPED`, así que hasta que el cambio llegue a `develop` devolvería siempre
+  `Result.failure`. En `PERSONAL_PAUSED` el temporizador y el GPS se detienen.
+- **D2 — `markMoving()` acepta `STOPPED` y `PERSONAL_PAUSED`, no `PAUSED` (acordada)**. Hoy solo
+  acepta `STOPPED`. Con el cambio, el adaptador vuelve a `ACTIVE` desde `PERSONAL_PAUSED` con
+  `markMoving()` y deja de usar `resumeSession()`, que también reanudaría una pausa manual; así
+  desaparece la ventana de carrera. En `PAUSED` el detector no publica nada, por lo que no llama a
+  `markMoving()`.
+- **D3 — `markStopped()` deja el temporizador y el GPS corriendo, también en `STOPPED` (acordada)**.
+  Hoy llama `stopJobs()` (cancela ubicación, señal y temporizador), congela
+  `accumulatedElapsedTimeMillis` y pone `resumedAtMonotonicTimestamp = null`, de modo que el tiempo en
+  `STOPPED` no se cuenta. Con el cambio, el tiempo en `STOPPED` sí cuenta y el GPS sigue registrando
+  la traza. Esto **cierra la pregunta abierta sobre el GPS en `STOPPED`**.
+- **D4 — No existe `RunState.FINISHED`** (corrección de documentación, sin impacto en código): el
+  fin del recorrido es `RunSession.Idle` con `isRunInProgress = false`. Se corrigieron las
+  referencias a `FINISHED` en este documento y en `tasks.md`.
+
+- **Frenadas y regularidad en `FrozenRunSummary` (acordado con Persona 3)**: Persona 3 agrega los
+  campos de frenadas y regularidad a `FrozenRunSummary` y define su forma. HU-05 produce el conteo de
+  frenadas (a partir de `StopDetectionRepository.state.brakes`) y HU-05.2 produce la regularidad.
+  Esta spec no modifica `FrozenRunSummary`.
+- **Pregunta abierta — cómo llega el dato al resumen en `finishSession()`**: si `finishSession()` lo
+  lee desde `StopDetectionRepository` o se lo pasa quien finaliza el recorrido. Se define con
+  Persona 3 al integrar. Hasta entonces, las frenadas se exponen solo por
+  `StopDetectionRepository.state.brakes`.
+
+Coinciden con el diseño: `markStopped()` solo desde `ACTIVE`; `pausePersonally()` y la pausa manual
+detienen el temporizador; `finishSession()` funciona desde los cuatro estados; `isRunInProgress`
+permanece `true` en los cuatro estados; `RunSession` es sellada (`Idle` / `ActiveSession`); existe
+`@ApplicationScope`; las funciones rethrow `CancellationException` y devuelven `Result`.
+- **Simplificación conocida (aceptada)**: la pausa personal se descuenta desde que el corredor la
+  elige en la consulta, no desde que empezó la quietud. Por eso el tiempo descontado difiere del real
+  en ~20–30 s (la consulta aparece a los 20 s y el corredor tarda un poco en responder).
+- **Caso borde conocido (aceptado)**: si el corredor reanuda a mano desde `PAUSED` y sigue sin
+  moverse, la fase parte de `Moving` y se registra una segunda frenada a los 8 s para la misma
+  detención física (2.3 aplica por detención continua dentro de un tramo en curso). Se acepta sin
+  mitigación.
 - **Frenada sin ubicación**: se registra con `location = null` si no hay fix. Alternativa
   descartada: demorar el registro, que violaría 2.1/2.2. Los consumidores (pin del mapa, `save-run`)
   deben tolerar `null`.

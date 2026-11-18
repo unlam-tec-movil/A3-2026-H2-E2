@@ -258,8 +258,11 @@ investigación web, solo análisis del código y de `origin/HU-04-map`)._
    sensor siga emitiendo.
 4. **Quién cierra la alerta a los 4 s**: el ViewModel (es presentación y se prueba con tiempo
    virtual); el dominio solo expone la frenada nueva.
-5. **Qué es «recorrido en curso»**: solo `RunState.RUNNING`. Las frenadas se vacían cuando cambia el
-   `id` del recorrido (no en reanudaciones) y se conservan al terminar para que `save-run` las lea.
+5. **Qué es «recorrido en curso»** (actualizado 2026-11-11 con las decisiones del equipo): estado
+   `ACTIVE`, `STOPPED` o `PERSONAL_PAUSED` de HU-04 (`RunSession` sellada, nunca nula). `PAUSED`
+   (pausa manual), `FINISHED` e `Idle` no cuentan. Las frenadas se vacían cuando cambia el `id` del
+   recorrido (no en reanudaciones) y se conservan al terminar para que `save-run` las lea. (Antes:
+   solo `RUNNING`, de la rama vieja `origin/HU-04-map`.)
 6. **Pausa personal**: se elimina la frenada de la lista (se registró a los 8 s, 2.2) y una fase
    `PersonalPause` evita volver a registrar la misma detención.
 7. **Ubicación**: última `RoutePoint` de la sesión activa; si no hay, `location = null` (no se
@@ -280,8 +283,11 @@ investigación web, solo análisis del código y de `origin/HU-04-map`)._
 
 ### Riesgos registrados
 
-- Calibración del umbral; sensor con pantalla apagada (servicio en primer plano de HU-04); ubicación
-  nula; propiedad del sensor con HU-05.2; momento de lectura de `brakes` por `save-run`. Detalle en
-  `design.md`, «Riesgos y preguntas abiertas».
+- Calibración del umbral; sin servicio en segundo plano (decisión C8: pantalla encendida; sin
+  detección con pantalla apagada); función de `RunSessionRepository` para cambiar de estado (supuesto
+  a confirmar con Persona 3); ubicación nula; propiedad del sensor con HU-05.2; momento de lectura de
+  `brakes` por `save-run`. Detalle en `design.md`, «Riesgos y preguntas abiertas».
+- Nota: las menciones de arriba a un foreground service, `WakeLock` y `RunState.RUNNING` del gap
+  analysis (2026-11-04) quedan superadas por las decisiones del equipo del 2026-11-06.
 - Tareas de integración (módulo Hilt, adaptadores, montaje en `MapScreen`) bloqueadas hasta que
   HU-04 llegue a `develop`.
