@@ -11,6 +11,7 @@ activityCompose = "1.10.1" # Integración entre Activity y Jetpack Compose.
 composeBom = "2025.04.01" # BOM que administra versiones compatibles de las bibliotecas Compose.
 navigationCompose = "2.8.9" # Navegación entre pantallas utilizando Compose.
 playServicesLocation = "21.3.0" # Servicios de Google para obtener ubicación y actualizaciones GPS.
+camerax = "1.6.2"
 
 # Dependencias adicionales
 coil = "2.7.0" # Carga y visualización de imágenes en Compose.
@@ -78,6 +79,11 @@ material-icons-extended = { module = "androidx.compose.material:material-icons-e
 
 # Acceso a ubicación y actualizaciones de GPS
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
+
+androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
+androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
+androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
+androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 
 [plugins]
 # Configuración y compilación de aplicaciones Android
