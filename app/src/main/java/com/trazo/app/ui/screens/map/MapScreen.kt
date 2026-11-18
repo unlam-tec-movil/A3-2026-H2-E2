@@ -40,6 +40,9 @@ fun MapScreen(
     onNavigateToResults: (FrozenRunSummary) -> Unit,
     modifier: Modifier = Modifier,
     shortRunNotice: (@Composable (onDiscard: () -> Unit, onReturn: () -> Unit) -> Unit)? = null,
+    // Piezas de start-run armadas por TrazoApp: el botón «+» y el aviso «Esperando señal GPS».
+    startRunFab: @Composable (Modifier) -> Unit = {},
+    gpsWaitingNotice: @Composable (Modifier) -> Unit = {},
     viewModel: LiveRouteTrackingViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -102,7 +105,10 @@ fun MapScreen(
             isMapCenteredOnRunner = uiState.isMapCenteredOnRunner,
             onCenterMapClicked = { viewModel.onCenterMapClicked() },
             onMapDragged = { viewModel.onMapDragged() },
+            // El «+» va entre «Centrar» y el panel del temporizador.
+            belowCenterButton = { startRunFab(Modifier) },
         ) {
+            gpsWaitingNotice(Modifier.padding(bottom = Spacing.md))
             RunPanel(uiState = uiState) {
                 RunControls(
                     uiState = uiState,

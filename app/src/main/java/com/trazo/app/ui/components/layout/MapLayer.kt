@@ -2,6 +2,7 @@ package com.trazo.app.ui.components.layout
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -82,6 +83,7 @@ fun MapLayer(
     onCenterMapClicked: () -> Unit,
     onMapDragged: () -> Unit,
     modifier: Modifier = Modifier,
+    belowCenterButton: @Composable () -> Unit = {},
     bottomContent: @Composable () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
@@ -191,7 +193,8 @@ fun MapLayer(
             state = mapState,
         )
 
-        // Atribución y botón «Centrar» 16 dp por encima del panel del recorrido (§6.2).
+        // Atribución y, a la derecha, «Centrar» con [belowCenterButton] debajo (el «+» de start-run),
+        // 16 dp por encima del panel del recorrido (§6.2).
         Column(
             modifier =
                 Modifier
@@ -218,36 +221,43 @@ fun MapLayer(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                SmallFloatingActionButton(
-                    onClick = {
-                        onCenterMapClicked()
-                        currentLocation?.let { location ->
-                            val point = WebMercator.normalize(location.latitude, location.longitude)
-                            scope.launch {
-                                mapState.scrollTo(
-                                    point.x,
-                                    point.y,
-                                    WebMercator.scaleForZoom(RUNNER_ZOOM),
-                                )
-                            }
-                        }
-                    },
-                    modifier = Modifier.size(Sizes.minTouchTarget),
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    elevation =
-                        FloatingActionButtonDefaults.elevation(
-                            defaultElevation = Elevation.level2,
-                            pressedElevation = Elevation.level2,
-                            focusedElevation = Elevation.level2,
-                            hoveredElevation = Elevation.level2,
-                        ),
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.MyLocation,
-                        contentDescription = stringResource(R.string.map_recenter),
-                    )
+                    SmallFloatingActionButton(
+                        onClick = {
+                            onCenterMapClicked()
+                            currentLocation?.let { location ->
+                                val point = WebMercator.normalize(location.latitude, location.longitude)
+                                scope.launch {
+                                    mapState.scrollTo(
+                                        point.x,
+                                        point.y,
+                                        WebMercator.scaleForZoom(RUNNER_ZOOM),
+                                    )
+                                }
+                            }
+                        },
+                        modifier = Modifier.size(Sizes.minTouchTarget),
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        elevation =
+                            FloatingActionButtonDefaults.elevation(
+                                defaultElevation = Elevation.level2,
+                                pressedElevation = Elevation.level2,
+                                focusedElevation = Elevation.level2,
+                                hoveredElevation = Elevation.level2,
+                            ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.MyLocation,
+                            contentDescription = stringResource(R.string.map_recenter),
+                        )
+                    }
+
+                    belowCenterButton()
                 }
             }
 

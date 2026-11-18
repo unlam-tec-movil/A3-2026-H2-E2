@@ -13,10 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.trazo.app.R
-import com.trazo.app.domain.model.RunGoal
+import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme
+import kotlin.math.roundToInt
 
 /**
  * Modal "Iniciar nuevo recorrido". No guarda estado propio: dibuja lo que recibe y avisa
@@ -46,7 +47,7 @@ fun StartRunDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     RunGoal.entries.forEach { goal ->
                         GoalChip(
-                            label = stringResource(R.string.start_run_goal_km, goal.kilometers),
+                            label = stringResource(R.string.start_run_goal_km, goal.distanceKm.roundToInt()),
                             selected = goal == selectedGoal,
                             onClick = { onGoalSelected(goal) },
                         )
@@ -104,7 +105,7 @@ private fun StartRunDialogNoGoalPreview() {
 private fun StartRunDialogWithGoalPreview() {
     TrazoTheme {
         StartRunDialog(
-            selectedGoal = RunGoal.KM_10,
+            selectedGoal = RunGoal.TEN_KILOMETERS,
             onGoalSelected = {},
             onConfirm = {},
             onDismiss = {},
