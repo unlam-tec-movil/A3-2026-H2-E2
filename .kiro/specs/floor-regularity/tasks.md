@@ -49,7 +49,7 @@
   - _Depends: 1.1_
   - _Requirements: 5.1, 5.7_
 
-- [ ] 2.4 Repositorio de regularidad: estado del recorrido, sensor y tramos
+- [x] 2.4 Repositorio de regularidad: estado del recorrido, sensor y tramos
   - Mide solo con el recorrido activo; en pausa manual, frenada o pausa personal descarta el tramo
     abierto y conserva los tramos cerrados
   - Reinicia el estado cuando cambia el id del recorrido; lo conserva al reanudar y tras finalizar o
@@ -64,7 +64,7 @@
 
 - [ ] 3. Verificación sobre stop-detection y aviso
 
-- [ ] 3.1 (P) Verificar con pruebas que la pausa manual y la reanudación no afectan a las frenadas
+- [x] 3.1 (P) Verificar con pruebas que la pausa manual y la reanudación no afectan a las frenadas
   - Sin modificar `stop-detection`: pausar durante una detención de menos de 8 s no registra frenada
     ni pausa personal; las frenadas previas se conservan al pausar y al reanudar
   - Al reanudar, la fase vuelve a «movimiento» y la quietud anterior no se arrastra
@@ -72,7 +72,7 @@
   - _Boundary: StopDetectionRepositoryImpl (solo pruebas)_
   - _Requirements: 1.1, 1.2, 1.3, 2.1, 7.4_
 
-- [ ] 3.2 (P) Aviso de falta de acelerómetro
+- [x] 3.2 (P) Aviso de falta de acelerómetro
   - Textos del aviso y de accesibilidad en español rioplatense y un ícono de sensor apagado
   - Componente con ícono y texto, anunciado como región viva, legible con fuente al 200 % y con
     vista previa; no se cablea en la pantalla del Mapa
@@ -146,3 +146,4 @@
 - El umbral de 2,0 m/s² es provisional y no está acordado.
 - El requisito 4.6 («sin dato» con texto) lo cumple la presentación de otras personas; esta spec solo
   entrega `null`.
+- `MotionSensorMissingNoticeTest` (3.2) compila pero no se ejecutó: falta correrla en emulador o dispositivo.

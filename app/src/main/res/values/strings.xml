@@ -46,6 +46,9 @@
     <!-- HU-05.1 Detección de frenadas -->
     <string name="map_brake_alert_title">Frenada detectada</string>
     <string name="map_brake_alert_detail">Semáforo o intersección</string>
+    <!-- HU-05.2 Regularidad del piso -->
+    <string name="map_motion_sensor_missing_title">Sin acelerómetro</string>
+    <string name="map_motion_sensor_missing_detail">No vamos a poder medir frenadas ni regularidad. Vas a ver distancia, tiempo y velocidad.</string>
     <string name="map_stop_query_title">¿Qué tipo de detención fue?</string>
     <string name="map_stop_query_text">Llevás más de 20 segundos sin moverte. Elegí cómo contarla.</string>
     <string name="map_stop_query_brake">Frenada</string>
