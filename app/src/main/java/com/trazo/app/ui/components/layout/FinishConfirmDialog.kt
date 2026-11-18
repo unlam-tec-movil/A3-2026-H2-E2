@@ -1,5 +1,7 @@
 package com.trazo.app.ui.components.layout
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -8,6 +10,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.trazo.app.R
+import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoShapes
 
 @Composable
@@ -16,6 +19,8 @@ fun FinishConfirmDialog(
     goalReached: Boolean,
     onConfirmFinish: () -> Unit,
     onCancelFinish: () -> Unit,
+    errorMessage: String? = null,
+    isFinishing: Boolean = false,
 ) {
     if (!showFinishConfirmDialog) return
 
@@ -27,21 +32,47 @@ fun FinishConfirmDialog(
         }
 
     AlertDialog(
-        onDismissRequest = onCancelFinish,
+        onDismissRequest = {
+            if (!isFinishing) {
+                onCancelFinish()
+            }
+        },
         text = {
-            Text(
-                text = messageText,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Text(
+                    text = messageText,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
         },
         shape = TrazoShapes.extraLarge,
         confirmButton = {
             TextButton(
                 onClick = onConfirmFinish,
+                enabled = !isFinishing,
             ) {
                 Text(
-                    text = stringResource(R.string.map_finish),
-                    color = MaterialTheme.colorScheme.error,
+                    text =
+                        if (errorMessage != null) {
+                            stringResource(R.string.map_retry)
+                        } else {
+                            stringResource(R.string.map_finish)
+                        },
+                    color =
+                        if (!isFinishing) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        },
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -49,6 +80,7 @@ fun FinishConfirmDialog(
         dismissButton = {
             OutlinedButton(
                 onClick = onCancelFinish,
+                enabled = !isFinishing,
             ) {
                 Text(
                     text = stringResource(R.string.map_cancel),

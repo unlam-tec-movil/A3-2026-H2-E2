@@ -26,6 +26,8 @@ data class LiveRouteTrackingUiState(
     val showGoalCelebration: Boolean = false,
     val areControlActionsAllowed: Boolean = false,
     val rawDistanceMeters: Double = 0.0,
+    val finishErrorMessage: String? = null,
+    val isFinishing: Boolean = false,
 ) {
     val isRunning: Boolean
         get() = runState == RunState.ACTIVE

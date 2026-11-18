@@ -56,6 +56,8 @@ class LiveRouteTrackingViewModel
         private val showShortRunDialogFlow = MutableStateFlow(false)
         private val showGoalCelebrationFlow = MutableStateFlow(false)
         private val isMapCenteredOnRunnerFlow = MutableStateFlow(true)
+        private val finishErrorMessageFlow = MutableStateFlow<String?>(null)
+        private val isFinishingFlow = MutableStateFlow(false)
 
         private var previousGoalReached = false
         private var hasShownLocationPermissionLostNotice = false
@@ -154,6 +156,8 @@ class LiveRouteTrackingViewModel
                 showShortRunDialogFlow,
                 showGoalCelebrationFlow,
                 isMapCenteredOnRunnerFlow,
+                finishErrorMessageFlow,
+                isFinishingFlow,
             ) { args: Array<Any?> ->
                 val session = args[0] as RunSession
                 val isRunInProgress = args[1] as Boolean
@@ -162,6 +166,8 @@ class LiveRouteTrackingViewModel
                 val showShort = args[4] as Boolean
                 val showCelebration = args[5] as Boolean
                 val isCentered = args[6] as Boolean
+                val finishErrorMessage = args[7] as? String
+                val isFinishing = args[8] as Boolean
 
                 when (session) {
                     is RunSession.Idle -> {
@@ -184,6 +190,8 @@ class LiveRouteTrackingViewModel
                             showGoalCelebration = false,
                             areControlActionsAllowed = false,
                             rawDistanceMeters = 0.0,
+                            finishErrorMessage = finishErrorMessage,
+                            isFinishing = isFinishing,
                         )
                     }
 
@@ -210,6 +218,8 @@ class LiveRouteTrackingViewModel
                             showGoalCelebration = showCelebration,
                             areControlActionsAllowed = true,
                             rawDistanceMeters = session.metrics.distanceMeters,
+                            finishErrorMessage = finishErrorMessage,
+                            isFinishing = isFinishing,
                         )
                     }
                 }
@@ -238,6 +248,9 @@ class LiveRouteTrackingViewModel
         fun onFinishRequested() {
             if (!uiState.value.hasActiveRun) return
 
+            finishErrorMessageFlow.value = null
+            isFinishingFlow.value = false
+
             val currentState = uiState.value
 
             if (currentState.rawDistanceMeters < 200.0) {
@@ -248,18 +261,31 @@ class LiveRouteTrackingViewModel
         }
 
         fun onConfirmFinish() {
-            showFinishConfirmDialogFlow.value = false
+            if (!uiState.value.hasActiveRun) return
+
+            isFinishingFlow.value = true
+            finishErrorMessageFlow.value = null
 
             viewModelScope.launch {
-                finishRunUseCase().onSuccess { summary ->
-                    _uiEffect.send(
-                        LiveRouteTrackingUiEffect.NavigateToResults(summary),
-                    )
-                }
+                finishRunUseCase()
+                    .onSuccess { summary ->
+                        isFinishingFlow.value = false
+                        finishErrorMessageFlow.value = null
+                        showFinishConfirmDialogFlow.value = false
+                        _uiEffect.send(
+                            LiveRouteTrackingUiEffect.NavigateToResults(summary),
+                        )
+                    }.onFailure { exception ->
+                        isFinishingFlow.value = false
+                        finishErrorMessageFlow.value =
+                            exception.message ?: DEFAULT_FINISH_ERROR_MESSAGE
+                    }
             }
         }
 
         fun onCancelFinish() {
+            isFinishingFlow.value = false
+            finishErrorMessageFlow.value = null
             showFinishConfirmDialogFlow.value = false
         }
 
@@ -311,6 +337,9 @@ class LiveRouteTrackingViewModel
         }
 
         private companion object {
+            const val DEFAULT_FINISH_ERROR_MESSAGE =
+                "No se pudo finalizar el recorrido. Podés reintentar."
+
             const val LOCATION_PERMISSION_LOST_MESSAGE =
                 "Se perdió el permiso de ubicación. Activalo desde Ajustes para seguir registrando tu recorrido."
 

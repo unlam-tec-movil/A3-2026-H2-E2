@@ -12,6 +12,7 @@ import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.repository.LocationClient
 import com.trazo.app.domain.repository.RunSessionRepository
+import com.trazo.app.domain.repository.StopDetectionRepository
 import com.trazo.app.domain.usecases.GpsPointFilterPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -25,6 +26,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,8 +40,35 @@ class RunSessionRepositoryImpl
     constructor(
         private val locationClient: LocationClient,
         private val gpsPointFilterPolicy: GpsPointFilterPolicy,
+        stopDetectionRepositoryOptional: Optional<StopDetectionRepository>,
         @ApplicationScope private val applicationScope: CoroutineScope,
     ) : RunSessionRepository {
+        private val stopDetectionRepository: StopDetectionRepository? =
+            stopDetectionRepositoryOptional.orElse(null)
+
+        constructor(
+            locationClient: LocationClient,
+            gpsPointFilterPolicy: GpsPointFilterPolicy,
+            stopDetectionRepository: StopDetectionRepository?,
+            applicationScope: CoroutineScope,
+        ) : this(
+            locationClient = locationClient,
+            gpsPointFilterPolicy = gpsPointFilterPolicy,
+            stopDetectionRepositoryOptional = Optional.ofNullable(stopDetectionRepository),
+            applicationScope = applicationScope,
+        )
+
+        constructor(
+            locationClient: LocationClient,
+            gpsPointFilterPolicy: GpsPointFilterPolicy,
+            applicationScope: CoroutineScope,
+        ) : this(
+            locationClient = locationClient,
+            gpsPointFilterPolicy = gpsPointFilterPolicy,
+            stopDetectionRepositoryOptional = Optional.empty(),
+            applicationScope = applicationScope,
+        )
+
         private val mutex = Mutex()
 
         private val _activeSession = MutableStateFlow<RunSession>(RunSession.Idle)
@@ -272,6 +301,13 @@ class RunSessionRepositoryImpl
                     val now = SystemClock.elapsedRealtime()
                     val elapsedTime = calculateElapsedTime(session, now)
 
+                    val brakesCount =
+                        stopDetectionRepository
+                            ?.state
+                            ?.value
+                            ?.brakes
+                            ?.size ?: 0
+
                     stopJobs()
 
                     val finalMetrics =
@@ -295,6 +331,8 @@ class RunSessionRepositoryImpl
                             finishedAtMonotonicTimestamp = now,
                             goalReached = session.goalReached,
                             isDemoMode = session.isDemoMode,
+                            brakes = brakesCount,
+                            regularity = null,
                         )
 
                     finishedSummaries[summary.id] = summary
@@ -317,6 +355,8 @@ class RunSessionRepositoryImpl
         }
 
         override fun getFinishedSummary(id: String): FrozenRunSummary? = finishedSummaries[id]
+
+        override fun removeFinishedSummary(id: String): Boolean = finishedSummaries.remove(id) != null
 
         private fun startTracking() {
             startLocationUpdates()

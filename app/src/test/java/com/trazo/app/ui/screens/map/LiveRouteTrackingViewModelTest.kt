@@ -31,6 +31,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -206,9 +207,10 @@ class LiveRouteTrackingViewModelTest {
         }
 
     @Test
-    fun repository_handlesSummaryRecoveryById() =
+    fun repository_handlesSummaryRecoveryById_andRetainsBrakesCount() =
         runTest {
             val now = Clock.System.now()
+            fakeRepository.brakesCountToReturn = 3
             fakeRepository.setSession(
                 RunSession.ActiveSession(
                     id = "run-123",
@@ -232,11 +234,77 @@ class LiveRouteTrackingViewModelTest {
             assertEquals(now, summary?.startedAt)
             assertTrue(summary?.goalReached == true)
             assertTrue(summary?.isDemoMode == true)
+            assertEquals(3, summary?.brakes)
+            assertNull(summary?.regularity)
 
             assertEquals(RunSession.Idle, fakeRepository.activeSession.value)
         }
 
+    @Test
+    fun finishSession_withoutBrakes_generatesZeroBrakes() =
+        runTest {
+            fakeRepository.brakesCountToReturn = 0
+            fakeRepository.setSession(
+                RunSession.ActiveSession(
+                    id = "no-brakes-run",
+                    goal = RunGoal.THREE_KILOMETERS,
+                    state = RunState.ACTIVE,
+                    metrics = RunMetrics(distanceMeters = 3000.0),
+                    startMonotonicTimestamp = 1000L,
+                    startedAt = Clock.System.now(),
+                ),
+            )
+
+            val finishResult = fakeRepository.finishSession()
+            assertTrue(finishResult.isSuccess)
+
+            val summary = fakeRepository.getFinishedSummary("no-brakes-run")
+            assertNotNull(summary)
+            assertEquals(0, summary?.brakes)
+        }
+
+    @Test
+    fun startingNewRun_resetsBrakesForNewSession() =
+        runTest {
+            // First run with 2 brakes
+            fakeRepository.brakesCountToReturn = 2
+            fakeRepository.setSession(
+                RunSession.ActiveSession(
+                    id = "run-1",
+                    goal = RunGoal.THREE_KILOMETERS,
+                    state = RunState.ACTIVE,
+                    metrics = RunMetrics(distanceMeters = 3000.0),
+                    startMonotonicTimestamp = 1000L,
+                    startedAt = Clock.System.now(),
+                ),
+            )
+
+            val finishResult1 = fakeRepository.finishSession()
+            assertTrue(finishResult1.isSuccess)
+            assertEquals(2, fakeRepository.getFinishedSummary("run-1")?.brakes)
+
+            // Second run started fresh
+            fakeRepository.brakesCountToReturn = 0
+            fakeRepository.attachActiveSession(
+                InitializedRunSession(
+                    id = "run-2",
+                    goal = RunGoal.FIVE_KILOMETERS,
+                    startMonotonicTimestamp = 2000L,
+                    startedAt = Clock.System.now(),
+                ),
+            )
+
+            val finishResult2 = fakeRepository.finishSession()
+            assertTrue(finishResult2.isSuccess)
+            assertEquals(0, fakeRepository.getFinishedSummary("run-2")?.brakes)
+
+            // Run 1 summary still has 2 brakes
+            assertEquals(2, fakeRepository.getFinishedSummary("run-1")?.brakes)
+        }
+
     private class FakeRunSessionRepository : RunSessionRepository {
+        var brakesCountToReturn: Int = 0
+
         private val sessionStateFlow = MutableStateFlow<RunSession>(RunSession.Idle)
         override val activeSession: StateFlow<RunSession> = sessionStateFlow
 
@@ -325,6 +393,8 @@ class LiveRouteTrackingViewModelTest {
                     finishedAtMonotonicTimestamp = 2000L,
                     goalReached = current.goalReached,
                     isDemoMode = current.isDemoMode,
+                    brakes = brakesCountToReturn,
+                    regularity = null,
                 )
 
             summaries[summary.id] = summary
@@ -339,6 +409,8 @@ class LiveRouteTrackingViewModelTest {
         }
 
         override fun getFinishedSummary(id: String): FrozenRunSummary? = summaries[id]
+
+        override fun removeFinishedSummary(id: String): Boolean = summaries.remove(id) != null
     }
 
     private class FakeLocationClient : LocationClient {

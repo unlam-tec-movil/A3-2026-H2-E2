@@ -12,4 +12,6 @@ data class FrozenRunSummary(
     val finishedAtMonotonicTimestamp: Long,
     val goalReached: Boolean,
     val isDemoMode: Boolean = false,
+    val brakes: Int = 0,
+    val regularity: Float? = null,
 )

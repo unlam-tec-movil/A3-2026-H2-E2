@@ -8,15 +8,22 @@ import com.trazo.app.domain.model.map.RawLocationPoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
+import com.trazo.app.domain.model.stops.BrakeEvent
+import com.trazo.app.domain.model.stops.StopDetectionState
+import com.trazo.app.domain.model.stops.StopKind
+import com.trazo.app.domain.repository.StopDetectionRepository
 import com.trazo.app.domain.usecases.GpsPointFilterPolicy
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
+import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -205,6 +212,45 @@ class RunSessionRepositoryImplTest {
 
             val activeSession = repository.activeSession.value as? RunSession.ActiveSession
             assertEquals(RunState.ACTIVE, activeSession?.state)
+        }
+
+    @Test
+    fun finishSession_capturesBrakesCountFromStopDetectionRepository() =
+        runBlocking {
+            val fakeStopRepo = FakeStopDetectionRepository()
+            val repoWithStops =
+                RunSessionRepositoryImpl(
+                    locationClient = fakeLocationClient,
+                    gpsPointFilterPolicy = GpsPointFilterPolicy(),
+                    stopDetectionRepository = fakeStopRepo,
+                    applicationScope = applicationScope,
+                )
+
+            val initializedSession =
+                InitializedRunSession(
+                    id = "brakes-test-session",
+                    goal = RunGoal.FIVE_KILOMETERS,
+                    startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
+                )
+
+            repoWithStops.attachActiveSession(initializedSession)
+
+            fakeStopRepo.setBrakesCount(2)
+
+            val result = repoWithStops.finishSession()
+            assertTrue(result.isSuccess)
+
+            val summary = result.getOrNull()
+            assertNotNull(summary)
+            assertEquals(2, summary?.brakes)
+            assertNull(summary?.regularity)
+
+            val retrieved = repoWithStops.getFinishedSummary("brakes-test-session")
+            assertNotNull(retrieved)
+            assertEquals(2, retrieved?.brakes)
+
+            repoWithStops.resetToIdle()
         }
 
     @Test
@@ -477,4 +523,19 @@ class RunSessionRepositoryImplTest {
             assertEquals(RunState.ACTIVE, sessionAfter?.state)
             assertTrue(repository.isRunInProgress.value)
         }
+
+    private class FakeStopDetectionRepository : StopDetectionRepository {
+        private val _state = MutableStateFlow(StopDetectionState())
+        override val state: StateFlow<StopDetectionState> = _state
+
+        fun setBrakesCount(count: Int) {
+            val fakeBrakes =
+                List(count) { index ->
+                    BrakeEvent(id = "brake-$index", location = null, detectedAtMillis = 1000L)
+                }
+            _state.value = _state.value.copy(brakes = fakeBrakes)
+        }
+
+        override fun classifyCurrentStop(kind: StopKind) {}
+    }
 }
