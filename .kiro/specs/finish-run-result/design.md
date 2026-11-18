@@ -381,7 +381,8 @@ layout sin check ni animación, título «Recorrido finalizado» y marca «Incom
 - `onNavigateToResults = { summary -> navController.navigate("$RESULT_ROUTE/${summary.id}") { launchSingleTop = true } }`.
 - Barra inferior oculta cuando `currentRoute` empieza con `RESULT_ROUTE`.
 - `onContinue(runId)` navega a `saverun/$runId`. La ruta `saverun` es de `save-run` y todavía **no
-  existe**: hasta que exista, «Continuar» queda conectado a un callback vacío.
+  existe**: hasta que exista, «Continuar» usa un parche temporal aprobado por Rocío (tarea 5.3) y
+  vuelve al Mapa con la misma navegación de `onLeave` (lambda local en el bloque `composable`).
 
 ### Contrato pedido a otras specs
 
@@ -406,7 +407,7 @@ layout sin check ni animación, título «Recorrido finalizado» y marca «Incom
 | Resultado sin datos (`getFinishedSummary` devuelve `null`) | `LeaveToMap` | Vuelve al Mapa |
 | Doble toque en «Finalizar recorrido» | No hay `isFinishing`; el segundo `finishSession()` falla con «no hay sesión» | Sin efecto visible |
 | Regularidad ausente | `regularityText = null` | «No disponible» |
-| `saverun` sin ruta | Callback vacío | «Continuar» sin efecto hasta que exista |
+| `saverun` sin ruta | Parche temporal (5.3) | «Continuar» vuelve al Mapa hasta que exista |
 
 ## Testing Strategy
 
@@ -452,4 +453,4 @@ se registra la ubicación en logs.
   esta spec; Persona 3 no toca ese archivo.
 - **Dos `RunGoal`** (`domain.model` con `kilometers: Int` y `domain.model.map` con `distanceKm:
   Double`): se usa el de `map`. Riesgo de confusión al importar.
-- **Ruta `saverun/{runId}` inexistente** (es de `save-run`): «Continuar» queda con callback vacío.
+- **Ruta `saverun/{runId}` inexistente** (es de `save-run`): «Continuar» vuelve al Mapa (parche temporal 5.3, aprobado por Rocío) hasta que exista.

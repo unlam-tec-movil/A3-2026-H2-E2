@@ -45,7 +45,9 @@ regularidad es HU-05.)
 5. Continuar al guardado: desde la pantalla de resultado, al tocar «Continuar» se abre «Guardar
    recorrido», conservando distancia, tiempo, velocidad promedio, frenadas, regularidad y meta
    seleccionada, y el corredor puede ingresar el título obligatorio y agregar destacados y
-   fotografías opcionales.
+   fotografías opcionales. **Estado: parcial** hasta que `save-run` (HU-07) publique la ruta
+   `saverun/{runId}`; mientras tanto «Continuar» vuelve al Mapa (parche temporal aprobado por Rocío,
+   tarea 5.3).
 
 ## Introduction
 
@@ -189,7 +191,8 @@ guardar mi recorrido completo.
 #### Acceptance Criteria
 
 1. When el corredor toca «Continuar» en la pantalla de resultado, the Trazo App shall abrir la
-   pantalla «Guardar recorrido».
+   pantalla «Guardar recorrido». _(Parcial: hasta que exista `saverun/{runId}`, «Continuar» vuelve
+   al Mapa; ver tarea 5.3.)_
 2. When se abre «Guardar recorrido» desde la pantalla de resultado, the Trazo App shall conservar la
    distancia, el tiempo, la velocidad promedio, las frenadas, la regularidad y la meta elegida del
    recorrido finalizado.

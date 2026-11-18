@@ -106,15 +106,17 @@ fun TrazoApp() {
                 route = RESULT_ROUTE,
                 arguments = listOf(navArgument("runId") { type = NavType.StringType }),
             ) {
+                val leaveToMap: () -> Unit = {
+                    navController.navigate(TrazoDestination.MAP.route) {
+                        popUpTo(RESULT_ROUTE) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
                 ResultScreen(
-                    // «Guardar recorrido» (save-run, HU-07) todavía no tiene ruta: se conecta cuando exista.
-                    onContinue = { _ -> },
-                    onLeave = {
-                        navController.navigate(TrazoDestination.MAP.route) {
-                            popUpTo(RESULT_ROUTE) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    },
+                    // Parche temporal (aprobado por Rocío): hasta que save-run (HU-07) publique
+                    // saverun/{runId}, «Continuar» vuelve al Mapa. Reemplazar por navigate("saverun/$runId").
+                    onContinue = { _ -> leaveToMap() },
+                    onLeave = leaveToMap,
                 )
             }
             composable(TrazoDestination.HISTORY.route) { HistoryScreen() }

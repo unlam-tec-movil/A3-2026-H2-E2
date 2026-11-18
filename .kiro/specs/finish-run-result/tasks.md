@@ -90,10 +90,16 @@
   - _Requirements: 2.3, 3.3, 5.6_
 - [x] 5.2 «Continuar» hacia «Guardar recorrido»
   - «Continuar» llama a un callback `onContinue(runId)` expuesto por la pantalla; la ruta `saverun/{runId}` es de `save-run` (HU-07) y se conecta cuando exista
-  - Hasta entonces el callback queda vacío en `TrazoApp`; después navega a `saverun/$runId`
+  - Hasta entonces el callback queda con el parche temporal de la 5.3; después navega a `saverun/$runId`
   - `save-run` lee con `getFinishedSummary(id)` y es quien llama `removeFinishedSummary(id)` al guardar o descartar; esta spec no lo llama
   - _Depends: 5.1_
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+- [x] 5.3 Parche temporal: Continuar vuelve al Mapa (aprobado por Rocío)
+  - En `TrazoApp`, «Continuar» reutiliza la navegación de `onLeave` (al Mapa con `popUpTo(RESULT_ROUTE) { inclusive = true }` y `launchSingleTop`) mediante un lambda local, para que la pantalla tenga salida (el «atrás» está deshabilitado)
+  - Se reemplaza por `navigate("saverun/$runId")` cuando exista la ruta de `save-run` (HU-07)
+  - El escenario E5 (Continuar al guardado) queda **parcial** hasta `save-run`; el requisito 6.1 no se cumple aún
+  - _Depends: 5.2_
+  - _Requirements: 6.1 (parcial)_
 
 - [ ] 6. Validación
 - [x] 6.1 Prueba de flujo con fakes
