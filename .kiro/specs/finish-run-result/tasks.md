@@ -80,7 +80,7 @@
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 6.1, 6.5_
 
 - [ ] 5. Integración
-- [ ] 5.1 Ruta `result/{runId}` y navegación desde el Mapa
+- [x] 5.1 Ruta `result/{runId}` y navegación desde el Mapa
   - Esta spec (HU-06) es dueña de la ruta y del cableado en `TrazoApp.kt`; Persona 3 no toca ese archivo
   - En `TrazoApp`, reemplazar el `TODO (Persona 4)` de `onNavigateToResults`: navegar a `result/${summary.id}` con `launchSingleTop` (el efecto `NavigateToResults` hoy lleva el `FrozenRunSummary`; solo se usa su `id`)
   - Agregar `composable("result/{runId}")` con un único argumento `String` y ocultar la barra inferior en esa ruta

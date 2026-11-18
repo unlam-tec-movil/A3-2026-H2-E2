@@ -14,10 +14,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.trazo.app.data.location.locationSettingsIntent
 import com.trazo.app.data.location.readLocationStatus
 import com.trazo.app.domain.model.LocationStatus
@@ -26,7 +28,10 @@ import com.trazo.app.ui.components.common.StartRunDialog
 import com.trazo.app.ui.screens.history.HistoryScreen
 import com.trazo.app.ui.screens.home.HomeScreen
 import com.trazo.app.ui.screens.map.MapScreen
+import com.trazo.app.ui.screens.result.ResultScreen
 import com.trazo.app.ui.screens.startrun.StartRunViewModel
+
+private const val RESULT_ROUTE = "result/{runId}"
 
 @Composable
 fun TrazoApp() {
@@ -70,10 +75,12 @@ fun TrazoApp() {
         // (Inicio lo cubre con su barra superior).
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            BottomNavBar(
-                currentRoute = currentRoute,
-                onDestinationSelected = navigateTo,
-            )
+            if (currentRoute != RESULT_ROUTE) {
+                BottomNavBar(
+                    currentRoute = currentRoute,
+                    onDestinationSelected = navigateTo,
+                )
+            }
         },
     ) { innerPadding ->
         NavHost(
@@ -90,8 +97,23 @@ fun TrazoApp() {
             composable(TrazoDestination.MAP.route) {
                 MapScreen(
                     onStartRunClick = requestStartRun,
-                    onNavigateToResults = { _ ->
-                        // TODO (Persona 4): Navegar a la pantalla de Resultados pasando el resumen congelado
+                    onNavigateToResults = { summary ->
+                        navController.navigate("result/${summary.id}") { launchSingleTop = true }
+                    },
+                )
+            }
+            composable(
+                route = RESULT_ROUTE,
+                arguments = listOf(navArgument("runId") { type = NavType.StringType }),
+            ) {
+                ResultScreen(
+                    // «Guardar recorrido» (save-run, HU-07) todavía no tiene ruta: se conecta cuando exista.
+                    onContinue = { _ -> },
+                    onLeave = {
+                        navController.navigate(TrazoDestination.MAP.route) {
+                            popUpTo(RESULT_ROUTE) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     },
                 )
             }
