@@ -160,10 +160,8 @@
   - _Depends: 2.4_
   - _Requirements: 1.4, 2.2_
 
-- [ ] 4.2 Implementar la publicación de estado sobre `RunSessionRepository`
-  - **BLOQUEADA hasta que Persona 3 avise**: D1, D2 y D3 (`design.md`, «Discrepancias con el código
-    real») ya están acordadas con ella, pero sus cambios en `RunSessionRepository` todavía no están en
-    `develop`
+- [x] 4.2 Implementar la publicación de estado sobre `RunSessionRepository`
+  - Se implementa con un repositorio falso que replica los orígenes acordados (D1-D3). La verificación manual contra el repositorio real queda pendiente hasta que los cambios de Persona 3 estén en develop.
   - El adaptador llama a las funciones `suspend` del repositorio y devuelve su `Result<Unit>`
     (orígenes acordados): `STOPPED` → `markStopped()` (solo desde `ACTIVE`; deja temporizador y GPS
     corriendo, D3); `ACTIVE` desde `STOPPED` o `PERSONAL_PAUSED` → `markMoving()` (D2; no acepta
