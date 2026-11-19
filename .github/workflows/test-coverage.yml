@@ -19,13 +19,13 @@ jobs:
       - name: Change wrapper permissions
         run: chmod +x ./gradlew
       - name: Generate kover coverage report
-        run: ./gradlew koverXmlReportRelease
+        run: ./gradlew koverXmlReportDebug
 
       - name: Add coverage report to PR
         id: kover
         uses: mi-kas/kover-report@v1
         with:
-          path: ${{ github.workspace }}/app/build/reports/kover/reportRelease.xml
+          path: ${{ github.workspace }}/app/build/reports/kover/reportDebug.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           title: Code Coverage
           update-comment: true
@@ -36,4 +36,7 @@ jobs:
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
         with:
-          files: app/build/reports/kover/reportRelease.xml
+          files: app/build/reports/kover/reportDebug.xml
+
+      - name: Verify minimum coverage (80%)
+        run: ./gradlew koverVerifyDebug

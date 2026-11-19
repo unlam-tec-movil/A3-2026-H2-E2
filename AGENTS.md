@@ -14,7 +14,7 @@ Run from the repository root; use `./gradlew` instead of `./gradlew.bat` on Unix
 - `./gradlew.bat :app:connectedDebugAndroidTest` — run device tests.
 - `./gradlew.bat :app:ktlintCheck :app:lint` — check Kotlin formatting and Android lint.
 - `./gradlew.bat :app:ktlintFormat` — apply Kotlin formatting.
-- `./gradlew.bat :app:koverXmlReportRelease` — generate the coverage report used by CI.
+- `./gradlew.bat :app:koverXmlReportDebug` — generate the coverage report used by CI.
 
 ## Coding Style & Naming Conventions
 - Use four-space indentation, Kotlin idioms, and ktlint. Respect `.editorconfig`, which permits PascalCase names for `@Composable` functions.
@@ -24,7 +24,7 @@ Run from the repository root; use `./gradlew` instead of `./gradlew.bat` on Unix
 ## Testing Guidelines
 - Use JUnit 4 for JVM tests and AndroidX JUnit, Espresso, or Compose testing for device tests.
 - Name test classes `<Subject>Test` and methods descriptively, following `addition_isCorrect` where appropriate.
-- Test behavior and failure cases for changed logic. Run tests after every change and report execution blockers. CI publishes Kover coverage; its configured minimum is currently 0%.
+- Test behavior and failure cases for changed logic. Run tests after every change and report execution blockers. CI publishes Kover coverage; CI fails below 80% line coverage (`koverVerifyDebug`; generated Hilt/Dagger code is excluded).
 
 ## Commit & Pull Request Guidelines
 - Recent history uses `feat: ...`; follow the same concise, type-prefixed style, using `fix:` or `docs:` as appropriate.
