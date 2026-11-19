@@ -57,11 +57,46 @@ android {
         compose = true
         buildConfig = true
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "*_Factory",
+                    "*_Factory\$*",
+                    "*_Provide*Factory",
+                    "*_Provide*Factory\$*",
+                    "*_HiltModules*",
+                    "*_GeneratedInjector",
+                    "*_MembersInjector",
+                    "*.Hilt_*",
+                    "hilt_aggregated_deps.*",
+                    "dagger.hilt.internal.*",
+                    "*.ComposableSingletons*",
+                    "*.BuildConfig",
+                )
+            }
+        }
+        verify {
+            rule {
+                minBound(80)
+            }
+        }
     }
 }
 
@@ -103,6 +138,12 @@ dependencies {
     // Tests unitarios
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.junit)
+    testImplementation(libs.androidx.test.runner)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.androidx.ui.test.manifest)
 
     // Tests instrumentados
     androidTestImplementation(platform(libs.androidx.compose.bom))
