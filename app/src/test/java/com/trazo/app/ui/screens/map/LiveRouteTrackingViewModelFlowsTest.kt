@@ -17,8 +17,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -37,12 +37,13 @@ import kotlin.time.Clock
 class LiveRouteTrackingViewModelFlowsTest {
     private val repository = FakeRunSessionRepository()
     private var locationPoints: List<RawLocationPoint> = emptyList()
+    private var signalFailure: Throwable? = null
 
     private val locationClient =
         object : LocationClient {
             override fun getLocationUpdates(intervalMillis: Long): Flow<RawLocationPoint> = flowOf(*locationPoints.toTypedArray())
 
-            override fun getSignalQualityUpdates(): Flow<GpsQuality> = emptyFlow()
+            override fun getSignalQualityUpdates(): Flow<GpsQuality> = flow { signalFailure?.let { throw it } }
         }
 
     @Before
@@ -168,6 +169,21 @@ class LiveRouteTrackingViewModelFlowsTest {
 
             // Then
             assertTrue(effect.await() is LiveRouteTrackingUiEffect.ShowLocationPermissionLostMessage)
+        }
+
+    @Test
+    fun `given an active run, when the signal updates fail with a security exception at creation, then warns about the lost permission`() =
+        runTest {
+            // Given
+            signalFailure = SecurityException("revoked")
+            repository.setSession(session(RunState.ACTIVE))
+
+            // When
+            val viewModel = createViewModel()
+            val effect = viewModel.uiEffect.first()
+
+            // Then
+            assertTrue(effect is LiveRouteTrackingUiEffect.ShowLocationPermissionLostMessage)
         }
 
     @Test

@@ -57,6 +57,10 @@ class LiveRouteTrackingViewModel
         private val showGoalCelebrationFlow = MutableStateFlow(false)
         private val isMapCenteredOnRunnerFlow = MutableStateFlow(true)
 
+        private val _uiEffect = Channel<LiveRouteTrackingUiEffect>(Channel.BUFFERED)
+
+        val uiEffect: Flow<LiveRouteTrackingUiEffect> = _uiEffect.receiveAsFlow()
+
         private var previousGoalReached = false
         private var hasShownLocationPermissionLostNotice = false
 
@@ -140,10 +144,6 @@ class LiveRouteTrackingViewModel
                     }
                 }
             }
-
-        private val _uiEffect = Channel<LiveRouteTrackingUiEffect>(Channel.BUFFERED)
-
-        val uiEffect: Flow<LiveRouteTrackingUiEffect> = _uiEffect.receiveAsFlow()
 
         val uiState =
             combine(
