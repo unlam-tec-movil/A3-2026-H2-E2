@@ -3,7 +3,7 @@ package com.trazo.app.ui.screens.result
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.trazo.app.domain.model.map.RunGoal
-import com.trazo.app.domain.usecases.GetFinishedRunSummaryUseCase
+import com.trazo.app.domain.repository.RunSessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.channels.Channel
@@ -33,7 +33,7 @@ class ResultViewModel
     @Inject
     constructor(
         savedStateHandle: SavedStateHandle,
-        getFinishedRunSummary: GetFinishedRunSummaryUseCase,
+        runSessionRepository: RunSessionRepository,
         formatter: ResultFormatter,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(ResultUiState())
@@ -46,7 +46,7 @@ class ResultViewModel
         val runId: String = savedStateHandle.get<String>(RUN_ID_KEY).orEmpty()
 
         init {
-            val summary = savedStateHandle.get<String>(RUN_ID_KEY)?.let(getFinishedRunSummary::invoke)
+            val summary = savedStateHandle.get<String>(RUN_ID_KEY)?.let(runSessionRepository::getFinishedSummary)
             if (summary == null) {
                 _effect.trySend(ResultEffect.LeaveToMap)
             } else {

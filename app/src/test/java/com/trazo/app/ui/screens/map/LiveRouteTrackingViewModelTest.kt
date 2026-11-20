@@ -3,18 +3,13 @@ package com.trazo.app.ui.screens.map
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
-import com.trazo.app.domain.model.map.RawLocationPoint
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunMetrics
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.repository.LocationClient
 import com.trazo.app.domain.repository.RunSessionRepository
-import com.trazo.app.domain.usecases.AttachActiveRunSessionUseCase
-import com.trazo.app.domain.usecases.FinishRunUseCase
-import com.trazo.app.domain.usecases.GetActiveRunSessionUseCase
-import com.trazo.app.domain.usecases.PauseRunUseCase
-import com.trazo.app.domain.usecases.ResumeRunUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -50,19 +45,8 @@ class LiveRouteTrackingViewModelTest {
         fakeRepository = FakeRunSessionRepository()
         fakeLocationClient = FakeLocationClient()
 
-        val getSessionUseCase = GetActiveRunSessionUseCase(fakeRepository)
-        val attachUseCase = AttachActiveRunSessionUseCase(fakeRepository)
-        val pauseUseCase = PauseRunUseCase(fakeRepository)
-        val resumeUseCase = ResumeRunUseCase(fakeRepository)
-        val finishUseCase = FinishRunUseCase(fakeRepository)
-
         viewModel =
             LiveRouteTrackingViewModel(
-                getActiveRunSessionUseCase = getSessionUseCase,
-                attachActiveRunSessionUseCase = attachUseCase,
-                pauseRunUseCase = pauseUseCase,
-                resumeRunUseCase = resumeUseCase,
-                finishRunUseCase = finishUseCase,
                 runSessionRepository = fakeRepository,
                 locationClient = fakeLocationClient,
             )
@@ -342,7 +326,7 @@ class LiveRouteTrackingViewModelTest {
     }
 
     private class FakeLocationClient : LocationClient {
-        override fun getLocationUpdates(intervalMillis: Long): Flow<RawLocationPoint> = emptyFlow()
+        override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> = emptyFlow()
 
         override fun getSignalQualityUpdates(): Flow<GpsQuality> = emptyFlow()
     }

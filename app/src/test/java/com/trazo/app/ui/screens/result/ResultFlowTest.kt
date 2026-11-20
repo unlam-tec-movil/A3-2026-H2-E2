@@ -6,8 +6,6 @@ import com.trazo.app.domain.model.map.RunMetrics
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.repository.FakeRunSessionRepository
-import com.trazo.app.domain.usecases.FinishRunUseCase
-import com.trazo.app.domain.usecases.GetFinishedRunSummaryUseCase
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -35,10 +33,10 @@ class ResultFlowTest {
                 goalReached = goalReached,
             ),
         )
-        val summary = FinishRunUseCase(repository).invoke().getOrThrow()
+        val summary = repository.finishSession().getOrThrow()
         return ResultViewModel(
             savedStateHandle = SavedStateHandle(mapOf("runId" to summary.id)),
-            getFinishedRunSummary = GetFinishedRunSummaryUseCase(repository),
+            runSessionRepository = repository,
             formatter = ResultFormatter(),
         ).uiState.value
     }

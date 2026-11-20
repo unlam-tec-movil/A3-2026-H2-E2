@@ -5,7 +5,6 @@ import com.trazo.app.di.ApplicationScope
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
-import com.trazo.app.domain.model.map.RawLocationPoint
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunMetrics
 import com.trazo.app.domain.model.map.RunSession
@@ -336,8 +335,8 @@ class RunSessionRepositoryImpl
                             if (exception is CancellationException) {
                                 throw exception
                             }
-                        }.collect { rawPoint ->
-                            processLocation(rawPoint)
+                        }.collect { point ->
+                            processLocation(point)
                         }
                 }
         }
@@ -368,12 +367,10 @@ class RunSessionRepositoryImpl
                 }
         }
 
-        private suspend fun processLocation(rawPoint: RawLocationPoint) {
-            if (!gpsPointFilterPolicy.isPointAccurate(rawPoint.accuracyMeters)) {
+        private suspend fun processLocation(point: RoutePoint) {
+            if (!gpsPointFilterPolicy.isPointAccurate(point.accuracyMeters)) {
                 return
             }
-
-            val point = rawPoint.toRoutePoint()
 
             mutex.withLock {
                 val session = _activeSession.value as? RunSession.ActiveSession ?: return@withLock
@@ -403,7 +400,7 @@ class RunSessionRepositoryImpl
                     )
 
                 val currentSpeed =
-                    rawPoint.speedMetersPerSecond
+                    point.speedMetersPerSecond
                         .coerceAtLeast(0f) * 3.6
 
                 val metrics =
@@ -422,7 +419,7 @@ class RunSessionRepositoryImpl
                     session.copy(
                         routePoints = session.routePoints + point,
                         metrics = metrics,
-                        lastValidLocationTimestamp = rawPoint.monotonicTimestampMillis,
+                        lastValidLocationTimestamp = point.monotonicTimestampMillis,
                         goalReached = goalReached,
                     )
             }
@@ -546,15 +543,6 @@ class RunSessionRepositoryImpl
 
             return earthRadiusMeters * centralAngle
         }
-
-        private fun RawLocationPoint.toRoutePoint(): RoutePoint =
-            RoutePoint(
-                latitude = latitude,
-                longitude = longitude,
-                accuracyMeters = accuracyMeters,
-                speedMetersPerSecond = speedMetersPerSecond,
-                monotonicTimestampMillis = monotonicTimestampMillis,
-            )
 
         private fun requireActiveSession(): RunSession.ActiveSession =
             (_activeSession.value as? RunSession.ActiveSession)

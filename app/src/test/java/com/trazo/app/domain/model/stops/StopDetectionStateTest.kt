@@ -5,47 +5,27 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class StopDetectionStateTest {
+    private val brake = BrakeEvent(id = "b1", runId = "r1", location = null, detectedAtMillis = 0L)
+
     @Test
-    fun `el estado inicial es movimiento continuo sin consulta pendiente`() {
+    fun `el estado inicial es movimiento sin consulta pendiente`() {
         val state = StopDetectionState()
 
-        assertEquals(MovementState.CONTINUOUS_MOVEMENT, state.movement)
+        assertEquals(StopPhase.Moving, state.phase)
         assertNull(state.pendingClassificationBrakeId)
     }
 
     @Test
-    fun `Still se expone como movimiento continuo`() {
-        val state = StopDetectionState(phase = StopPhase.Still(sinceMillis = 1_000L))
-
-        assertEquals(MovementState.CONTINUOUS_MOVEMENT, state.movement)
-        assertNull(state.pendingClassificationBrakeId)
-    }
-
-    @Test
-    fun `PersonalPause se expone como movimiento continuo`() {
-        val state = StopDetectionState(phase = StopPhase.PersonalPause(sinceMillis = 1_000L))
-
-        assertEquals(MovementState.CONTINUOUS_MOVEMENT, state.movement)
-        assertNull(state.pendingClassificationBrakeId)
-    }
-
-    @Test
-    fun `Braking se expone como BRAKING`() {
-        QueryStatus.entries.forEach { query ->
-            val state =
-                StopDetectionState(
-                    phase = StopPhase.Braking(sinceMillis = 0L, brakeId = "b1", query = query),
-                )
-
-            assertEquals(MovementState.BRAKING, state.movement)
-        }
+    fun `Still y PersonalPause no tienen consulta pendiente`() {
+        assertNull(StopDetectionState(StopPhase.Still(sinceMillis = 1_000L)).pendingClassificationBrakeId)
+        assertNull(StopDetectionState(StopPhase.PersonalPause(sinceMillis = 1_000L)).pendingClassificationBrakeId)
     }
 
     @Test
     fun `la consulta pendiente solo existe con query PENDING`() {
         fun pendingId(query: QueryStatus) =
             StopDetectionState(
-                phase = StopPhase.Braking(sinceMillis = 0L, brakeId = "b1", query = query),
+                phase = StopPhase.Braking(sinceMillis = 0L, brake = brake, query = query),
             ).pendingClassificationBrakeId
 
         assertNull(pendingId(QueryStatus.NOT_DUE))

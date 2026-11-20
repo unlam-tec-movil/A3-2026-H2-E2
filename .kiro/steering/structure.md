@@ -1,6 +1,6 @@
 # Project Structure
 
-_updated_at: 2026-11-05_
+_updated_at: 2026-11-19_
 
 ## Organization Philosophy
 
@@ -13,12 +13,17 @@ inglés; textos de la app, comentarios y documentación de specs en español.
 ### Dominio
 
 **Location**: `app/src/main/java/com/trazo/app/domain/`
-**Purpose**: Kotlin puro, sin Android, Hilt ni Room.
+**Purpose**: Kotlin puro, sin Android, Hilt ni Room. Se permite `javax.inject.@Inject` (anotación
+estándar, no de Hilt) en los constructores.
 
 - `model/<área>/`: modelos de negocio agrupados por área (por ejemplo `model/stops/`).
-- `repository/`: interfaces de repositorio y puertos que implementa `data`.
-- `usecases/`: reglas y casos de uso; se crean solo si agregan lógica (un ViewModel puede consumir
-  un repositorio directo si es una lectura simple).
+- `repository/`: interfaces de repositorio y puertos que implementa `data`. Un **repositorio es
+  «bobo»**: recibe, guarda y expone datos, sin reglas ni borrados condicionales (por ejemplo
+  `BrakeRepository`). Lo que vigila un sensor o un proceso es un puerto, no un repositorio (por
+  ejemplo `StopMonitor`).
+- `usecases/`: reglas y casos de uso; se crean solo si agregan lógica (un ViewModel consume el
+  repositorio directo si solo pasaría la llamada). Las decisiones van acá y el use case llama al
+  repositorio solo cuando corresponde (por ejemplo `SaveStopUseCase` guarda solo las frenadas).
 
 ### Datos
 

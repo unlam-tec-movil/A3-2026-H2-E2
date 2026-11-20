@@ -6,7 +6,7 @@ import com.trazo.app.domain.model.stops.QueryStatus
 import com.trazo.app.domain.model.stops.StopDetectionState
 import com.trazo.app.domain.model.stops.StopKind
 import com.trazo.app.domain.model.stops.StopPhase
-import com.trazo.app.domain.repository.StopDetectionRepository
+import com.trazo.app.domain.repository.StopMonitor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -43,7 +43,7 @@ data class StopDetectionUiState(
 class StopDetectionViewModel
     @Inject
     constructor(
-        private val repository: StopDetectionRepository,
+        private val stopMonitor: StopMonitor,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(StopDetectionUiState())
         val uiState: StateFlow<StopDetectionUiState> = _uiState.asStateFlow()
@@ -57,13 +57,13 @@ class StopDetectionViewModel
 
         init {
             viewModelScope.launch {
-                combine(repository.state, suppressed) { state, isSuppressed -> state to isSuppressed }
+                combine(stopMonitor.state, suppressed) { state, isSuppressed -> state to isSuppressed }
                     .collect { (state, isSuppressed) -> process(state, isSuppressed) }
             }
         }
 
         fun onClassify(kind: StopKind) {
-            repository.classifyCurrentStop(kind)
+            stopMonitor.answer(kind)
         }
 
         fun onSuppressedChanged(isSuppressed: Boolean) {
@@ -75,13 +75,13 @@ class StopDetectionViewModel
             isSuppressed: Boolean,
         ) {
             val seen = seenBrakeIds
-            val currentIds = state.brakes.mapTo(mutableSetOf()) { it.id }
+            val braking = state.phase as? StopPhase.Braking
             val newBrakeId =
-                (state.phase as? StopPhase.Braking)
-                    ?.takeIf { seen != null && it.brakeId !in seen && it.brakeId in currentIds }
-                    ?.takeIf { it.query != QueryStatus.PENDING }
-                    ?.brakeId
-            seenBrakeIds = (seen ?: emptySet()) + currentIds
+                braking
+                    ?.takeIf { seen != null && it.brake.id !in seen && it.query != QueryStatus.PENDING }
+                    ?.brake
+                    ?.id
+            seenBrakeIds = (seen ?: emptySet()) + listOfNotNull(braking?.brake?.id)
 
             val pendingId = state.pendingClassificationBrakeId
             when {
@@ -89,14 +89,15 @@ class StopDetectionViewModel
                 newBrakeId != null -> showAlert(newBrakeId)
                 else ->
                     _uiState.value.alert?.let { alert ->
-                        if (alert.brakeId !in currentIds || pendingId != null) hideAlert()
+                        // La pausa personal descarta la frenada: su alerta ya no corresponde.
+                        if (state.phase is StopPhase.PersonalPause || pendingId != null) hideAlert()
                     }
             }
 
             _uiState.update { it.copy(classificationVisible = !isSuppressed && pendingId != null) }
 
             if (isSuppressed && pendingId != null) {
-                repository.classifyCurrentStop(StopKind.BRAKE)
+                stopMonitor.answer(StopKind.BRAKE)
             }
         }
 

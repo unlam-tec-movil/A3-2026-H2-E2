@@ -5,6 +5,10 @@
 > implementa ahora; la 4.4 y la verificación manual de transiciones esperan los cambios de Persona 3
 > en `develop` (discrepancias D1–D3 de `design.md`, «Discrepancias con el código real»).
 
+> **Revisión 2026-11-19:** el repositorio de la tarea 2.4 se reorganizó según «Guardar una parada»
+> (ver la revisión al inicio de `design.md`): `SensorStopMonitor` + `SaveStopUseCase` +
+> `BrakeRepository` bobo. La frenada se guarda al cerrar la parada y ya no se borra.
+
 - [ ] 1. Fundaciones: utilidad compartida, pruebas con tiempo virtual y contratos del dominio
 
 - [x] 1.1 Crear la utilidad compartida «Quitar animaciones»

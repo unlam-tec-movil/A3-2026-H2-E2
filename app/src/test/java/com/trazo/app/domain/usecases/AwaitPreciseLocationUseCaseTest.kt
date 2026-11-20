@@ -1,7 +1,7 @@
 package com.trazo.app.domain.usecases
 
 import com.trazo.app.domain.model.map.GpsQuality
-import com.trazo.app.domain.model.map.RawLocationPoint
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.repository.LocationClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -14,7 +14,7 @@ import org.junit.Test
 
 class AwaitPreciseLocationUseCaseTest {
     private fun point(accuracy: Float) =
-        RawLocationPoint(
+        RoutePoint(
             latitude = -34.6,
             longitude = -58.4,
             accuracyMeters = accuracy,
@@ -22,9 +22,9 @@ class AwaitPreciseLocationUseCaseTest {
             monotonicTimestampMillis = 0L,
         )
 
-    private fun clientOf(updates: Flow<RawLocationPoint>) =
+    private fun clientOf(updates: Flow<RoutePoint>) =
         object : LocationClient {
-            override fun getLocationUpdates(intervalMillis: Long): Flow<RawLocationPoint> = updates
+            override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> = updates
 
             override fun getSignalQualityUpdates(): Flow<GpsQuality> = emptyFlow()
         }
@@ -33,7 +33,7 @@ class AwaitPreciseLocationUseCaseTest {
     @Test
     fun ignoresImpreciseLocations_andReturnsFirstWithin30Meters() =
         runTest {
-            val useCase = AwaitPreciseLocationUseCase(clientOf(flowOf(point(31f), point(30f), point(5f))))
+            val useCase = AwaitPreciseLocationUseCase(clientOf(flowOf(point(31f), point(30f), point(5f))), GpsPointFilterPolicy())
 
             assertEquals(30f, useCase().accuracyMeters)
         }
@@ -45,6 +45,7 @@ class AwaitPreciseLocationUseCaseTest {
             val useCase =
                 AwaitPreciseLocationUseCase(
                     clientOf(flow { throw SecurityException("sin permiso") }),
+                    GpsPointFilterPolicy(),
                 )
 
             val result = runCatching { useCase() }

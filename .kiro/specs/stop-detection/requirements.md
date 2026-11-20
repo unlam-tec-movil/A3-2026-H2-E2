@@ -90,7 +90,8 @@ propias de mi recorrido.
 1. When hay un recorrido en curso y el corredor permanece sin movimiento durante 8 segundos, the
    Detector de Frenadas shall cambiar el estado a «Frenada».
 2. When el estado cambia a «Frenada», the Detector de Frenadas shall registrar la ubicación de la
-   detención.
+   detención. La frenada queda guardada al terminar la detención (el corredor contesta «Frenada»,
+   retoma sin contestar o termina el recorrido); si contesta «Pausa personal» no se guarda.
 3. When el estado cambia a «Frenada», the Detector de Frenadas shall registrar una única frenada por
    cada detención continua.
 4. When el corredor retoma el movimiento después de una frenada, the Detector de Frenadas shall

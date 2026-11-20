@@ -5,7 +5,7 @@ import com.trazo.app.domain.model.stops.QueryStatus
 import com.trazo.app.domain.model.stops.StopDetectionState
 import com.trazo.app.domain.model.stops.StopKind
 import com.trazo.app.domain.model.stops.StopPhase
-import com.trazo.app.domain.repository.StopDetectionRepository
+import com.trazo.app.domain.repository.StopMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,18 +28,18 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StopDetectionViewModelTest {
-    private class FakeStopDetectionRepository : StopDetectionRepository {
+    private class FakeStopMonitor : StopMonitor {
         val flow = MutableStateFlow(StopDetectionState())
         val classifications = mutableListOf<StopKind>()
         override val state: StateFlow<StopDetectionState> = flow
 
-        override fun classifyCurrentStop(kind: StopKind) {
+        override fun answer(kind: StopKind) {
             classifications += kind
         }
     }
 
     private val dispatcher = StandardTestDispatcher()
-    private val repository = FakeStopDetectionRepository()
+    private val repository = FakeStopMonitor()
 
     @Before
     fun setUp() {
@@ -51,15 +51,13 @@ class StopDetectionViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun brake(id: String) = BrakeEvent(id = id, location = null, detectedAtMillis = 0L)
+    private fun brake(id: String) = BrakeEvent(id = id, runId = "r1", location = null, detectedAtMillis = 0L)
 
     private fun braking(
         id: String,
         query: QueryStatus = QueryStatus.NOT_DUE,
-        previous: List<String> = emptyList(),
     ) = StopDetectionState(
-        phase = StopPhase.Braking(sinceMillis = 0L, brakeId = id, query = query),
-        brakes = previous.map(::brake) + brake(id),
+        phase = StopPhase.Braking(sinceMillis = 0L, brake = brake(id), query = query),
     )
 
     private fun test(block: suspend TestScope.(StopDetectionViewModel) -> Unit) =
@@ -115,7 +113,7 @@ class StopDetectionViewModelTest {
         }
 
     @Test
-    fun alertIsHidden_whenBrakeNoLongerExists() =
+    fun alertIsHidden_whenAnsweredAsPersonalPause() =
         test { viewModel ->
             repository.flow.value = braking("b1")
             runCurrent()
@@ -130,10 +128,10 @@ class StopDetectionViewModelTest {
         test { viewModel ->
             repository.flow.value = braking("b1")
             runCurrent()
-            repository.flow.value = StopDetectionState(brakes = listOf(brake("b1")))
+            repository.flow.value = StopDetectionState()
             runCurrent()
             advanceTimeBy(1_000)
-            repository.flow.value = braking("b2", previous = listOf("b1"))
+            repository.flow.value = braking("b2")
             runCurrent()
 
             assertEquals(BrakeAlertUi("b2"), viewModel.uiState.value.alert)
@@ -168,14 +166,14 @@ class StopDetectionViewModelTest {
         test { viewModel ->
             repository.flow.value = braking("b1", QueryStatus.PENDING)
             runCurrent()
-            repository.flow.value = StopDetectionState(brakes = listOf(brake("b1")))
+            repository.flow.value = StopDetectionState()
             runCurrent()
 
             assertFalse(viewModel.uiState.value.classificationVisible)
         }
 
     @Test
-    fun onClassify_delegatesToRepository() =
+    fun onClassify_delegatesToStopMonitor() =
         test { viewModel ->
             viewModel.onClassify(StopKind.PERSONAL_PAUSE)
 
@@ -228,7 +226,6 @@ class StopDetectionViewModelTest {
             repository.flow.value = braking("b1")
             runCurrent()
             assertNull(viewModel.uiState.value.alert)
-            assertEquals(1, repository.flow.value.brakes.size)
 
             viewModel.onSuppressedChanged(false)
             runCurrent()

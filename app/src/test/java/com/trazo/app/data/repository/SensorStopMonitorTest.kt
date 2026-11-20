@@ -11,6 +11,7 @@ import com.trazo.app.domain.repository.MotionSource
 import com.trazo.app.domain.repository.RunStatePublisher
 import com.trazo.app.domain.repository.RunningRunSource
 import com.trazo.app.domain.repository.StopLocationProvider
+import com.trazo.app.domain.usecases.SaveStopUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -31,7 +32,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class StopDetectionRepositoryImplTest {
+class SensorStopMonitorTest {
     private class FakeMotionSource : MotionSource {
         private val shared = MutableSharedFlow<MotionSample>()
         var activeCollectors = 0
@@ -76,15 +77,19 @@ class StopDetectionRepositoryImplTest {
     private val motion = FakeMotionSource()
     private val run = FakeRunningRunSource()
     private val publisher = FakePublisher()
+    private val brakes = InMemoryBrakeRepository()
     private var nextId = 0
 
-    private fun TestScope.repository() =
-        StopDetectionRepositoryImpl(
+    private val saved get() = brakes.brakes.value
+
+    private fun TestScope.monitor() =
+        SensorStopMonitor(
             motionSource = motion,
             runningRunSource = run,
             locationProvider = locationProvider,
             publisher = publisher,
             clock = { testScheduler.currentTime },
+            saveStop = SaveStopUseCase(brakes),
             scope = backgroundScope,
             config = config,
             idGenerator = { "b${nextId++}" },
@@ -108,50 +113,64 @@ class StopDetectionRepositoryImplTest {
     @Test
     fun `sin recorrido en curso no se lee el sensor y el estado no cambia`() =
         runTest {
-            val repository = repository()
+            val monitor = monitor()
             emitStillSamplesUntil(30_000)
 
             advance(30_000)
 
             assertEquals(0, motion.activeCollectors)
-            assertEquals(StopPhase.Moving, repository.state.value.phase)
-            assertTrue(
-                repository.state.value.brakes
-                    .isEmpty(),
-            )
+            assertEquals(StopPhase.Moving, monitor.state.value.phase)
+            assertTrue(saved.isEmpty())
         }
 
     @Test
-    fun `ocho segundos quieto registra una frenada con ubicacion`() =
+    fun `ocho segundos quieto inicia una frenada con ubicacion sin guardarla todavia`() =
         runTest {
-            val repository = repository()
+            val monitor = monitor()
             run.id.value = "r1"
             emitStillSamplesUntil(20_000)
 
             advance(10_000)
 
-            val state = repository.state.value
-            assertEquals(1, state.brakes.size)
-            assertEquals(location, state.brakes.single().location)
-            assertTrue(state.phase is StopPhase.Braking)
+            val phase = monitor.state.value.phase as StopPhase.Braking
+            assertEquals(location, phase.brake.location)
+            assertEquals("r1", phase.brake.runId)
+            assertTrue(saved.isEmpty())
         }
 
     @Test
-    fun `mantenerse quieto no registra una segunda frenada`() =
+    fun `mantenerse quieto no genera una segunda frenada`() =
         runTest {
-            val repository = repository()
+            val monitor = monitor()
             run.id.value = "r1"
             emitStillSamplesUntil(40_000)
 
             advance(19_000)
 
-            assertEquals(1, repository.state.value.brakes.size)
+            assertEquals("b0", (monitor.state.value.phase as StopPhase.Braking).brake.id)
+            assertEquals(1, nextId)
         }
 
     @Test
-    fun `al dejar de haber recorrido se deja de leer el sensor y se conservan las frenadas`() =
+    fun `retomar sin contestar guarda la frenada`() =
         runTest {
-            val repository = repository()
+            val monitor = monitor()
+            run.id.value = "r1"
+            emitStillSamplesUntil(10_000)
+            advance(10_000)
+
+            // El sensor calla: sin evidencia se trata como movimiento y tras 1,5 s se retoma.
+            advance(5_000)
+
+            assertEquals(StopPhase.Moving, monitor.state.value.phase)
+            assertEquals(listOf("b0"), saved.map { it.id })
+            assertEquals(location, saved.single().location)
+        }
+
+    @Test
+    fun `al dejar de haber recorrido se deja de leer el sensor y se guarda la frenada abierta`() =
+        runTest {
+            val monitor = monitor()
             run.id.value = "r1"
             emitStillSamplesUntil(60_000)
             advance(10_000)
@@ -161,92 +180,111 @@ class StopDetectionRepositoryImplTest {
             advance(100)
 
             assertEquals(0, motion.activeCollectors)
-            assertEquals(StopPhase.Moving, repository.state.value.phase)
-            assertEquals(1, repository.state.value.brakes.size)
+            assertEquals(StopPhase.Moving, monitor.state.value.phase)
+            assertEquals(listOf("b0"), saved.map { it.id })
         }
 
     @Test
-    fun `el mismo id conserva las frenadas y otro id las vacia`() =
+    fun `cada frenada guardada lleva el id de su recorrido`() =
         runTest {
-            val repository = repository()
+            monitor()
             run.id.value = "r1"
             emitStillSamplesUntil(120_000)
             advance(10_000)
             run.id.value = null
             advance(100)
 
-            run.id.value = "r1"
-            advance(100)
-            assertEquals(1, repository.state.value.brakes.size)
-
+            run.id.value = "r2"
+            advance(12_000)
             run.id.value = null
             advance(100)
-            run.id.value = "r2"
-            advance(100)
-            assertTrue(
-                repository.state.value.brakes
-                    .isEmpty(),
-            )
-            assertEquals(StopPhase.Moving, repository.state.value.phase)
+
+            assertEquals(listOf("r1", "r2"), saved.map { it.runId })
         }
 
     @Test
-    fun `un sensor mudo tras quieto no registra frenada`() =
+    fun `pasar a otro recorrido sin pausa guarda la frenada abierta del anterior`() =
         runTest {
-            val repository = repository()
+            val monitor = monitor()
+            run.id.value = "r1"
+            emitStillSamplesUntil(60_000)
+            advance(10_000)
+
+            run.id.value = "r2"
+            advance(100)
+
+            assertEquals(listOf("r1"), saved.map { it.runId })
+            assertTrue(monitor.state.value.phase !is StopPhase.Braking)
+        }
+
+    @Test
+    fun `un sensor mudo tras quieto no inicia una frenada`() =
+        runTest {
+            val monitor = monitor()
             run.id.value = "r1"
             emitStillSamplesUntil(2_000)
 
             advance(30_000)
 
-            assertTrue(
-                repository.state.value.brakes
-                    .isEmpty(),
-            )
-            assertEquals(StopPhase.Moving, repository.state.value.phase)
+            assertTrue(saved.isEmpty())
+            assertEquals(0, nextId)
+            assertEquals(StopPhase.Moving, monitor.state.value.phase)
         }
 
     @Test
-    fun `clasificar como pausa personal quita la frenada y no se vuelve a registrar`() =
+    fun `contestar pausa personal no guarda la frenada ni inicia otra`() =
         runTest {
-            val repository = repository()
+            val monitor = monitor()
             run.id.value = "r1"
             emitStillSamplesUntil(60_000)
             advance(22_000)
-            val pending = (repository.state.value.phase as StopPhase.Braking)
+            val pending = (monitor.state.value.phase as StopPhase.Braking)
             assertEquals(QueryStatus.PENDING, pending.query)
-            assertNotNull(repository.state.value.pendingClassificationBrakeId)
+            assertNotNull(monitor.state.value.pendingClassificationBrakeId)
 
-            repository.classifyCurrentStop(StopKind.PERSONAL_PAUSE)
+            monitor.answer(StopKind.PERSONAL_PAUSE)
             advance(20_000)
+            run.id.value = null
+            advance(100)
 
-            assertTrue(repository.state.value.phase is StopPhase.PersonalPause)
-            assertTrue(
-                repository.state.value.brakes
-                    .isEmpty(),
-            )
+            assertTrue(saved.isEmpty())
+            assertEquals(1, nextId)
         }
 
     @Test
-    fun `clasificar como frenada concurrente con los ticks no se pierde`() =
+    fun `contestar frenada concurrente con los ticks la guarda una sola vez`() =
         runTest {
-            val repository = repository()
+            val monitor = monitor()
             run.id.value = "r1"
             emitStillSamplesUntil(60_000)
             advance(22_000)
 
-            backgroundScope.launch { repository.classifyCurrentStop(StopKind.BRAKE) }
+            backgroundScope.launch { monitor.answer(StopKind.BRAKE) }
             advance(5_000)
+            run.id.value = null
+            advance(100)
 
-            val phase = repository.state.value.phase as StopPhase.Braking
-            assertEquals(QueryStatus.ANSWERED, phase.query)
-            assertEquals(1, repository.state.value.brakes.size)
+            assertEquals(listOf("b0"), saved.map { it.id })
+        }
+
+    @Test
+    fun `contestar frenada la guarda en el momento`() =
+        runTest {
+            val monitor = monitor()
+            run.id.value = "r1"
+            emitStillSamplesUntil(60_000)
+            advance(22_000)
+
+            monitor.answer(StopKind.BRAKE)
+
+            assertEquals(QueryStatus.ANSWERED, (monitor.state.value.phase as StopPhase.Braking).query)
+            assertEquals(listOf("b0"), saved.map { it.id })
         }
 
     @Test
     fun `una frenada publica STOPPED una sola vez`() =
         runTest {
-            repository()
+            monitor()
             run.id.value = "r1"
             emitStillSamplesUntil(60_000)
 
@@ -258,12 +296,12 @@ class StopDetectionRepositoryImplTest {
     @Test
     fun `clasificar como pausa personal publica PERSONAL_PAUSED`() =
         runTest {
-            val repository = repository()
+            val monitor = monitor()
             run.id.value = "r1"
             emitStillSamplesUntil(60_000)
             advance(22_000)
 
-            repository.classifyCurrentStop(StopKind.PERSONAL_PAUSE)
+            monitor.answer(StopKind.PERSONAL_PAUSE)
             advance(1_000)
 
             assertEquals(
@@ -275,7 +313,7 @@ class StopDetectionRepositoryImplTest {
     @Test
     fun `retomar el movimiento publica ACTIVE`() =
         runTest {
-            repository()
+            monitor()
             run.id.value = "r1"
             emitStillSamplesUntil(10_000)
             advance(10_000)
@@ -293,7 +331,7 @@ class StopDetectionRepositoryImplTest {
     @Test
     fun `con pausa manual no se publica nada`() =
         runTest {
-            repository()
+            monitor()
             run.id.value = "r1"
             emitStillSamplesUntil(60_000)
             advance(10_000)
@@ -310,7 +348,7 @@ class StopDetectionRepositoryImplTest {
     @Test
     fun `si el puerto rechaza la publicacion se reintenta en el siguiente ciclo`() =
         runTest {
-            repository()
+            monitor()
             publisher.failNext = 2
             run.id.value = "r1"
             emitStillSamplesUntil(60_000)

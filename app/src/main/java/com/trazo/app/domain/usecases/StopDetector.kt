@@ -1,6 +1,7 @@
 package com.trazo.app.domain.usecases
 
 import com.trazo.app.domain.model.stops.BrakeEvent
+import com.trazo.app.domain.model.stops.ClosedStop
 import com.trazo.app.domain.model.stops.QueryStatus
 import com.trazo.app.domain.model.stops.StopDetectionConfig
 import com.trazo.app.domain.model.stops.StopDetectionState
@@ -9,91 +10,119 @@ import com.trazo.app.domain.model.stops.StopLocation
 import com.trazo.app.domain.model.stops.StopPhase
 
 data class Observation(
+    val runId: String,
     val nowMillis: Long,
     val isStill: Boolean,
     val lastLocation: StopLocation?,
 )
 
-/** Reductor puro: sin reloj, sin E/S. El tiempo llega en cada observación. */
+/** Resultado de un paso: el estado nuevo y, si en este paso terminó una parada, cuál fue. */
+data class StopStep(
+    val state: StopDetectionState,
+    val closed: ClosedStop? = null,
+)
+
+/**
+ * Reductor puro: sin reloj, sin E/S. El tiempo llega en cada observación.
+ *
+ * Una parada empieza a los 8 s de quietud (fase `Braking`) y se cierra una sola vez: cuando el
+ * corredor contesta, cuando retoma sin contestar o cuando termina el recorrido.
+ */
 class StopDetector(
     private val config: StopDetectionConfig,
     private val idGenerator: () -> String,
 ) {
     fun initial(): StopDetectionState = StopDetectionState()
 
-    fun onRunStopped(state: StopDetectionState): StopDetectionState = state.copy(phase = StopPhase.Moving)
+    /** El recorrido dejó de estar en curso: vuelve a Moving y cierra la parada sin contestar. */
+    fun onRunStopped(state: StopDetectionState): StopStep = StopStep(StopDetectionState(StopPhase.Moving), closedWithoutAnswer(state.phase))
 
     fun advance(
         state: StopDetectionState,
         observation: Observation,
-    ): StopDetectionState =
+    ): StopStep =
         when (val phase = state.phase) {
             StopPhase.Moving ->
                 if (observation.isStill) {
-                    state.copy(phase = StopPhase.Still(sinceMillis = observation.nowMillis))
+                    StopStep(state.copy(phase = StopPhase.Still(sinceMillis = observation.nowMillis)))
                 } else {
-                    state
+                    StopStep(state)
                 }
 
             is StopPhase.Still ->
                 when {
                     !observation.isStill ->
-                        resumeOrHold(state, phase.movingSinceMillis, observation.nowMillis) {
-                            phase.copy(movingSinceMillis = it)
-                        }
+                        StopStep(
+                            resumeOrHold(state, phase.movingSinceMillis, observation.nowMillis) {
+                                phase.copy(movingSinceMillis = it)
+                            },
+                        )
+
                     observation.nowMillis - phase.sinceMillis >= config.brakeAfterMillis ->
-                        registerBrake(state, phase, observation)
-                    else -> state.copy(phase = phase.copy(movingSinceMillis = null))
+                        StopStep(startBrake(state, phase, observation))
+
+                    else -> StopStep(state.copy(phase = phase.copy(movingSinceMillis = null)))
                 }
 
             is StopPhase.Braking ->
                 if (!observation.isStill) {
-                    resumeOrHold(state, phase.movingSinceMillis, observation.nowMillis) {
-                        phase.copy(movingSinceMillis = it)
-                    }
+                    val next =
+                        resumeOrHold(state, phase.movingSinceMillis, observation.nowMillis) {
+                            phase.copy(movingSinceMillis = it)
+                        }
+                    val resumed = next.phase == StopPhase.Moving
+                    StopStep(next, if (resumed) closedWithoutAnswer(phase) else null)
                 } else {
                     val due =
                         phase.query == QueryStatus.NOT_DUE &&
                             observation.nowMillis - phase.sinceMillis > config.classifyAfterMillis
-                    state.copy(
-                        phase =
-                            phase.copy(
-                                query = if (due) QueryStatus.PENDING else phase.query,
-                                movingSinceMillis = null,
-                            ),
+                    StopStep(
+                        state.copy(
+                            phase =
+                                phase.copy(
+                                    query = if (due) QueryStatus.PENDING else phase.query,
+                                    movingSinceMillis = null,
+                                ),
+                        ),
                     )
                 }
 
             is StopPhase.PersonalPause ->
                 if (!observation.isStill) {
-                    resumeOrHold(state, phase.movingSinceMillis, observation.nowMillis) {
-                        phase.copy(movingSinceMillis = it)
-                    }
+                    StopStep(
+                        resumeOrHold(state, phase.movingSinceMillis, observation.nowMillis) {
+                            phase.copy(movingSinceMillis = it)
+                        },
+                    )
                 } else {
-                    state.copy(phase = phase.copy(movingSinceMillis = null))
+                    StopStep(state.copy(phase = phase.copy(movingSinceMillis = null)))
                 }
         }
 
-    /** Responde a la clasificación del corredor; sin consulta pendiente no cambia nada. */
+    /** Respuesta del corredor: cierra la parada con esa respuesta. Sin consulta pendiente no hace nada. */
     fun classify(
         state: StopDetectionState,
         kind: StopKind,
-    ): StopDetectionState {
-        val phase = state.phase as? StopPhase.Braking ?: return state
-        if (phase.query != QueryStatus.PENDING) return state
-        return when (kind) {
-            StopKind.BRAKE -> state.copy(phase = phase.copy(query = QueryStatus.ANSWERED))
-            StopKind.PERSONAL_PAUSE ->
-                state.copy(
-                    phase =
-                        StopPhase.PersonalPause(
-                            sinceMillis = phase.sinceMillis,
-                            movingSinceMillis = phase.movingSinceMillis,
-                        ),
-                    brakes = state.brakes.filterNot { it.id == phase.brakeId },
-                )
-        }
+    ): StopStep {
+        val phase = state.phase as? StopPhase.Braking ?: return StopStep(state)
+        if (phase.query != QueryStatus.PENDING) return StopStep(state)
+        val next =
+            when (kind) {
+                StopKind.BRAKE -> phase.copy(query = QueryStatus.ANSWERED)
+                StopKind.PERSONAL_PAUSE ->
+                    StopPhase.PersonalPause(
+                        sinceMillis = phase.sinceMillis,
+                        movingSinceMillis = phase.movingSinceMillis,
+                    )
+            }
+        return StopStep(state.copy(phase = next), ClosedStop(phase.brake, kind))
     }
+
+    /** Una parada ya contestada no se vuelve a cerrar, así no se guarda dos veces. */
+    private fun closedWithoutAnswer(phase: StopPhase): ClosedStop? =
+        (phase as? StopPhase.Braking)
+            ?.takeIf { it.query != QueryStatus.ANSWERED }
+            ?.let { ClosedStop(it.brake, answer = null) }
 
     /** Salir de la quietud exige [StopDetectionConfig.resumeConfirmMillis] de movimiento continuo. */
     private fun resumeOrHold(
@@ -110,7 +139,7 @@ class StopDetector(
         }
     }
 
-    private fun registerBrake(
+    private fun startBrake(
         state: StopDetectionState,
         still: StopPhase.Still,
         observation: Observation,
@@ -118,6 +147,7 @@ class StopDetector(
         val brake =
             BrakeEvent(
                 id = idGenerator(),
+                runId = observation.runId,
                 location = observation.lastLocation,
                 detectedAtMillis = observation.nowMillis,
             )
@@ -125,10 +155,9 @@ class StopDetector(
             phase =
                 StopPhase.Braking(
                     sinceMillis = still.sinceMillis,
-                    brakeId = brake.id,
+                    brake = brake,
                     query = QueryStatus.NOT_DUE,
                 ),
-            brakes = state.brakes + brake,
         )
     }
 }

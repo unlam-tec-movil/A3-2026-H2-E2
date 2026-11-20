@@ -8,7 +8,6 @@ import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.repository.LocationStatusReader
 import com.trazo.app.domain.repository.MonotonicClock
 import com.trazo.app.domain.repository.RunSessionRepository
-import com.trazo.app.domain.usecases.AttachActiveRunSessionUseCase
 import com.trazo.app.domain.usecases.AwaitPreciseLocationUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -64,10 +63,9 @@ sealed interface StartRunEffect {
 class StartRunViewModel
     @Inject
     constructor(
-        runSessionRepository: RunSessionRepository,
+        private val runSessionRepository: RunSessionRepository,
         private val locationStatusReader: LocationStatusReader,
         private val awaitPreciseLocation: AwaitPreciseLocationUseCase,
-        private val attachActiveRunSession: AttachActiveRunSessionUseCase,
         private val monotonicClock: MonotonicClock,
         private val clock: Clock,
     ) : ViewModel() {
@@ -159,7 +157,7 @@ class StartRunViewModel
         private suspend fun awaitSignalAndStart(goal: RunGoal) {
             try {
                 awaitPreciseLocation()
-                attachActiveRunSession(
+                runSessionRepository.attachActiveSession(
                     InitializedRunSession(
                         id = UUID.randomUUID().toString(),
                         goal = goal,

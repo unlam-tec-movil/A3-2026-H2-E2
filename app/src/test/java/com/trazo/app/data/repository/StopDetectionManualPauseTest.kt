@@ -9,6 +9,7 @@ import com.trazo.app.domain.repository.MotionSource
 import com.trazo.app.domain.repository.RunStatePublisher
 import com.trazo.app.domain.repository.RunningRunSource
 import com.trazo.app.domain.repository.StopLocationProvider
+import com.trazo.app.domain.usecases.SaveStopUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -58,10 +59,13 @@ class StopDetectionManualPauseTest {
     private val motion = FakeMotionSource()
     private val run = FakeRunningRunSource()
     private val publisher = FakePublisher()
+    private val brakes = InMemoryBrakeRepository()
     private var nextId = 0
 
+    private val saved get() = brakes.brakes.value
+
     private fun TestScope.repository() =
-        StopDetectionRepositoryImpl(
+        SensorStopMonitor(
             motionSource = motion,
             runningRunSource = run,
             locationProvider =
@@ -70,6 +74,7 @@ class StopDetectionManualPauseTest {
                 },
             publisher = publisher,
             clock = { testScheduler.currentTime },
+            saveStop = SaveStopUseCase(brakes),
             scope = backgroundScope,
             config = StopDetectionConfig(),
             idGenerator = { "b${nextId++}" },
@@ -102,27 +107,28 @@ class StopDetectionManualPauseTest {
             advance(60_000)
 
             val state = repository.state.value
-            assertTrue(state.brakes.isEmpty())
+            assertTrue(saved.isEmpty())
             assertEquals(StopPhase.Moving, state.phase)
             assertTrue(publisher.published.isEmpty())
         }
 
     @Test
-    fun `las frenadas previas se conservan al pausar y al reanudar`() =
+    fun `pausar durante una frenada la guarda y reanudar no la duplica`() =
         runTest {
             val repository = repository()
             run.id.value = "r1"
             emitStillSamplesForever()
             advance(10_000)
-            assertEquals(1, repository.state.value.brakes.size)
+            assertTrue(repository.state.value.phase is StopPhase.Braking)
+            assertTrue(saved.isEmpty())
 
             run.id.value = null
             advance(1_000)
-            assertEquals(1, repository.state.value.brakes.size)
+            assertEquals(1, saved.size)
 
             run.id.value = "r1"
             advance(100)
-            assertEquals(1, repository.state.value.brakes.size)
+            assertEquals(1, saved.size)
         }
 
     @Test
@@ -142,9 +148,7 @@ class StopDetectionManualPauseTest {
             // 5 s quieto antes de la pausa + 5 s después sumarían 10 s si se arrastrara (> 8 s).
             advance(5_000)
 
-            assertTrue(
-                repository.state.value.brakes
-                    .isEmpty(),
-            )
+            assertTrue(repository.state.value.phase !is StopPhase.Braking)
+            assertTrue(saved.isEmpty())
         }
 }

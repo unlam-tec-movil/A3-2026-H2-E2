@@ -5,7 +5,6 @@ import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunMetrics
 import com.trazo.app.domain.repository.FakeRunSessionRepository
-import com.trazo.app.domain.usecases.GetFinishedRunSummaryUseCase
 import kotlinx.coroutines.flow.first
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,7 +19,7 @@ class ResultViewModelTest {
     private fun viewModel(runId: String) =
         ResultViewModel(
             savedStateHandle = SavedStateHandle(mapOf("runId" to runId)),
-            getFinishedRunSummary = GetFinishedRunSummaryUseCase(repository),
+            runSessionRepository = repository,
             formatter = ResultFormatter(),
         )
 

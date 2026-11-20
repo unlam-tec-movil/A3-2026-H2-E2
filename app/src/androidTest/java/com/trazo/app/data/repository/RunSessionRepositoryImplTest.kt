@@ -4,7 +4,7 @@ import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
-import com.trazo.app.domain.model.map.RawLocationPoint
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
@@ -223,7 +223,7 @@ class RunSessionRepositoryImplTest {
             val firstTimestamp = SystemClock.elapsedRealtime()
 
             fakeLocationClient.sendLocation(
-                RawLocationPoint(
+                RoutePoint(
                     latitude = -34.6037,
                     longitude = -58.3816,
                     accuracyMeters = 5f,
@@ -239,7 +239,7 @@ class RunSessionRepositoryImplTest {
             }
 
             fakeLocationClient.sendLocation(
-                RawLocationPoint(
+                RoutePoint(
                     latitude = -34.6027,
                     longitude = -58.3816,
                     accuracyMeters = 5f,
@@ -273,7 +273,7 @@ class RunSessionRepositoryImplTest {
             repository.attachActiveSession(initializedSession)
 
             fakeLocationClient.sendLocation(
-                RawLocationPoint(
+                RoutePoint(
                     latitude = -34.6037,
                     longitude = -58.3816,
                     accuracyMeters = 35f,
@@ -337,7 +337,7 @@ class RunSessionRepositoryImplTest {
             fakeLocationClient.awaitLocationSubscriber()
 
             fakeLocationClient.sendLocation(
-                RawLocationPoint(
+                RoutePoint(
                     latitude = -34.6037,
                     longitude = -58.3816,
                     accuracyMeters = 5f,
@@ -382,7 +382,7 @@ class RunSessionRepositoryImplTest {
             fakeLocationClient.awaitLocationSubscriber()
 
             fakeLocationClient.sendLocation(
-                RawLocationPoint(
+                RoutePoint(
                     latitude = -34.6037,
                     longitude = -58.3816,
                     accuracyMeters = 5f,
@@ -410,7 +410,7 @@ class RunSessionRepositoryImplTest {
             fakeLocationClient.awaitLocationSubscriber()
 
             fakeLocationClient.sendLocation(
-                RawLocationPoint(
+                RoutePoint(
                     latitude = -34.6027,
                     longitude = -58.3816,
                     accuracyMeters = 5f,

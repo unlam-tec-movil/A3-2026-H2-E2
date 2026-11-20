@@ -1,27 +1,26 @@
 package com.trazo.app.domain.usecases
 
-import com.trazo.app.domain.model.map.RawLocationPoint
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.repository.LocationClient
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
- * Espera la primera ubicación con precisión de [MAX_ACCURACY_METERS] o menos. Al cancelar la
- * corrutina se deja de pedir ubicación. Si el flujo falla (por ejemplo, sin permiso), propaga el
- * error.
+ * Espera la primera ubicación precisa según [GpsPointFilterPolicy]. Al cancelar la corrutina se deja
+ * de pedir ubicación. Si el flujo falla (por ejemplo, sin permiso), propaga el error.
  */
 class AwaitPreciseLocationUseCase
     @Inject
     constructor(
         private val locationClient: LocationClient,
+        private val gpsPointFilterPolicy: GpsPointFilterPolicy,
     ) {
-        suspend operator fun invoke(): RawLocationPoint =
+        suspend operator fun invoke(): RoutePoint =
             locationClient
                 .getLocationUpdates(INTERVAL_MILLIS)
-                .first { it.accuracyMeters <= MAX_ACCURACY_METERS }
+                .first { gpsPointFilterPolicy.isPointAccurate(it.accuracyMeters) }
 
         companion object {
-            const val MAX_ACCURACY_METERS = 30f
             const val INTERVAL_MILLIS = 1_000L
         }
     }

@@ -5,17 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
-import com.trazo.app.domain.model.map.RawLocationPoint
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.repository.LocationClient
 import com.trazo.app.domain.repository.RunSessionRepository
-import com.trazo.app.domain.usecases.AttachActiveRunSessionUseCase
-import com.trazo.app.domain.usecases.FinishRunUseCase
-import com.trazo.app.domain.usecases.GetActiveRunSessionUseCase
-import com.trazo.app.domain.usecases.PauseRunUseCase
-import com.trazo.app.domain.usecases.ResumeRunUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -39,15 +33,10 @@ import javax.inject.Inject
 class LiveRouteTrackingViewModel
     @Inject
     constructor(
-        getActiveRunSessionUseCase: GetActiveRunSessionUseCase,
-        private val attachActiveRunSessionUseCase: AttachActiveRunSessionUseCase,
-        private val pauseRunUseCase: PauseRunUseCase,
-        private val resumeRunUseCase: ResumeRunUseCase,
-        private val finishRunUseCase: FinishRunUseCase,
         private val runSessionRepository: RunSessionRepository,
         private val locationClient: LocationClient,
     ) : ViewModel() {
-        private val activeSessionFlow = getActiveRunSessionUseCase()
+        private val activeSessionFlow = runSessionRepository.activeSession
 
 //        private val hasActiveSession = MutableStateFlow(false)
         private val isRunInProgressFlow = runSessionRepository.isRunInProgress
@@ -115,15 +104,8 @@ class LiveRouteTrackingViewModel
                         } else {
                             locationClient
                                 .getLocationUpdates(1_000L)
-                                .map<RawLocationPoint, RoutePoint?> { point ->
-                                    RoutePoint(
-                                        latitude = point.latitude,
-                                        longitude = point.longitude,
-                                        accuracyMeters = point.accuracyMeters,
-                                        speedMetersPerSecond = point.speedMetersPerSecond,
-                                        monotonicTimestampMillis = point.monotonicTimestampMillis,
-                                    )
-                                }.catch { emit(null) }
+                                .map<RoutePoint, RoutePoint?> { it }
+                                .catch { emit(null) }
                                 .onStart { emit(null) }
                         }
                     }
@@ -131,15 +113,8 @@ class LiveRouteTrackingViewModel
                     is RunSession.Idle -> {
                         locationClient
                             .getLocationUpdates(1_000L)
-                            .map<RawLocationPoint, RoutePoint?> { point ->
-                                RoutePoint(
-                                    latitude = point.latitude,
-                                    longitude = point.longitude,
-                                    accuracyMeters = point.accuracyMeters,
-                                    speedMetersPerSecond = point.speedMetersPerSecond,
-                                    monotonicTimestampMillis = point.monotonicTimestampMillis,
-                                )
-                            }.catch { emit(null) }
+                            .map<RoutePoint, RoutePoint?> { it }
+                            .catch { emit(null) }
                             .onStart { emit(null) }
                     }
                 }
@@ -220,18 +195,18 @@ class LiveRouteTrackingViewModel
             )
 
         fun attachActiveSession(session: InitializedRunSession) {
-            attachActiveRunSessionUseCase(session)
+            runSessionRepository.attachActiveSession(session)
         }
 
         fun onPauseClicked() {
             viewModelScope.launch {
-                pauseRunUseCase()
+                runSessionRepository.pauseSession()
             }
         }
 
         fun onResumeClicked() {
             viewModelScope.launch {
-                resumeRunUseCase()
+                runSessionRepository.resumeSession()
             }
         }
 
@@ -251,7 +226,7 @@ class LiveRouteTrackingViewModel
             showFinishConfirmDialogFlow.value = false
 
             viewModelScope.launch {
-                finishRunUseCase().onSuccess { summary ->
+                runSessionRepository.finishSession().onSuccess { summary ->
                     _uiEffect.send(
                         LiveRouteTrackingUiEffect.NavigateToResults(summary),
                     )

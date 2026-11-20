@@ -10,7 +10,6 @@ import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunMetrics
 import com.trazo.app.domain.repository.FakeRunSessionRepository
-import com.trazo.app.domain.usecases.GetFinishedRunSummaryUseCase
 import com.trazo.app.ui.theme.TrazoTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -30,7 +29,7 @@ class ResultScreenTest {
     private fun createViewModel(runId: String?) =
         ResultViewModel(
             savedStateHandle = SavedStateHandle(if (runId == null) emptyMap() else mapOf("runId" to runId)),
-            getFinishedRunSummary = GetFinishedRunSummaryUseCase(repository),
+            runSessionRepository = repository,
             formatter = ResultFormatter(),
         )
 

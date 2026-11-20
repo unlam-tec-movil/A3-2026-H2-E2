@@ -9,11 +9,13 @@ import com.trazo.app.domain.repository.MonotonicClock
 import com.trazo.app.domain.repository.MotionSource
 import com.trazo.app.domain.repository.RunStatePublisher
 import com.trazo.app.domain.repository.RunningRunSource
-import com.trazo.app.domain.repository.StopDetectionRepository
 import com.trazo.app.domain.repository.StopLocationProvider
+import com.trazo.app.domain.repository.StopMonitor
 import com.trazo.app.domain.usecases.Observation
+import com.trazo.app.domain.usecases.SaveStopUseCase
 import com.trazo.app.domain.usecases.StillnessEstimator
 import com.trazo.app.domain.usecases.StopDetector
+import com.trazo.app.domain.usecases.StopStep
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -22,7 +24,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -30,23 +31,23 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Orquesta sensor, reloj y recorrido en curso. Solo lee el sensor mientras hay un recorrido en
- * curso; cada observación usa el reloj monotónico y un tick periódico.
+ * curso; cada observación usa el reloj monotónico y un tick periódico. Cuando una parada termina, se
+ * la pasa a [SaveStopUseCase], que decide si se guarda.
  */
-class StopDetectionRepositoryImpl(
+class SensorStopMonitor(
     private val motionSource: MotionSource,
     private val runningRunSource: RunningRunSource,
     private val locationProvider: StopLocationProvider,
     private val publisher: RunStatePublisher,
     private val clock: MonotonicClock,
+    private val saveStop: SaveStopUseCase,
     scope: CoroutineScope,
     private val config: StopDetectionConfig = StopDetectionConfig(),
     idGenerator: () -> String = { UUID.randomUUID().toString() },
-) : StopDetectionRepository {
+) : StopMonitor {
     private val detector = StopDetector(config, idGenerator)
     private val _state = MutableStateFlow(detector.initial())
     override val state: StateFlow<StopDetectionState> = _state.asStateFlow()
-
-    private var lastRunId: String? = null
 
     /** Última lectura del estimador y el instante (reloj monotónico) en que llegó. */
     private data class Reading(
@@ -58,7 +59,7 @@ class StopDetectionRepositoryImpl(
         scope.launch {
             runningRunSource.runningRunId.distinctUntilChanged().collectLatest { runId ->
                 if (runId == null) {
-                    _state.update { detector.onRunStopped(it) }
+                    applyStep { detector.onRunStopped(it) }
                 } else {
                     track(runId)
                 }
@@ -66,16 +67,28 @@ class StopDetectionRepositoryImpl(
         }
     }
 
-    override fun classifyCurrentStop(kind: StopKind) {
-        _state.update { detector.classify(it, kind) }
+    override fun answer(kind: StopKind) {
+        applyStep { detector.classify(it, kind) }
+    }
+
+    /**
+     * Aplica un paso del detector. Los ticks y la respuesta del corredor pueden llegar a la vez: se
+     * reintenta hasta escribir sobre el estado leído, y la parada cerrada se guarda una sola vez.
+     */
+    private fun applyStep(transition: (StopDetectionState) -> StopStep) {
+        while (true) {
+            val current = _state.value
+            val step = transition(current)
+            if (_state.compareAndSet(current, step.state)) {
+                step.closed?.let { saveStop(it) }
+                return
+            }
+        }
     }
 
     private suspend fun track(runId: String) {
-        // Mismo id (reanudación): conserva las frenadas. Otro id: parte de cero.
-        if (runId != lastRunId) {
-            _state.value = detector.initial()
-            lastRunId = runId
-        }
+        // Si se pasó de un recorrido a otro sin pausa, cierra la parada que haya quedado abierta.
+        applyStep { detector.onRunStopped(it) }
         // Al iniciar o reanudar el recorrido HU-04 está en ACTIVE: es lo último publicado.
         var lastPublished: RunState? = RunState.ACTIVE
         val estimator = StillnessEstimator(config)
@@ -90,7 +103,7 @@ class StopDetectionRepositoryImpl(
             launch {
                 while (isActive) {
                     delay(config.tickIntervalMillis)
-                    observe(reading.get())
+                    observe(runId, reading.get())
                     // Si el puerto rechaza, no se registra como publicado y se reintenta en el
                     // siguiente tick mientras la fase siga requiriendo ese estado.
                     val desired = _state.value.phase.toRunState()
@@ -102,12 +115,15 @@ class StopDetectionRepositoryImpl(
         }
     }
 
-    private fun observe(reading: Reading?) {
+    private fun observe(
+        runId: String,
+        reading: Reading?,
+    ) {
         val now = clock.nowMillis()
         // Sin muestras recientes no hay evidencia de quietud: se trata como «en movimiento».
         val isStill = reading != null && reading.isStill && now - reading.atMillis <= config.sampleStaleMillis
-        val observation = Observation(now, isStill, locationProvider.lastKnown())
-        _state.update { detector.advance(it, observation) }
+        val observation = Observation(runId, now, isStill, locationProvider.lastKnown())
+        applyStep { detector.advance(it, observation) }
     }
 
     private fun StopPhase.toRunState(): RunState =
