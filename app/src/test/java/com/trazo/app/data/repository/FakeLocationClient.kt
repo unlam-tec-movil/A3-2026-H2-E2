@@ -1,7 +1,7 @@
 package com.trazo.app.data.repository
 
 import com.trazo.app.domain.model.map.GpsQuality
-import com.trazo.app.domain.model.map.RawLocationPoint
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.repository.LocationClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.flow
 
 class FakeLocationClient : LocationClient {
     private val locationUpdates =
-        MutableSharedFlow<RawLocationPoint>(
+        MutableSharedFlow<RoutePoint>(
             replay = 0,
             extraBufferCapacity = 10,
         )
@@ -22,7 +22,7 @@ class FakeLocationClient : LocationClient {
 
     private var shouldFailWithSecurityException = false
 
-    override fun getLocationUpdates(intervalMillis: Long): Flow<RawLocationPoint> =
+    override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> =
         flow {
             if (shouldFailWithSecurityException) {
                 throw SecurityException("No se concedieron permisos de ubicación.")
@@ -36,7 +36,7 @@ class FakeLocationClient : LocationClient {
         locationUpdates.subscriptionCount.first { it > 0 }
     }
 
-    fun sendLocation(point: RawLocationPoint) {
+    fun sendLocation(point: RoutePoint) {
         locationUpdates.tryEmit(point)
     }
 

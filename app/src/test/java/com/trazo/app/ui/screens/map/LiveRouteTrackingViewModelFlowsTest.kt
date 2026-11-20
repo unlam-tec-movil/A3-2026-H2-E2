@@ -1,17 +1,12 @@
 package com.trazo.app.ui.screens.map
 
 import com.trazo.app.domain.model.map.GpsQuality
-import com.trazo.app.domain.model.map.RawLocationPoint
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.repository.FakeRunSessionRepository
 import com.trazo.app.domain.repository.LocationClient
-import com.trazo.app.domain.usecases.AttachActiveRunSessionUseCase
-import com.trazo.app.domain.usecases.FinishRunUseCase
-import com.trazo.app.domain.usecases.GetActiveRunSessionUseCase
-import com.trazo.app.domain.usecases.PauseRunUseCase
-import com.trazo.app.domain.usecases.ResumeRunUseCase
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,12 +31,12 @@ import kotlin.time.Clock
 @OptIn(ExperimentalCoroutinesApi::class)
 class LiveRouteTrackingViewModelFlowsTest {
     private val repository = FakeRunSessionRepository()
-    private var locationPoints: List<RawLocationPoint> = emptyList()
+    private var locationPoints: List<RoutePoint> = emptyList()
     private var signalFailure: Throwable? = null
 
     private val locationClient =
         object : LocationClient {
-            override fun getLocationUpdates(intervalMillis: Long): Flow<RawLocationPoint> = flowOf(*locationPoints.toTypedArray())
+            override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> = flowOf(*locationPoints.toTypedArray())
 
             override fun getSignalQualityUpdates(): Flow<GpsQuality> = flow { signalFailure?.let { throw it } }
         }
@@ -58,11 +53,6 @@ class LiveRouteTrackingViewModelFlowsTest {
 
     private fun createViewModel() =
         LiveRouteTrackingViewModel(
-            getActiveRunSessionUseCase = GetActiveRunSessionUseCase(repository),
-            attachActiveRunSessionUseCase = AttachActiveRunSessionUseCase(repository),
-            pauseRunUseCase = PauseRunUseCase(repository),
-            resumeRunUseCase = ResumeRunUseCase(repository),
-            finishRunUseCase = FinishRunUseCase(repository),
             runSessionRepository = repository,
             locationClient = locationClient,
         )
@@ -77,7 +67,7 @@ class LiveRouteTrackingViewModelFlowsTest {
         )
 
     private fun rawPoint() =
-        RawLocationPoint(
+        RoutePoint(
             latitude = -34.6,
             longitude = -58.4,
             accuracyMeters = 5f,

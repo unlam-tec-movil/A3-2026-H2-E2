@@ -10,9 +10,10 @@ sealed interface StopPhase {
         val movingSinceMillis: Long? = null,
     ) : StopPhase
 
+    /** Quieto 8 s: [brake] es la frenada candidata, que se guarda recién al cerrar la parada. */
     data class Braking(
         val sinceMillis: Long,
-        val brakeId: String,
+        val brake: BrakeEvent,
         val query: QueryStatus,
         val movingSinceMillis: Long? = null,
     ) : StopPhase

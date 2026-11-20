@@ -3,13 +3,13 @@ package com.trazo.app.ui.screens.startrun
 import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
-import com.trazo.app.domain.model.map.RawLocationPoint
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.repository.FakeRunSessionRepository
 import com.trazo.app.domain.repository.LocationClient
-import com.trazo.app.domain.usecases.AttachActiveRunSessionUseCase
 import com.trazo.app.domain.usecases.AwaitPreciseLocationUseCase
+import com.trazo.app.domain.usecases.GpsPointFilterPolicy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -39,13 +39,13 @@ class StartRunViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val repository = FakeRunSessionRepository()
     private var locationStatus = LocationStatus.READY
-    private var locationUpdates: Flow<RawLocationPoint> = MutableSharedFlow()
+    private var locationUpdates: Flow<RoutePoint> = MutableSharedFlow()
     private val startedAt = Instant.fromEpochMilliseconds(1_700_000_000_000L)
     private val monotonicNow = 42_000L
 
     private val locationClient =
         object : LocationClient {
-            override fun getLocationUpdates(intervalMillis: Long): Flow<RawLocationPoint> = locationUpdates
+            override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> = locationUpdates
 
             override fun getSignalQualityUpdates(): Flow<GpsQuality> = emptyFlow()
         }
@@ -59,8 +59,7 @@ class StartRunViewModelTest {
             StartRunViewModel(
                 runSessionRepository = repository,
                 locationStatusReader = { locationStatus },
-                awaitPreciseLocation = AwaitPreciseLocationUseCase(locationClient),
-                attachActiveRunSession = AttachActiveRunSessionUseCase(repository),
+                awaitPreciseLocation = AwaitPreciseLocationUseCase(locationClient, GpsPointFilterPolicy()),
                 monotonicClock = { monotonicNow },
                 clock =
                     object : Clock {
@@ -75,7 +74,7 @@ class StartRunViewModelTest {
     }
 
     private fun point(accuracy: Float) =
-        RawLocationPoint(
+        RoutePoint(
             latitude = -34.6,
             longitude = -58.4,
             accuracyMeters = accuracy,
@@ -332,7 +331,7 @@ class StartRunViewModelTest {
     @Test
     fun impreciseLocation_doesNotStartTheRun() =
         runTest(dispatcher) {
-            val updates = MutableSharedFlow<RawLocationPoint>()
+            val updates = MutableSharedFlow<RoutePoint>()
             locationUpdates = updates
             openDialog()
             viewModel.onGoalSelected(RunGoal.FIVE_KILOMETERS)
@@ -350,7 +349,7 @@ class StartRunViewModelTest {
     @Test
     fun preciseLocation_startsTheRunWithGoalAndClocks_andStopsWaiting() =
         runTest(dispatcher) {
-            val updates = MutableSharedFlow<RawLocationPoint>()
+            val updates = MutableSharedFlow<RoutePoint>()
             locationUpdates = updates
             openDialog()
             viewModel.onGoalSelected(RunGoal.TEN_KILOMETERS)
@@ -373,7 +372,7 @@ class StartRunViewModelTest {
     @Test
     fun preciseLocation_startsTheRunOnlyOnce() =
         runTest(dispatcher) {
-            val updates = MutableSharedFlow<RawLocationPoint>()
+            val updates = MutableSharedFlow<RoutePoint>()
             locationUpdates = updates
             openDialog()
             viewModel.onGoalSelected(RunGoal.FIVE_KILOMETERS)
@@ -394,7 +393,7 @@ class StartRunViewModelTest {
     @Test
     fun onCancelWaiting_stopsWaiting_andDoesNotStart() =
         runTest(dispatcher) {
-            val updates = MutableSharedFlow<RawLocationPoint>()
+            val updates = MutableSharedFlow<RoutePoint>()
             locationUpdates = updates
             openDialog()
             viewModel.onGoalSelected(RunGoal.FIVE_KILOMETERS)

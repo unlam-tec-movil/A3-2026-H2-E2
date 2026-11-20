@@ -11,17 +11,12 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.GpsQuality
-import com.trazo.app.domain.model.map.RawLocationPoint
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.repository.FakeRunSessionRepository
 import com.trazo.app.domain.repository.LocationClient
-import com.trazo.app.domain.usecases.AttachActiveRunSessionUseCase
-import com.trazo.app.domain.usecases.FinishRunUseCase
-import com.trazo.app.domain.usecases.GetActiveRunSessionUseCase
-import com.trazo.app.domain.usecases.PauseRunUseCase
-import com.trazo.app.domain.usecases.ResumeRunUseCase
 import com.trazo.app.ui.theme.TrazoTheme
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -43,18 +38,13 @@ class MapScreenTest {
 
     private val silentLocationClient =
         object : LocationClient {
-            override fun getLocationUpdates(intervalMillis: Long): Flow<RawLocationPoint> = emptyFlow()
+            override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> = emptyFlow()
 
             override fun getSignalQualityUpdates(): Flow<GpsQuality> = emptyFlow()
         }
 
     private fun createViewModel() =
         LiveRouteTrackingViewModel(
-            getActiveRunSessionUseCase = GetActiveRunSessionUseCase(repository),
-            attachActiveRunSessionUseCase = AttachActiveRunSessionUseCase(repository),
-            pauseRunUseCase = PauseRunUseCase(repository),
-            resumeRunUseCase = ResumeRunUseCase(repository),
-            finishRunUseCase = FinishRunUseCase(repository),
             runSessionRepository = repository,
             locationClient = silentLocationClient,
         )

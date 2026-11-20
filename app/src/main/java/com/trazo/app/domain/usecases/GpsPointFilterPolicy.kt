@@ -2,13 +2,11 @@ package com.trazo.app.domain.usecases
 
 import jakarta.inject.Inject
 
+/** Reglas de la señal GPS: qué punto es preciso y cuándo se considera perdida la señal. */
 class GpsPointFilterPolicy
     @Inject
     constructor() {
-        private val maxAllowedAccuracyMeters: Float = 30.0f
-        private val signalLossTimeoutMillis: Long = 15_000L
-
-        fun isPointAccurate(accuracyMeters: Float): Boolean = accuracyMeters <= maxAllowedAccuracyMeters
+        fun isPointAccurate(accuracyMeters: Float): Boolean = accuracyMeters <= MAX_ACCURACY_METERS
 
         fun isSignalLost(
             lastValidLocationMonotonicTimestamp: Long,
@@ -16,6 +14,11 @@ class GpsPointFilterPolicy
         ): Boolean {
             if (lastValidLocationMonotonicTimestamp <= 0L) return false
 
-            return currentMonotonicTimestamp - lastValidLocationMonotonicTimestamp >= signalLossTimeoutMillis
+            return currentMonotonicTimestamp - lastValidLocationMonotonicTimestamp >= SIGNAL_LOSS_TIMEOUT_MILLIS
+        }
+
+        companion object {
+            const val MAX_ACCURACY_METERS = 30f
+            const val SIGNAL_LOSS_TIMEOUT_MILLIS = 15_000L
         }
     }

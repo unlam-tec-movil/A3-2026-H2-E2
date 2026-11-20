@@ -15,7 +15,7 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.trazo.app.domain.model.map.GpsQuality
-import com.trazo.app.domain.model.map.RawLocationPoint
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.repository.LocationClient
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
@@ -32,7 +32,7 @@ class AndroidLocationClient
             LocationServices.getFusedLocationProviderClient(context)
 
         @SuppressLint("MissingPermission")
-        override fun getLocationUpdates(intervalMillis: Long): Flow<RawLocationPoint> =
+        override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> =
             callbackFlow {
                 if (!hasLocationPermission()) {
                     close(SecurityException("No se concedieron permisos de ubicación."))
@@ -52,7 +52,7 @@ class AndroidLocationClient
                     object : LocationCallback() {
                         override fun onLocationResult(result: LocationResult) {
                             result.locations.forEach { location ->
-                                trySend(location.toRawLocationPoint())
+                                trySend(location.toRoutePoint())
                             }
                         }
                     }
@@ -131,8 +131,8 @@ class AndroidLocationClient
             return fineLocationGranted || coarseLocationGranted
         }
 
-        private fun Location.toRawLocationPoint(): RawLocationPoint =
-            RawLocationPoint(
+        private fun Location.toRoutePoint(): RoutePoint =
+            RoutePoint(
                 latitude = latitude,
                 longitude = longitude,
                 accuracyMeters = accuracy,

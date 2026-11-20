@@ -1,5 +1,24 @@
 # Documento de diseño · stop-detection (HU-05.1 · Frenadas y pausas personales)
 
+> **Revisión 2026-11-19 · «Guardar una parada» (simplificación del dominio).** Esta sección manda
+> sobre lo que se contradiga más abajo:
+>
+> - La secuencia de guardado sigue la regla «clasificar en dominio, repositorio bobo»:
+>   `StopDetector` (reductor puro) avisa cuando una parada termina con `StopStep.closed:
+>   ClosedStop(brake, answer)` → `SaveStopUseCase` clasifica (`answer ?: BRAKE`) → solo si es
+>   `BRAKE` llama a `BrakeRepository.save(brake)`. Una pausa personal no llega al repositorio.
+> - Una parada se cierra una sola vez desde `Braking`: al contestar (`BRAKE` o `PERSONAL_PAUSE`),
+>   al retomar sin contestar o al terminar el recorrido (`answer = null`).
+> - `BrakeRepository` (`brakes`, `save`) solo recibe y guarda; nunca borra. Implementación:
+>   `InMemoryBrakeRepository` (singleton). `BrakeEvent` lleva `runId`.
+> - `StopDetectionRepository` pasa a llamarse `StopMonitor` (`state`, `answer(kind)`) y
+>   `StopDetectionRepositoryImpl` pasa a `SensorStopMonitor`: no es un repositorio, vigila el sensor.
+> - `StopDetectionState` ya no tiene `brakes` ni `movement`; se elimina `MovementState`.
+>   `StopPhase.Braking` lleva la frenada candidata (`brake`) en lugar de `brakeId`.
+> - `StopDetectionViewModel`: alerta ante un `phase.brake.id` nuevo; se oculta con consulta
+>   pendiente o al pasar a `PersonalPause`.
+> - Para `save-run`: las frenadas válidas se leen de `BrakeRepository.brakes` filtrando por `runId`.
+
 ## Overview
 
 **Propósito**: esta funcionalidad entrega al corredor la detección automática de sus detenciones
