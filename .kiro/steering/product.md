@@ -1,6 +1,6 @@
 # Product Overview
 
-_updated_at: 2026-11-05 · Fuente: specs de `.kiro/specs/` (definición de producto «Trazo v0.6»)._
+_updated_at: 2026-11-20 · Fuente: specs de `.kiro/specs/` (definición de producto «Trazo v0.6»)._
 
 **Trazo** es una app Android para **corredores recreativos urbanos** (público de referencia: Buenos
 Aires) que quieren registrar sus salidas con una meta de distancia, ver el recorrido en vivo sobre
@@ -11,21 +11,23 @@ historias de usuario (HU-01, HU-02…), una spec Kiro por historia o grupo de hi
 
 ## Core Capabilities
 
-1. **Iniciar un recorrido con meta fija** de 3, 5 o 10 km, desde Inicio o desde el Mapa.
+1. **Iniciar un recorrido con meta fija** de 3, 5 o 10 km, desde el «+» de Actividad.
 2. **Seguir el recorrido en vivo**: posición, traza, tiempo, distancia y velocidad, con pausa,
    reanudación y control de calidad del GPS.
 3. **Detectar cómo fue el camino** con los sensores del teléfono: frenadas (semáforos, esquinas),
    pausas personales y regularidad del piso.
 4. **Cerrar y celebrar**: aviso de meta cumplida, pantalla de resultado y paso al guardado.
-5. **Guardar y consultar**: título, destacados y métricas en un Historial local.
+5. **Guardar y consultar**: título, destacados y métricas en «Mis recorridos» (pestaña Perfil),
+   junto con «Mis estadísticas» (totales de recorridos, distancia y tiempo).
 
 ## Target Use Cases
 
-- Primer uso: el corredor abre la app, ve Inicio vacío («Todavía no hay recorridos») y empieza un
-  recorrido desde el FAB «+».
+- Primer uso: el corredor abre la app en Actividad (el mapa) y empieza un recorrido desde el FAB
+  «+». En Perfil, «Mis recorridos» muestra el estado vacío («Todavía no hay recorridos»).
 - Salida con meta: elige 5 km, corre con la pantalla encendida, para en semáforos, pausa si
   necesita, llega a la meta y guarda el recorrido.
-- Revisión: entra al Historial para comparar recorridos (distancia, tiempo, frenadas, regularidad).
+- Revisión: entra a «Mis recorridos» en Perfil para comparar recorridos (distancia, tiempo,
+  frenadas, regularidad).
 
 ## Value Proposition
 
@@ -38,8 +40,8 @@ historias de usuario (HU-01, HU-02…), una spec Kiro por historia o grupo de hi
 
 Estas reglas aplican a todas las specs; si una spec necesita romperlas, se discute en equipo.
 
-- **100 % local**: persistencia en el dispositivo (Room). Sin cuentas, perfiles, comunidad,
-  rankings, servidores ni APIs propias.
+- **100 % local**: persistencia en el dispositivo (Room). Sin cuentas (la pestaña Perfil es
+  local), comunidad, rankings, servidores ni APIs propias.
 - **Metas solo de 3, 5 y 10 km**. No hay metas personalizadas.
 - **Sin** calorías, planes de entrenamiento, pulsómetros ni wearables.
 - **Pantalla encendida durante el recorrido**; no se garantiza seguimiento prolongado en segundo
