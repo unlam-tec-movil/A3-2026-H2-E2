@@ -1,5 +1,8 @@
 package com.trazo.app.domain.services
 
+import com.trazo.app.data.clock.MonotonicClock
+import com.trazo.app.data.repository.RunSessionRepository
+import com.trazo.app.data.sensors.MotionSource
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.stops.ClosedStop
@@ -8,9 +11,6 @@ import com.trazo.app.domain.model.stops.StopDetectionState
 import com.trazo.app.domain.model.stops.StopKind
 import com.trazo.app.domain.model.stops.StopLocation
 import com.trazo.app.domain.model.stops.StopPhase
-import com.trazo.app.domain.repository.MonotonicClock
-import com.trazo.app.domain.repository.MotionSource
-import com.trazo.app.domain.repository.RunSessionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay

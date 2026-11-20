@@ -1,12 +1,12 @@
 package com.trazo.app.domain.services
 
+import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.data.repository.InMemoryBrakeRepository
+import com.trazo.app.data.sensors.MotionSource
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.stops.MotionSample
 import com.trazo.app.domain.model.stops.StopDetectionConfig
 import com.trazo.app.domain.model.stops.StopPhase
-import com.trazo.app.domain.repository.FakeRunSessionRepository
-import com.trazo.app.domain.repository.MotionSource
 import com.trazo.app.domain.usecases.RecordStopsUseCase
 import com.trazo.app.domain.usecases.SaveStopUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi

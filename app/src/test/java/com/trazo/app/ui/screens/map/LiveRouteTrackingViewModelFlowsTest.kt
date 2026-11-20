@@ -1,12 +1,12 @@
 package com.trazo.app.ui.screens.map
 
+import com.trazo.app.data.location.LocationClient
+import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.repository.FakeRunSessionRepository
-import com.trazo.app.domain.repository.LocationClient
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

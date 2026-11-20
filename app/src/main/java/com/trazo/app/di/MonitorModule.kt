@@ -1,9 +1,9 @@
 package com.trazo.app.di
 
-import com.trazo.app.domain.repository.MonotonicClock
-import com.trazo.app.domain.repository.MotionSensorAvailability
-import com.trazo.app.domain.repository.MotionSource
-import com.trazo.app.domain.repository.RunSessionRepository
+import com.trazo.app.data.clock.MonotonicClock
+import com.trazo.app.data.repository.RunSessionRepository
+import com.trazo.app.data.sensors.MotionSensorAvailability
+import com.trazo.app.data.sensors.MotionSource
 import com.trazo.app.domain.services.RegularityMonitor
 import com.trazo.app.domain.services.SensorStopMonitor
 import com.trazo.app.domain.services.StopMonitor

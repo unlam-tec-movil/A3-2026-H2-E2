@@ -1,7 +1,7 @@
 package com.trazo.app.data.di
 
+import com.trazo.app.data.repository.BrakeRepository
 import com.trazo.app.data.repository.InMemoryBrakeRepository
-import com.trazo.app.domain.repository.BrakeRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

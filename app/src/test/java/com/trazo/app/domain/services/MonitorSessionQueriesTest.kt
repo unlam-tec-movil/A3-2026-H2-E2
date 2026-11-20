@@ -1,5 +1,6 @@
 package com.trazo.app.domain.services
 
+import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
@@ -8,7 +9,6 @@ import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.regularity.ActiveRunSnapshot
 import com.trazo.app.domain.model.stops.StopLocation
-import com.trazo.app.domain.repository.RunSessionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first

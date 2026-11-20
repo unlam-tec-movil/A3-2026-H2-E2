@@ -2,14 +2,14 @@ package com.trazo.app.ui.screens.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.trazo.app.data.location.LocationClient
+import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.repository.LocationClient
-import com.trazo.app.domain.repository.RunSessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel

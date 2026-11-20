@@ -1,14 +1,13 @@
 package com.trazo.app.data.repository
 
+import com.trazo.app.data.clock.MonotonicClock
+import com.trazo.app.data.location.LocationClient
 import com.trazo.app.di.ApplicationScope
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.isAccurate
-import com.trazo.app.domain.repository.LocationClient
-import com.trazo.app.domain.repository.MonotonicClock
-import com.trazo.app.domain.repository.RunSessionRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

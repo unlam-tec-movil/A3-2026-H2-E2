@@ -3,7 +3,6 @@ package com.trazo.app.data.sensors
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
-import com.trazo.app.domain.repository.MotionSensorAvailability
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 

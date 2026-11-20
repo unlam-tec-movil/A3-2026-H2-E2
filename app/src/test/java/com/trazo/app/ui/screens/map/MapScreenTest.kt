@@ -10,13 +10,13 @@ import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.trazo.app.R
+import com.trazo.app.data.location.LocationClient
+import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.repository.FakeRunSessionRepository
-import com.trazo.app.domain.repository.LocationClient
 import com.trazo.app.ui.theme.TrazoTheme
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow

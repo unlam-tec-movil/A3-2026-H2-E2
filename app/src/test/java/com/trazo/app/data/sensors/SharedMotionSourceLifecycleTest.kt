@@ -1,11 +1,9 @@
 package com.trazo.app.data.sensors
 
+import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.stops.MotionSample
 import com.trazo.app.domain.model.stops.StopDetectionConfig
-import com.trazo.app.domain.repository.FakeRunSessionRepository
-import com.trazo.app.domain.repository.MotionSensorAvailability
-import com.trazo.app.domain.repository.MotionSource
 import com.trazo.app.domain.services.RegularityMonitor
 import com.trazo.app.domain.services.SensorStopMonitor
 import kotlinx.coroutines.ExperimentalCoroutinesApi

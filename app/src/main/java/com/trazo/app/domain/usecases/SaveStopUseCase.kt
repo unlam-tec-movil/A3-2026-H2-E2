@@ -1,8 +1,8 @@
 package com.trazo.app.domain.usecases
 
+import com.trazo.app.data.repository.BrakeRepository
 import com.trazo.app.domain.model.stops.ClosedStop
 import com.trazo.app.domain.model.stops.StopKind
-import com.trazo.app.domain.repository.BrakeRepository
 import javax.inject.Inject
 
 /** Clasifica una parada terminada y guarda solo las frenadas. Una pausa personal no se guarda. */

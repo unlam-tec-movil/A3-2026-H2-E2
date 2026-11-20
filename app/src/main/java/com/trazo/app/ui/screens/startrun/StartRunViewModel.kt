@@ -2,12 +2,12 @@ package com.trazo.app.ui.screens.startrun
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.trazo.app.data.clock.MonotonicClock
+import com.trazo.app.data.location.LocationStatusReader
+import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RunGoal
-import com.trazo.app.domain.repository.LocationStatusReader
-import com.trazo.app.domain.repository.MonotonicClock
-import com.trazo.app.domain.repository.RunSessionRepository
 import com.trazo.app.domain.usecases.AwaitPreciseLocationUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException

@@ -1,11 +1,11 @@
 package com.trazo.app.ui.screens.result
 
 import androidx.lifecycle.SavedStateHandle
+import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunMetrics
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.repository.FakeRunSessionRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

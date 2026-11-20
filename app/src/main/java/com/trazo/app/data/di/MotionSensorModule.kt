@@ -1,13 +1,13 @@
 package com.trazo.app.data.di
 
 import android.os.SystemClock
+import com.trazo.app.data.clock.MonotonicClock
 import com.trazo.app.data.sensors.AccelerometerMotionSource
 import com.trazo.app.data.sensors.AndroidMotionSensorAvailability
+import com.trazo.app.data.sensors.MotionSensorAvailability
+import com.trazo.app.data.sensors.MotionSource
 import com.trazo.app.data.sensors.SharedMotionSource
 import com.trazo.app.di.ApplicationScope
-import com.trazo.app.domain.repository.MonotonicClock
-import com.trazo.app.domain.repository.MotionSensorAvailability
-import com.trazo.app.domain.repository.MotionSource
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

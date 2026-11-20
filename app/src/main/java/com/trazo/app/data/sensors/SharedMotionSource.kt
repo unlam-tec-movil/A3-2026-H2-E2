@@ -1,7 +1,6 @@
 package com.trazo.app.data.sensors
 
 import com.trazo.app.domain.model.stops.MotionSample
-import com.trazo.app.domain.repository.MotionSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted

@@ -1,13 +1,13 @@
 package com.trazo.app.ui.screens.startrun
 
+import com.trazo.app.data.location.LocationClient
+import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
-import com.trazo.app.domain.repository.FakeRunSessionRepository
-import com.trazo.app.domain.repository.LocationClient
 import com.trazo.app.domain.usecases.AwaitPreciseLocationUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

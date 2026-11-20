@@ -1,8 +1,7 @@
-package com.trazo.app.data.repository
+package com.trazo.app.data.location
 
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.RoutePoint
-import com.trazo.app.domain.repository.LocationClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

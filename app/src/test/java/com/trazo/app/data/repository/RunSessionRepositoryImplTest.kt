@@ -2,13 +2,14 @@ package com.trazo.app.data.repository
 
 import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.trazo.app.data.clock.MonotonicClock
+import com.trazo.app.data.location.FakeLocationClient
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.repository.MonotonicClock
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull

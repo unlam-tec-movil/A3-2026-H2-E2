@@ -1,9 +1,9 @@
 package com.trazo.app.data.di
 
 import com.trazo.app.data.location.AndroidLocationClient
+import com.trazo.app.data.location.LocationClient
+import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.data.repository.RunSessionRepositoryImpl
-import com.trazo.app.domain.repository.LocationClient
-import com.trazo.app.domain.repository.RunSessionRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

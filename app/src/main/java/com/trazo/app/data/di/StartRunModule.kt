@@ -1,7 +1,7 @@
 package com.trazo.app.data.di
 
 import com.trazo.app.data.location.AndroidLocationStatusReader
-import com.trazo.app.domain.repository.LocationStatusReader
+import com.trazo.app.data.location.LocationStatusReader
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

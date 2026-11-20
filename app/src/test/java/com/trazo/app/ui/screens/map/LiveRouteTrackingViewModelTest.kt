@@ -1,5 +1,7 @@
 package com.trazo.app.ui.screens.map
 
+import com.trazo.app.data.location.LocationClient
+import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
@@ -8,8 +10,6 @@ import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunMetrics
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.repository.LocationClient
-import com.trazo.app.domain.repository.RunSessionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow

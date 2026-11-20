@@ -1,15 +1,15 @@
 package com.trazo.app.domain.services
 
+import com.trazo.app.data.clock.MonotonicClock
+import com.trazo.app.data.repository.RunSessionRepository
+import com.trazo.app.data.sensors.MotionSensorAvailability
+import com.trazo.app.data.sensors.MotionSource
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.regularity.ActiveRunSnapshot
 import com.trazo.app.domain.model.regularity.RegularityConfig
 import com.trazo.app.domain.model.regularity.RegularityState
 import com.trazo.app.domain.model.regularity.SegmentClass
-import com.trazo.app.domain.repository.MonotonicClock
-import com.trazo.app.domain.repository.MotionSensorAvailability
-import com.trazo.app.domain.repository.MotionSource
-import com.trazo.app.domain.repository.RunSessionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

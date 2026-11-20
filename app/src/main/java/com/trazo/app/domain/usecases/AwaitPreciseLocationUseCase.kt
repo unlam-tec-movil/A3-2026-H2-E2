@@ -1,9 +1,9 @@
 package com.trazo.app.domain.usecases
 
+import com.trazo.app.data.location.LocationClient
 import com.trazo.app.domain.model.map.GpsSignalRules
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.isAccurate
-import com.trazo.app.domain.repository.LocationClient
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 

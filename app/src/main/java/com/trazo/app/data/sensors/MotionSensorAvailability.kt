@@ -1,4 +1,4 @@
-package com.trazo.app.domain.repository
+package com.trazo.app.data.sensors
 
 fun interface MotionSensorAvailability {
     fun isAvailable(): Boolean

@@ -1,4 +1,4 @@
-package com.trazo.app.domain.repository
+package com.trazo.app.data.repository
 
 import com.trazo.app.domain.model.stops.BrakeEvent
 import kotlinx.coroutines.flow.StateFlow

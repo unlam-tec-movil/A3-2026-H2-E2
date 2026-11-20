@@ -2,8 +2,8 @@ package com.trazo.app.ui.screens.result
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.map.RunGoal
-import com.trazo.app.domain.repository.RunSessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.channels.Channel
