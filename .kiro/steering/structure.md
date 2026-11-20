@@ -1,6 +1,6 @@
 # Project Structure
 
-_updated_at: 2026-11-19_
+_updated_at: 2026-11-20_
 
 ## Organization Philosophy
 
@@ -16,14 +16,29 @@ inglés; textos de la app, comentarios y documentación de specs en español.
 **Purpose**: Kotlin puro, sin Android, Hilt ni Room. Se permite `javax.inject.@Inject` (anotación
 estándar, no de Hilt) en los constructores.
 
-- `model/<área>/`: modelos de negocio agrupados por área (por ejemplo `model/stops/`).
-- `repository/`: interfaces de repositorio y puertos que implementa `data`. Un **repositorio es
-  «bobo»**: recibe, guarda y expone datos, sin reglas ni borrados condicionales (por ejemplo
-  `BrakeRepository`). Lo que vigila un sensor o un proceso es un puerto, no un repositorio (por
-  ejemplo `StopMonitor`).
-- `usecases/`: reglas y casos de uso; se crean solo si agregan lógica (un ViewModel consume el
-  repositorio directo si solo pasaría la llamada). Las decisiones van acá y el use case llama al
-  repositorio solo cuando corresponde (por ejemplo `SaveStopUseCase` guarda solo las frenadas).
+- `model/<área>/`: modelos de negocio agrupados por área (por ejemplo `model/stops/`). **Los
+  modelos tienen comportamiento** (no anémicos): las reglas propias de un modelo son métodos que
+  devuelven una copia nueva o lanzan `IllegalStateException` (por ejemplo
+  `RunSession.ActiveSession.pause(nowMillis)`, `addPoint`, `toFrozenSummary`). Los cálculos puros
+  sobre un modelo van como funciones de extensión junto a él (por ejemplo
+  `RoutePoint.distanceMetersTo`).
+- `repository/`: interfaces que implementa `data`, de dos tipos:
+  - **Repositorio, «bobo»**: recibe, guarda y expone datos, sin reglas ni borrados condicionales
+    (por ejemplo `BrakeRepository`, `RunSessionRepository`). Las lecturas o traducciones que
+    otros necesitan sobre un repositorio van como extensiones de dominio en
+    `<Nombre>RepositoryExt.kt` (por ejemplo `RunSessionRepositoryExt.kt`), no como adaptadores en
+    `data`.
+  - **Monitor**: lo que vigila un sensor o un proceso y expone lo que detecta (por ejemplo
+    `StopMonitor`, `RegularityMonitor`, con implementaciones `Sensor<Nombre>Monitor`). Un monitor
+    emite eventos (por ejemplo `StopMonitor.closedStops`), no decide qué se guarda.
+- `services/`: lógica de dominio reutilizable que no es un caso de uso: reductores, estimadores y
+  políticas (por ejemplo `StopDetector`, `StillnessEstimator`, `RegularityMeter`,
+  `GpsPointFilterPolicy`). Son clases puras que pueden usar `data` y los casos de uso.
+- `usecases/`: solo casos de uso, es decir acciones de la app; se crean solo si agregan lógica (un
+  ViewModel consume el repositorio directo si solo pasaría la llamada). Las decisiones van acá y
+  el use case llama al repositorio solo cuando corresponde (por ejemplo `SaveStopUseCase` guarda
+  solo las frenadas; `RecordStopsUseCase` lo conecta con `StopMonitor.closedStops` desde
+  `TrazoApplication`).
 
 ### Datos
 
@@ -99,6 +114,9 @@ imports.
 - Una pantalla **nunca** importa componentes de la carpeta de otra pantalla: si hace falta, se mueve
   a `ui/components/`.
 - `domain` no importa nada de Android, `data` ni `ui`; `data` implementa los contratos de `domain`.
+- `data` **no depende de `domain/usecases`**: puede usar modelos, `services/` y las interfaces de
+  `repository/`. Si un dato de `data` tiene que pasar por un caso de uso, `data` lo expone (por
+  ejemplo como `Flow`) y el caso de uso lo consume; nunca al revés.
 - Componentes con state hoisting y `modifier: Modifier = Modifier` como último parámetro.
 - Si una pantalla todavía no tiene componentes propios, no se crea `components/`.
 
