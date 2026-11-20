@@ -69,12 +69,12 @@ fun TrazoApp() {
                             Manifest.permission.ACCESS_COARSE_LOCATION,
                         ),
                     )
-                StartRunEffect.NavigateToMap -> navigateTo(TrazoDestination.ACTIVITY)
+                StartRunEffect.NavigateToActivity -> navigateTo(TrazoDestination.ACTIVITY)
             }
         }
     }
 
-    // Mismo «+» en Inicio y en Mapa (start-run, requisito 9).
+    // El «+» solo vive en Actividad (start-run, requisito 9).
     val startRunFab: @Composable (Modifier) -> Unit = { fabModifier ->
         StartRunFab(
             enabled = startRunState.isFabEnabled,
@@ -99,7 +99,7 @@ fun TrazoApp() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         // El inset de la barra de estado no se consume acá: lo maneja cada pantalla
-        // (Inicio lo cubre con su barra superior).
+        // (Perfil lo cubre con su barra superior).
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (currentRoute != RESULT_ROUTE) {
@@ -112,15 +112,9 @@ fun TrazoApp() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = TrazoDestination.PROFILE.route,
+            startDestination = TrazoDestination.ACTIVITY.route,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(TrazoDestination.PROFILE.route) {
-                HomeScreen(
-                    startRunFab = startRunFab,
-                    onSettingsClick = {},
-                )
-            }
             composable(TrazoDestination.ACTIVITY.route) {
                 MapScreen(
                     onStartRunClick = startRunViewModel::onOptionClick,
@@ -131,11 +125,17 @@ fun TrazoApp() {
                     gpsWaitingNotice = gpsWaitingNotice,
                 )
             }
+            composable(TrazoDestination.PROFILE.route) {
+                HomeScreen(
+                    startRunFab = {},
+                    onSettingsClick = {},
+                )
+            }
             composable(
                 route = RESULT_ROUTE,
                 arguments = listOf(navArgument("runId") { type = NavType.StringType }),
             ) {
-                val leaveToMap: () -> Unit = {
+                val leaveToActivity: () -> Unit = {
                     navController.navigate(TrazoDestination.ACTIVITY.route) {
                         popUpTo(RESULT_ROUTE) { inclusive = true }
                         launchSingleTop = true
@@ -143,9 +143,9 @@ fun TrazoApp() {
                 }
                 ResultScreen(
                     // Parche temporal (aprobado por Rocío): hasta que save-run (HU-07) publique
-                    // saverun/{runId}, «Continuar» vuelve al Mapa. Reemplazar por navigate("saverun/$runId").
-                    onContinue = { _ -> leaveToMap() },
-                    onLeave = leaveToMap,
+                    // saverun/{runId}, «Continuar» vuelve a Actividad. Reemplazar por navigate("saverun/$runId").
+                    onContinue = { _ -> leaveToActivity() },
+                    onLeave = leaveToActivity,
                 )
             }
         }

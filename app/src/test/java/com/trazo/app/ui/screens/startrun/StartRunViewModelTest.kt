@@ -308,7 +308,7 @@ class StartRunViewModelTest {
 
     // 5.1, 5.2, 8.2, 9.7
     @Test
-    fun onConfirm_withGoal_closesDialog_navigatesToMap_andWaitsWithFabDisabled() =
+    fun onConfirm_withGoal_closesDialog_navigatesToActivity_andWaitsWithFabDisabled() =
         runTest(dispatcher) {
             val effects = collectEffects()
             openDialog()
@@ -320,7 +320,7 @@ class StartRunViewModelTest {
             assertFalse(state.isDialogVisible)
             assertEquals(RunGoal.FIVE_KILOMETERS, state.waitingGoal)
             assertFalse(state.isFabEnabled)
-            assertEquals(listOf(StartRunEffect.NavigateToMap), effects)
+            assertEquals(listOf(StartRunEffect.NavigateToActivity), effects)
         }
 
     // 8.2
