@@ -1,4 +1,4 @@
-package com.trazo.app.data.repository
+package com.trazo.app.domain.services
 
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.regularity.RegularityConfig
@@ -25,7 +25,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class SensorRegularityMonitorTest {
+class RegularityMonitorTest {
     private class FakeMotionSource : MotionSource {
         private val shared = MutableSharedFlow<MotionSample>()
         var activeCollectors = 0
@@ -46,7 +46,7 @@ class SensorRegularityMonitorTest {
     private fun TestScope.repository(
         available: Boolean = true,
         source: MotionSource = motion,
-    ) = SensorRegularityMonitor(
+    ) = RegularityMonitor(
         motionSource = source,
         runSessionRepository = runs,
         availability = MotionSensorAvailability { available },

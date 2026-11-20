@@ -1,22 +1,16 @@
-package com.trazo.app.data.repository
+package com.trazo.app.domain.services
 
+import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.stops.ClosedStop
 import com.trazo.app.domain.model.stops.StopDetectionConfig
 import com.trazo.app.domain.model.stops.StopDetectionState
 import com.trazo.app.domain.model.stops.StopKind
+import com.trazo.app.domain.model.stops.StopLocation
 import com.trazo.app.domain.model.stops.StopPhase
 import com.trazo.app.domain.repository.MonotonicClock
 import com.trazo.app.domain.repository.MotionSource
 import com.trazo.app.domain.repository.RunSessionRepository
-import com.trazo.app.domain.repository.StopMonitor
-import com.trazo.app.domain.repository.lastKnownStopLocation
-import com.trazo.app.domain.repository.publishStopState
-import com.trazo.app.domain.repository.runningRunId
-import com.trazo.app.domain.services.Observation
-import com.trazo.app.domain.services.StillnessEstimator
-import com.trazo.app.domain.services.StopDetector
-import com.trazo.app.domain.services.StopStep
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -28,6 +22,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -142,3 +137,52 @@ class SensorStopMonitor(
         const val CLOSED_STOPS_BUFFER = 64
     }
 }
+
+/** Estados en los que corre la detección de paradas: activo, detenido o en pausa personal. */
+private val STOP_DETECTION_STATES = setOf(RunState.ACTIVE, RunState.STOPPED, RunState.PERSONAL_PAUSED)
+
+/**
+ * Id del recorrido mientras la detección de paradas aplica (activo, detenido o en pausa personal);
+ * `null` en reposo, pausa manual o recorrido finalizado.
+ */
+internal val RunSessionRepository.runningRunId: Flow<String?>
+    get() =
+        activeSession
+            .map { session ->
+                (session as? RunSession.ActiveSession)
+                    ?.takeIf { it.state in STOP_DETECTION_STATES }
+                    ?.id
+            }.distinctUntilChanged()
+
+/** Ubicación de la frenada: el último punto de la traza de la sesión activa; `null` si no hay. */
+internal fun RunSessionRepository.lastKnownStopLocation(): StopLocation? =
+    (activeSession.value as? RunSession.ActiveSession)
+        ?.routePoints
+        ?.lastOrNull()
+        ?.let { StopLocation(it.latitude, it.longitude, it.accuracyMeters) }
+
+/**
+ * Publica el estado de detección [state] del recorrido [runId]. Solo actúa si la sesión activa tiene
+ * ese id y el cambio es una de las traducciones acordadas (D1-D3); en cualquier otro caso (incluida
+ * la pausa manual) devuelve `Result.failure` sin llamar al repositorio.
+ */
+internal suspend fun RunSessionRepository.publishStopState(
+    runId: String,
+    state: RunState,
+): Result<Unit> {
+    val session =
+        activeSession.value as? RunSession.ActiveSession
+            ?: return rejected("No hay un recorrido activo.")
+    if (session.id != runId) return rejected("El recorrido cambió.")
+
+    return when (session.state to state) {
+        RunState.ACTIVE to RunState.STOPPED -> markStopped()
+        RunState.STOPPED to RunState.ACTIVE,
+        RunState.PERSONAL_PAUSED to RunState.ACTIVE,
+        -> markMoving()
+        RunState.STOPPED to RunState.PERSONAL_PAUSED -> pausePersonally()
+        else -> rejected("Cambio de ${session.state} a $state no soportado.")
+    }
+}
+
+private fun rejected(message: String): Result<Unit> = Result.failure(IllegalStateException(message))
