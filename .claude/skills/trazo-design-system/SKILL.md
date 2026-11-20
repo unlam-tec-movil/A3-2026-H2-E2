@@ -12,7 +12,7 @@ Aplicás el sistema de diseño de Trazo a cualquier trabajo de UI, y revisás qu
 1. Leé el steering `.kiro/steering/design-system.md`, que resume las reglas.
 2. Para medidas exactas, estados de componentes, patrones de pantalla y ejemplos de Compose, leé `references/trazo-design-system.md`, que está en el directorio de esta skill y es la fuente de verdad.
 3. Usá el tema existente en `app/src/main/java/com/trazo/app/ui/theme/`. No dupliques tokens: si falta uno, agregalo ahí y en la referencia.
-4. Ubicá los archivos según la sección "Ubicación de archivos de UI" del steering. Todo componente nuevo nace en `ui/screens/<pantalla>/components/` y pasa a `ui/components/layout/` o `ui/components/common/` recién cuando lo usa una segunda pantalla. Las pantallas son `home`, `map`, `history`, `settings`, `result` y `saverun`, y la navegación (`TrazoApp`, `BottomNavBar`) va en `ui/navigation/`. Carpetas y archivos siempre en inglés.
+4. Ubicá los archivos según la sección "Ubicación de archivos de UI" del steering. Todo componente nuevo nace en `ui/screens/<pantalla>/components/` y pasa a `ui/components/layout/` o `ui/components/common/` recién cuando lo usa una segunda pantalla. Las pantallas son `map` (pestaña Actividad), `profile` (pestaña Perfil), `settings`, `result` y `saverun`, y la navegación (`TrazoApp`, `BottomNavBar`) va en `ui/navigation/`. Carpetas y archivos siempre en inglés.
 5. Envolvé las pantallas en `TrazoTheme { … }`. Los colores van por rol (`MaterialTheme.colorScheme.*`, `TrazoTheme.extendedColors.*`), nunca con hex sueltos.
 6. Antes de dar el trabajo por terminado, recorré el checklist de accesibilidad (sección 9 de la referencia) y corré `./gradlew :app:ktlintCheck :app:lint`.
 

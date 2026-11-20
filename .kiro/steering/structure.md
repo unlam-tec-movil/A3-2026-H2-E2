@@ -64,8 +64,8 @@ interfaz de cada repositorio vive en Data**, junto a su implementación, y devue
 
 ### Pantallas
 
-**Location**: `ui/screens/<pantalla>/` (`home`, `map`, `history`, `result`, `saverun`, `settings`,
-`startrun`)
+**Location**: `ui/screens/<pantalla>/` (`map` = pestaña Actividad, `profile` = pestaña
+Perfil, `result`, `saverun`, `settings`, `startrun`)
 **Purpose**: tres piezas por pantalla:
 
 - `<Nombre>Screen.kt`: conecta el ViewModel; debajo, en el mismo archivo, `<Nombre>Content`
@@ -75,9 +75,9 @@ interfaz de cada repositorio vive en Data**, junto a su implementación, y devue
 
 ```kotlin
 @Composable
-fun HomeScreen(onStartRunClick: () -> Unit, viewModel: HomeViewModel = hiltViewModel()) {
+fun ProfileScreen(onSettingsClick: () -> Unit, viewModel: ProfileViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    HomeContent(state = state, onStartRunFabClick = viewModel::onStartRunFabClick, /* … */)
+    ProfileContent(state = state, onSettingsClick = onSettingsClick)
 }
 ```
 
@@ -97,7 +97,7 @@ fun HomeScreen(onStartRunClick: () -> Unit, viewModel: HomeViewModel = hiltViewM
 ### Recursos y tests
 
 - `res/drawable/`: prefijos `ic_` (íconos), `img_` (ilustraciones), `ic_nav_*_filled|outlined`.
-- `res/values/strings.xml`: claves con prefijo de pantalla (`home_`, `nav_`, `map_`…).
+- `res/values/strings.xml`: claves con prefijo de pantalla (`profile_`, `nav_`, `map_`…).
 - `app/src/test/` y `app/src/androidTest/` replican el paquete del código probado.
 - `design/assets/`: SVG fuente entregados por diseño.
 

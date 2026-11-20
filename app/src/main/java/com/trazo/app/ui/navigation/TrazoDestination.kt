@@ -5,7 +5,7 @@ import androidx.annotation.StringRes
 import com.trazo.app.R
 
 /**
- * Las 3 pestañas principales de la app y su ruta de navegación.
+ * Las 2 pestañas principales de la app y su ruta de navegación.
  * El orden del enum define el orden de la barra de navegación.
  */
 enum class TrazoDestination(
@@ -14,7 +14,6 @@ enum class TrazoDestination(
     @param:DrawableRes val selectedIconRes: Int,
     @param:DrawableRes val unselectedIconRes: Int,
 ) {
-    HOME("home", R.string.nav_home, R.drawable.ic_nav_home_filled, R.drawable.ic_nav_home_outlined),
-    MAP("map", R.string.nav_map, R.drawable.ic_nav_map_filled, R.drawable.ic_nav_map_outlined),
-    HISTORY("history", R.string.nav_history, R.drawable.ic_nav_history_filled, R.drawable.ic_nav_history_outlined),
+    ACTIVITY("activity", R.string.nav_activity, R.drawable.ic_nav_activity_filled, R.drawable.ic_nav_activity_outlined),
+    PROFILE("profile", R.string.nav_profile, R.drawable.ic_nav_profile_filled, R.drawable.ic_nav_profile_outlined),
 }

@@ -1,4 +1,4 @@
-package com.trazo.app.ui.screens.home.components
+package com.trazo.app.ui.screens.profile.components
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -19,7 +19,7 @@ import com.trazo.app.ui.theme.TrazoTheme
  * Barra superior con fondo primary, el [title] a la izquierda y el botón de Configuración a la derecha.
  * Ocupa también el área de la barra de estado (inset por defecto de [TopAppBar]).
  *
- * Nace en Inicio; se mueve a `ui/components/layout/` cuando la use otra pantalla.
+ * Nace en Perfil; se mueve a `ui/components/layout/` cuando la use otra pantalla.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +39,7 @@ fun TrazoTopBar(
             IconButton(onClick = onSettingsClick) {
                 Icon(
                     painter = painterResource(R.drawable.ic_settings),
-                    contentDescription = stringResource(R.string.home_settings_description),
+                    contentDescription = stringResource(R.string.profile_settings_description),
                 )
             }
         },
@@ -55,7 +55,7 @@ fun TrazoTopBar(
 
 @Preview
 @Composable
-private fun TrazoTopBarHomePreview() {
+private fun TrazoTopBarProfilePreview() {
     TrazoTheme {
         TrazoTopBar(
             title = stringResource(R.string.app_name),

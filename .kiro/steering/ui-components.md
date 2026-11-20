@@ -2,7 +2,7 @@
 
 Patrones para construir la interfaz de Trazo con Jetpack Compose y Material 3. La guía completa, con los componentes de cada pantalla, es la "Guía de UI de Trazo"; acá van las reglas y el catálogo de componentes globales.
 
-_updated_at: 2026-10-28_
+_updated_at: 2026-11-20_
 
 ## Dónde va cada componente
 
@@ -13,7 +13,7 @@ _updated_at: 2026-10-28_
 | `ui/components/common/` | Globales sueltos: botones, tarjetas, chips, avisos, diálogos |
 | `ui/navigation/` | Lo que conoce pantallas o rutas: `TrazoApp` (NavHost), `BottomNavBar`, destinos |
 
-- **Un componente nuevo nace en `ui/screens/<pantalla>/components/`**, aunque figure en el catálogo de globales. Se mueve a `ui/components/common/` (o `layout/`) recién cuando lo necesita otra pantalla (Mapa, Historial u otra), y en ese momento se generaliza.
+- **Un componente nuevo nace en `ui/screens/<pantalla>/components/`**, aunque figure en el catálogo de globales. Se mueve a `ui/components/common/` (o `layout/`) recién cuando lo necesita otra pantalla (Actividad, Perfil u otra), y en ese momento se generaliza.
 - Una pantalla nunca importa componentes de la carpeta de otra pantalla.
 - Un componente global no conoce pantallas, rutas, ViewModels ni modelos de `domain`.
 - El catálogo de abajo indica **dónde termina** cada componente cuando ya lo comparten varias pantallas, no dónde se crea.
@@ -78,7 +78,7 @@ Usar estos antes de crear uno nuevo.
 
 | Componente | Carpeta | Base | Uso |
 | --- | --- | --- | --- |
-| `BottomNavBar` | navigation | `NavigationBar` | Pestañas Inicio · Mapa · Historial |
+| `BottomNavBar` | navigation | `NavigationBar` | Pestañas Actividad · Perfil |
 | `TrazoApp` | navigation | `Scaffold` + `NavHost` | Esqueleto de la app, snackbars y rutas |
 | `TrazoTopBar` | layout | `TopAppBar` | Header con título e ícono opcional (engranaje, volver, cerrar) |
 | `ScreenContainer` | layout | `Column` | Padding, fondo y scroll comunes |
@@ -86,7 +86,7 @@ Usar estos antes de crear uno nuevo.
 | `PrimaryButton` | common | `Button` | Acción principal |
 | `SecondaryButton` | common | `OutlinedButton` | Acción secundaria: "Cancelar" en modales, "Ir a configuración". Para "Seguir editando" se usa `TextButton` |
 | `StartRunFab` | common | `FloatingActionButton` + `DropdownMenu` | Botón "+" con "Iniciar un recorrido" |
-| `RunCard` | common | `Card` | Tarjeta de recorrido (Inicio, Historial) |
+| `RunCard` | common | `Card` | Tarjeta de recorrido («Mis recorridos» de Perfil) |
 | `MetricItem` | common | `Column` + `Text` | Valor + etiqueta ("5,2 km / Distancia") |
 | `StatusBadge` | common | `AssistChip` / `Badge` | "Demo", "Incompleto", "Meta cumplida", "Modo demo" |
 | `HighlightChip` | common | `FilterChip` | Destacado, seleccionable o fijo |
@@ -101,4 +101,4 @@ Los componentes globales que reciben un recorrido (`RunCard`, `MetricItem`, `Sta
 
 ## Pantallas
 
-`splash`, `home`, `startrun` (modal), `map`, `result`, `saverun`, `camera`, `history`, `rundetail` (modal), `settings`. Los componentes propios de cada una están en la Guía de UI y en el `design.md` de cada spec.
+`splash`, `map` (pestaña Actividad), `profile` (pestaña Perfil), `startrun` (modal), `result`, `saverun`, `camera`, `rundetail` (modal), `settings`. Los componentes propios de cada una están en la Guía de UI y en el `design.md` de cada spec.
