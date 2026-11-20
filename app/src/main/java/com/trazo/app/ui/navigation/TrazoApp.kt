@@ -26,8 +26,8 @@ import com.trazo.app.R
 import com.trazo.app.ui.components.common.LocationIssueDialog
 import com.trazo.app.ui.components.common.StartRunDialog
 import com.trazo.app.ui.components.common.StartRunFab
-import com.trazo.app.ui.screens.home.HomeScreen
 import com.trazo.app.ui.screens.map.MapScreen
+import com.trazo.app.ui.screens.profile.ProfileScreen
 import com.trazo.app.ui.screens.result.ResultScreen
 import com.trazo.app.ui.screens.startrun.StartRunEffect
 import com.trazo.app.ui.screens.startrun.StartRunViewModel
@@ -126,10 +126,7 @@ fun TrazoApp() {
                 )
             }
             composable(TrazoDestination.PROFILE.route) {
-                HomeScreen(
-                    startRunFab = {},
-                    onSettingsClick = {},
-                )
+                ProfileScreen(onSettingsClick = {})
             }
             composable(
                 route = RESULT_ROUTE,

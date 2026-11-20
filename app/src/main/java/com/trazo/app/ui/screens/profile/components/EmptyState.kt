@@ -1,4 +1,4 @@
-package com.trazo.app.ui.screens.home.components
+package com.trazo.app.ui.screens.profile.components
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
@@ -56,7 +56,7 @@ private fun EmptyStateRunsPreview() {
     TrazoTheme {
         EmptyState(
             illustrationRes = R.drawable.img_empty_runs,
-            message = stringResource(R.string.home_empty_runs),
+            message = stringResource(R.string.profile_empty_runs),
         )
     }
 }

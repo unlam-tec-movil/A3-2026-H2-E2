@@ -41,7 +41,7 @@ private const val DISABLED_CONTAINER_ALPHA = 0.12f
 private const val DISABLED_CONTENT_ALPHA = 0.38f
 
 /**
- * FAB "+" de Inicio y Mapa. Al tocarlo, `StartRunViewModel` decide mostrar la opción
+ * FAB "+" de Actividad. Al tocarlo, `StartRunViewModel` decide mostrar la opción
  * "Iniciar un recorrido", que se dibuja en un [Popup] focusable: cualquier toque fuera de ella la
  * cierra.
  * No guarda estado propio; todos los eventos salen por parámetro.
@@ -67,7 +67,7 @@ fun StartRunFab(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_add),
-                    contentDescription = stringResource(R.string.home_start_run_fab_description),
+                    contentDescription = stringResource(R.string.start_run_fab_description),
                 )
             }
         } else {
@@ -89,7 +89,7 @@ fun StartRunFab(
  */
 @Composable
 private fun DisabledFab() {
-    val description = stringResource(R.string.home_start_run_fab_description)
+    val description = stringResource(R.string.start_run_fab_description)
     val onSurface = MaterialTheme.colorScheme.onSurface
     Surface(
         modifier =
@@ -133,7 +133,7 @@ private fun StartRunOption(
                     contentDescription = null,
                 )
             },
-            text = { Text(text = stringResource(R.string.home_start_run)) },
+            text = { Text(text = stringResource(R.string.start_run_fab_option)) },
             shape = MaterialTheme.shapes.large,
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,

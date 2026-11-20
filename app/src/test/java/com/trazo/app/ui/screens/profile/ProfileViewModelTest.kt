@@ -1,16 +1,16 @@
-package com.trazo.app.ui.screens.home
+package com.trazo.app.ui.screens.profile
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /** Los casos del botón «+» pasaron a `StartRunViewModelTest` (start-run, requisito 9). */
-class HomeViewModelTest {
+class ProfileViewModelTest {
     @Test
     fun initialState_isEmpty() {
-        val state = HomeViewModel().uiState.value
+        val state = ProfileViewModel().uiState.value
 
-        assertEquals(HomeUiState(), state)
+        assertEquals(ProfileUiState(), state)
         assertFalse(state.hasRecentRuns)
     }
 }

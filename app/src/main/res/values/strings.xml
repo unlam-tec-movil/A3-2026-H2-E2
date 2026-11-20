@@ -1,13 +1,23 @@
 <resources>
     <string name="app_name">Trazo</string>
 
-    <!-- Navegación e Inicio (develop) -->
+    <!-- Navegación y Perfil -->
     <string name="nav_activity">Actividad</string>
     <string name="nav_profile">Perfil</string>
-    <string name="home_empty_runs">Todavía no hay recorridos</string>
-    <string name="home_start_run">Iniciar un recorrido</string>
-    <string name="home_start_run_fab_description">Nuevo recorrido</string>
-    <string name="home_settings_description">Configuración</string>
+    <string name="profile_empty_runs">Todavía no hay recorridos</string>
+    <string name="profile_settings_description">Configuración</string>
+    <string name="profile_stats_title">Mis estadísticas</string>
+    <string name="profile_runs_title">Mis recorridos</string>
+    <string name="profile_stats_runs_label">Recorridos guardados</string>
+    <string name="profile_stats_distance_label">Distancia total</string>
+    <string name="profile_stats_time_label">Tiempo total</string>
+    <plurals name="profile_stats_runs">
+        <item quantity="one">%d recorrido</item>
+        <item quantity="other">%d recorridos</item>
+    </plurals>
+    <string name="profile_stats_distance">%1$s km</string>
+    <string name="start_run_fab_option">Iniciar un recorrido</string>
+    <string name="start_run_fab_description">Nuevo recorrido</string>
 
     <!-- HU-04 Mapa y Seguimiento del Recorrido -->
     <string name="map_elapsed_time">Tiempo recorrido</string>

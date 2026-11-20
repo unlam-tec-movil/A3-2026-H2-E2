@@ -44,12 +44,12 @@ class StartRunFabEnabledTest {
 
         // When
         composeTestRule
-            .onNodeWithContentDescription(context.getString(R.string.home_start_run_fab_description))
+            .onNodeWithContentDescription(context.getString(R.string.start_run_fab_description))
             .assertIsEnabled()
             .performClick()
 
         // Then
         assertEquals(1, fabClicks)
-        composeTestRule.onNodeWithText(context.getString(R.string.home_start_run)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.start_run_fab_option)).assertDoesNotExist()
     }
 }
