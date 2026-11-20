@@ -1,4 +1,4 @@
-package com.trazo.app.domain.usecases
+package com.trazo.app.domain.services
 
 import com.trazo.app.domain.model.stops.MotionSample
 import com.trazo.app.domain.model.stops.StopDetectionConfig

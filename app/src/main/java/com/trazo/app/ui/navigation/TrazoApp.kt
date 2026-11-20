@@ -23,7 +23,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.trazo.app.R
-import com.trazo.app.data.location.locationSettingsIntent
 import com.trazo.app.ui.components.common.LocationIssueDialog
 import com.trazo.app.ui.components.common.StartRunDialog
 import com.trazo.app.ui.components.common.StartRunFab

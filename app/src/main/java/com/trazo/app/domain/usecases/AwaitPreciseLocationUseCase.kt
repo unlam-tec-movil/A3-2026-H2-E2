@@ -2,6 +2,7 @@ package com.trazo.app.domain.usecases
 
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.repository.LocationClient
+import com.trazo.app.domain.services.GpsPointFilterPolicy
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 

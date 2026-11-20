@@ -13,10 +13,10 @@ import com.trazo.app.domain.repository.StopMonitor
 import com.trazo.app.domain.repository.lastKnownStopLocation
 import com.trazo.app.domain.repository.publishStopState
 import com.trazo.app.domain.repository.runningRunId
-import com.trazo.app.domain.usecases.Observation
-import com.trazo.app.domain.usecases.StillnessEstimator
-import com.trazo.app.domain.usecases.StopDetector
-import com.trazo.app.domain.usecases.StopStep
+import com.trazo.app.domain.services.Observation
+import com.trazo.app.domain.services.StillnessEstimator
+import com.trazo.app.domain.services.StopDetector
+import com.trazo.app.domain.services.StopStep
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay

@@ -1,6 +1,6 @@
-package com.trazo.app.domain.usecases
+package com.trazo.app.domain.services
 
-import jakarta.inject.Inject
+import javax.inject.Inject
 
 /** Reglas de la señal GPS: qué punto es preciso y cuándo se considera perdida la señal. */
 class GpsPointFilterPolicy

@@ -1,6 +1,5 @@
-package com.trazo.app.domain.repository
+package com.trazo.app.domain.services
 
-import com.trazo.app.domain.usecases.GpsPointFilterPolicy
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

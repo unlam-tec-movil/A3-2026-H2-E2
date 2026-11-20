@@ -8,7 +8,7 @@ import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.repository.LocationClient
 import com.trazo.app.domain.repository.MonotonicClock
 import com.trazo.app.domain.repository.RunSessionRepository
-import com.trazo.app.domain.usecases.GpsPointFilterPolicy
+import com.trazo.app.domain.services.GpsPointFilterPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

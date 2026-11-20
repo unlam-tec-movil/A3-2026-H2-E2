@@ -3,6 +3,7 @@ package com.trazo.app.domain.usecases
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.repository.LocationClient
+import com.trazo.app.domain.services.GpsPointFilterPolicy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow

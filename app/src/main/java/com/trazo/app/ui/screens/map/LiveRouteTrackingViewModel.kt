@@ -38,7 +38,6 @@ class LiveRouteTrackingViewModel
     ) : ViewModel() {
         private val activeSessionFlow = runSessionRepository.activeSession
 
-//        private val hasActiveSession = MutableStateFlow(false)
         private val isRunInProgressFlow = runSessionRepository.isRunInProgress
 
         private val showFinishConfirmDialogFlow = MutableStateFlow(false)
@@ -58,15 +57,12 @@ class LiveRouteTrackingViewModel
                 activeSessionFlow.collect { session ->
                     when (session) {
                         is RunSession.Idle -> {
-//                            hasActiveSession.value = false
                             previousGoalReached = false
                             hasShownLocationPermissionLostNotice = false
                             showGoalCelebrationFlow.value = false
                         }
 
                         is RunSession.ActiveSession -> {
-//                            hasActiveSession.value = true
-
                             if (session.goalReached && !previousGoalReached) {
                                 showGoalCelebrationFlow.value = true
                             }

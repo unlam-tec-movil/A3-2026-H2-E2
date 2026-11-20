@@ -10,7 +10,7 @@ import com.trazo.app.domain.repository.MotionSource
 import com.trazo.app.domain.repository.RegularityMonitor
 import com.trazo.app.domain.repository.RunSessionRepository
 import com.trazo.app.domain.repository.activeRunSnapshot
-import com.trazo.app.domain.usecases.RegularityMeter
+import com.trazo.app.domain.services.RegularityMeter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
