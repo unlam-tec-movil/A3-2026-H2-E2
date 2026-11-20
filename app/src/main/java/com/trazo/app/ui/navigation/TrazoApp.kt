@@ -26,7 +26,6 @@ import com.trazo.app.R
 import com.trazo.app.ui.components.common.LocationIssueDialog
 import com.trazo.app.ui.components.common.StartRunDialog
 import com.trazo.app.ui.components.common.StartRunFab
-import com.trazo.app.ui.screens.history.HistoryScreen
 import com.trazo.app.ui.screens.home.HomeScreen
 import com.trazo.app.ui.screens.map.MapScreen
 import com.trazo.app.ui.screens.result.ResultScreen
@@ -70,7 +69,7 @@ fun TrazoApp() {
                             Manifest.permission.ACCESS_COARSE_LOCATION,
                         ),
                     )
-                StartRunEffect.NavigateToMap -> navigateTo(TrazoDestination.MAP)
+                StartRunEffect.NavigateToMap -> navigateTo(TrazoDestination.ACTIVITY)
             }
         }
     }
@@ -113,16 +112,16 @@ fun TrazoApp() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = TrazoDestination.HOME.route,
+            startDestination = TrazoDestination.PROFILE.route,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(TrazoDestination.HOME.route) {
+            composable(TrazoDestination.PROFILE.route) {
                 HomeScreen(
                     startRunFab = startRunFab,
                     onSettingsClick = {},
                 )
             }
-            composable(TrazoDestination.MAP.route) {
+            composable(TrazoDestination.ACTIVITY.route) {
                 MapScreen(
                     onStartRunClick = startRunViewModel::onOptionClick,
                     onNavigateToResults = { summary ->
@@ -137,7 +136,7 @@ fun TrazoApp() {
                 arguments = listOf(navArgument("runId") { type = NavType.StringType }),
             ) {
                 val leaveToMap: () -> Unit = {
-                    navController.navigate(TrazoDestination.MAP.route) {
+                    navController.navigate(TrazoDestination.ACTIVITY.route) {
                         popUpTo(RESULT_ROUTE) { inclusive = true }
                         launchSingleTop = true
                     }
@@ -149,7 +148,6 @@ fun TrazoApp() {
                     onLeave = leaveToMap,
                 )
             }
-            composable(TrazoDestination.HISTORY.route) { HistoryScreen() }
         }
     }
 
