@@ -4,11 +4,12 @@ import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.regularity.RegularityConfig
 import com.trazo.app.domain.model.regularity.RegularityState
 import com.trazo.app.domain.model.regularity.SegmentClass
-import com.trazo.app.domain.repository.ActiveRunStateSource
 import com.trazo.app.domain.repository.MonotonicClock
 import com.trazo.app.domain.repository.MotionSensorAvailability
 import com.trazo.app.domain.repository.MotionSource
 import com.trazo.app.domain.repository.RegularityMonitor
+import com.trazo.app.domain.repository.RunSessionRepository
+import com.trazo.app.domain.repository.activeRunSnapshot
 import com.trazo.app.domain.usecases.RegularityMeter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +27,7 @@ import kotlinx.coroutines.launch
  */
 class SensorRegularityMonitor(
     private val motionSource: MotionSource,
-    private val activeRunStateSource: ActiveRunStateSource,
+    private val runSessionRepository: RunSessionRepository,
     availability: MotionSensorAvailability,
     private val clock: MonotonicClock,
     scope: CoroutineScope,
@@ -40,7 +41,7 @@ class SensorRegularityMonitor(
 
     init {
         scope.launch {
-            activeRunStateSource.activeRun.distinctUntilChanged().collectLatest { snapshot ->
+            runSessionRepository.activeRunSnapshot.distinctUntilChanged().collectLatest { snapshot ->
                 meter.reset()
                 if (snapshot == null) return@collectLatest
                 if (snapshot.runId != lastRunId) {

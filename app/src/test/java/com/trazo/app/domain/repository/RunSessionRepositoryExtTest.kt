@@ -1,21 +1,27 @@
-package com.trazo.app.data.repository
+package com.trazo.app.domain.repository
 
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.InitializedRunSession
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
+import com.trazo.app.domain.model.regularity.ActiveRunSnapshot
+import com.trazo.app.domain.model.stops.StopLocation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.time.Clock
+import kotlin.time.Instant
 
-class RunSessionStatePublisherTest {
+/** Extensiones de [RunSessionRepository] que usan los monitores de paradas y de regularidad. */
+class RunSessionRepositoryExtTest {
     /** Replica los orígenes permitidos acordados con Persona 3 (D1-D3); falla fuera de ellos. */
-    private class FakeRunSessionRepository : com.trazo.app.domain.repository.RunSessionRepository {
+    private class DetectionOriginsRepository : RunSessionRepository {
         val session = MutableStateFlow<RunSession>(RunSession.Idle)
         val calls = mutableListOf<String>()
         override val activeSession: StateFlow<RunSession> = session
@@ -58,27 +64,112 @@ class RunSessionStatePublisherTest {
         override fun getFinishedSummary(id: String): FrozenRunSummary? = error("no se usa")
     }
 
-    private val repository = FakeRunSessionRepository()
-    private val publisher = RunSessionStatePublisher { repository }
+    private val repository = DetectionOriginsRepository()
 
     private fun active(
         state: RunState,
         id: String = "run-1",
+        points: List<RoutePoint> = emptyList(),
     ) = RunSession.ActiveSession(
         id = id,
         goal = RunGoal.FIVE_KILOMETERS,
         state = state,
+        routePoints = points,
         startMonotonicTimestamp = 0L,
-        startedAt = Clock.System.now(),
+        startedAt = Instant.fromEpochMilliseconds(0L),
     )
 
+    private fun point(
+        lat: Double,
+        lon: Double,
+        accuracy: Float = 5f,
+    ) = RoutePoint(lat, lon, accuracy, 2f, 0L)
+
     private fun current() = (repository.session.value as RunSession.ActiveSession).state
+
+    // runningRunId
+
+    @Test
+    fun `sesion inactiva no entrega id`() =
+        runTest {
+            assertNull(repository.runningRunId.first())
+        }
+
+    @Test
+    fun `pausa manual no entrega id`() =
+        runTest {
+            repository.session.value = active(RunState.PAUSED)
+            assertNull(repository.runningRunId.first())
+        }
+
+    @Test
+    fun `activa, detenida y pausa personal entregan el id`() =
+        runTest {
+            listOf(RunState.ACTIVE, RunState.STOPPED, RunState.PERSONAL_PAUSED).forEach { state ->
+                repository.session.value = active(state)
+                assertEquals("run-1", repository.runningRunId.first())
+            }
+        }
+
+    @Test
+    fun `al finalizar el id vuelve a null`() =
+        runTest {
+            repository.session.value = active(RunState.ACTIVE)
+            repository.session.value = RunSession.Idle
+            assertNull(repository.runningRunId.first())
+        }
+
+    // lastKnownStopLocation
+
+    @Test
+    fun `sin sesion la ubicacion es null`() {
+        assertNull(repository.lastKnownStopLocation())
+    }
+
+    @Test
+    fun `sin puntos la ubicacion es null`() {
+        repository.session.value = active(RunState.ACTIVE)
+        assertNull(repository.lastKnownStopLocation())
+    }
+
+    @Test
+    fun `la ubicacion es el ultimo punto de la traza`() {
+        repository.session.value = active(RunState.STOPPED, points = listOf(point(1.0, 2.0), point(-34.6, -58.4, 7f)))
+        assertEquals(StopLocation(-34.6, -58.4, 7f), repository.lastKnownStopLocation())
+    }
+
+    // activeRunSnapshot
+
+    @Test
+    fun `sin sesion no hay recorrido`() =
+        runTest {
+            assertNull(repository.activeRunSnapshot.first())
+        }
+
+    @Test
+    fun `cada estado de la sesion activa se refleja con su id`() =
+        runTest {
+            listOf(RunState.ACTIVE, RunState.PAUSED, RunState.STOPPED, RunState.PERSONAL_PAUSED).forEach { state ->
+                repository.session.value = active(state)
+                assertEquals(ActiveRunSnapshot("run-1", state), repository.activeRunSnapshot.first())
+            }
+        }
+
+    @Test
+    fun `al volver a inactiva deja de haber recorrido`() =
+        runTest {
+            repository.session.value = active(RunState.ACTIVE)
+            repository.session.value = RunSession.Idle
+            assertNull(repository.activeRunSnapshot.first())
+        }
+
+    // publishStopState
 
     @Test
     fun `STOPPED desde ACTIVE llama markStopped`() =
         runTest {
             repository.session.value = active(RunState.ACTIVE)
-            assertTrue(publisher.publish("run-1", RunState.STOPPED).isSuccess)
+            assertTrue(repository.publishStopState("run-1", RunState.STOPPED).isSuccess)
             assertEquals(listOf("markStopped"), repository.calls)
             assertEquals(RunState.STOPPED, current())
         }
@@ -87,7 +178,7 @@ class RunSessionStatePublisherTest {
     fun `ACTIVE desde STOPPED llama markMoving`() =
         runTest {
             repository.session.value = active(RunState.STOPPED)
-            assertTrue(publisher.publish("run-1", RunState.ACTIVE).isSuccess)
+            assertTrue(repository.publishStopState("run-1", RunState.ACTIVE).isSuccess)
             assertEquals(listOf("markMoving"), repository.calls)
             assertEquals(RunState.ACTIVE, current())
         }
@@ -96,7 +187,7 @@ class RunSessionStatePublisherTest {
     fun `ACTIVE desde PERSONAL_PAUSED llama markMoving`() =
         runTest {
             repository.session.value = active(RunState.PERSONAL_PAUSED)
-            assertTrue(publisher.publish("run-1", RunState.ACTIVE).isSuccess)
+            assertTrue(repository.publishStopState("run-1", RunState.ACTIVE).isSuccess)
             assertEquals(listOf("markMoving"), repository.calls)
             assertEquals(RunState.ACTIVE, current())
         }
@@ -105,7 +196,7 @@ class RunSessionStatePublisherTest {
     fun `PERSONAL_PAUSED desde STOPPED llama pausePersonally`() =
         runTest {
             repository.session.value = active(RunState.STOPPED)
-            assertTrue(publisher.publish("run-1", RunState.PERSONAL_PAUSED).isSuccess)
+            assertTrue(repository.publishStopState("run-1", RunState.PERSONAL_PAUSED).isSuccess)
             assertEquals(listOf("pausePersonally"), repository.calls)
             assertEquals(RunState.PERSONAL_PAUSED, current())
         }
@@ -114,9 +205,9 @@ class RunSessionStatePublisherTest {
     fun `no pisa la pausa manual ni llama al repositorio`() =
         runTest {
             repository.session.value = active(RunState.PAUSED)
-            assertTrue(publisher.publish("run-1", RunState.ACTIVE).isFailure)
-            assertTrue(publisher.publish("run-1", RunState.STOPPED).isFailure)
-            assertTrue(publisher.publish("run-1", RunState.PERSONAL_PAUSED).isFailure)
+            assertTrue(repository.publishStopState("run-1", RunState.ACTIVE).isFailure)
+            assertTrue(repository.publishStopState("run-1", RunState.STOPPED).isFailure)
+            assertTrue(repository.publishStopState("run-1", RunState.PERSONAL_PAUSED).isFailure)
             assertTrue(repository.calls.isEmpty())
             assertEquals(RunState.PAUSED, current())
         }
@@ -125,9 +216,9 @@ class RunSessionStatePublisherTest {
     fun `id distinto o sesion inactiva fallan sin llamar`() =
         runTest {
             repository.session.value = active(RunState.ACTIVE, id = "otro")
-            assertTrue(publisher.publish("run-1", RunState.STOPPED).isFailure)
+            assertEquals("El recorrido cambió.", repository.publishStopState("run-1", RunState.STOPPED).exceptionOrNull()?.message)
             repository.session.value = RunSession.Idle
-            assertTrue(publisher.publish("run-1", RunState.STOPPED).isFailure)
+            assertEquals("No hay un recorrido activo.", repository.publishStopState("run-1", RunState.STOPPED).exceptionOrNull()?.message)
             assertTrue(repository.calls.isEmpty())
         }
 
@@ -135,9 +226,12 @@ class RunSessionStatePublisherTest {
     fun `combinaciones no traducibles fallan sin llamar`() =
         runTest {
             repository.session.value = active(RunState.ACTIVE)
-            assertTrue(publisher.publish("run-1", RunState.ACTIVE).isFailure)
-            assertTrue(publisher.publish("run-1", RunState.PERSONAL_PAUSED).isFailure)
-            assertTrue(publisher.publish("run-1", RunState.PAUSED).isFailure)
+            assertTrue(repository.publishStopState("run-1", RunState.ACTIVE).isFailure)
+            assertTrue(repository.publishStopState("run-1", RunState.PERSONAL_PAUSED).isFailure)
+            assertEquals(
+                "Cambio de ACTIVE a PAUSED no soportado.",
+                repository.publishStopState("run-1", RunState.PAUSED).exceptionOrNull()?.message,
+            )
             assertTrue(repository.calls.isEmpty())
         }
 
@@ -147,20 +241,19 @@ class RunSessionStatePublisherTest {
             repository.session.value = active(RunState.STOPPED)
             // El estado leído era STOPPED pero cambia antes de la llamada: el repositorio rechaza.
             val racing =
-                object : com.trazo.app.domain.repository.RunSessionRepository by repository {
+                object : RunSessionRepository by repository {
                     override suspend fun markMoving(): Result<Unit> {
                         repository.session.value = active(RunState.PAUSED)
                         return repository.markMoving()
                     }
                 }
-            val racingPublisher = RunSessionStatePublisher { racing }
 
-            assertTrue(racingPublisher.publish("run-1", RunState.ACTIVE).isFailure)
+            assertTrue(racing.publishStopState("run-1", RunState.ACTIVE).isFailure)
             assertEquals(RunState.PAUSED, current())
 
             // Siguiente ciclo: la sesión vuelve a STOPPED y el reintento sí se aplica.
             repository.session.value = active(RunState.STOPPED)
-            assertTrue(publisher.publish("run-1", RunState.ACTIVE).isSuccess)
+            assertTrue(repository.publishStopState("run-1", RunState.ACTIVE).isSuccess)
             assertEquals(RunState.ACTIVE, current())
         }
 
@@ -168,7 +261,7 @@ class RunSessionStatePublisherTest {
     fun `nunca usa resumeSession`() =
         runTest {
             repository.session.value = active(RunState.PERSONAL_PAUSED)
-            publisher.publish("run-1", RunState.ACTIVE)
+            repository.publishStopState("run-1", RunState.ACTIVE)
             assertTrue("resumeSession" !in repository.calls)
         }
 }

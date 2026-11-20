@@ -3,22 +3,15 @@ package com.trazo.app.data.sensors
 import com.trazo.app.data.repository.SensorRegularityMonitor
 import com.trazo.app.data.repository.SensorStopMonitor
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.model.regularity.ActiveRunSnapshot
 import com.trazo.app.domain.model.stops.MotionSample
 import com.trazo.app.domain.model.stops.StopDetectionConfig
-import com.trazo.app.domain.model.stops.StopLocation
-import com.trazo.app.domain.repository.ActiveRunStateSource
+import com.trazo.app.domain.repository.FakeRunSessionRepository
 import com.trazo.app.domain.repository.MotionSensorAvailability
 import com.trazo.app.domain.repository.MotionSource
-import com.trazo.app.domain.repository.RunStatePublisher
-import com.trazo.app.domain.repository.RunningRunSource
-import com.trazo.app.domain.repository.StopLocationProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
@@ -49,43 +42,24 @@ class SharedMotionSourceLifecycleTest {
         suspend fun emit(sample: MotionSample) = shared.emit(sample)
     }
 
-    /** Un único recorrido que ven ambos consumidores: `null` = sin recorrido; PAUSED = pausa manual. */
-    private class FakeRun :
-        ActiveRunStateSource,
-        RunningRunSource {
-        val snapshot = MutableStateFlow<ActiveRunSnapshot?>(null)
-        override val activeRun: Flow<ActiveRunSnapshot?> = snapshot
-        override val runningRunId: Flow<String?> =
-            snapshot.map { if (it == null || it.state == RunState.PAUSED) null else it.runId }
-    }
-
     private val upstream = CountingUpstream()
-    private val run = FakeRun()
+
+    /** Un único recorrido que ven ambos consumidores; PAUSED = pausa manual. */
+    private val run = FakeRunSessionRepository()
 
     private fun TestScope.startBothConsumers() {
         val shared = SharedMotionSource(upstream, backgroundScope)
         val clock = { testScheduler.currentTime }
         SensorStopMonitor(
             motionSource = shared,
-            runningRunSource = run,
-            locationProvider =
-                object : StopLocationProvider {
-                    override fun lastKnown() = StopLocation(-34.6, -58.4, 5f)
-                },
-            publisher =
-                object : RunStatePublisher {
-                    override suspend fun publish(
-                        runId: String,
-                        state: RunState,
-                    ) = Result.success(Unit)
-                },
+            runSessionRepository = run,
             clock = clock,
             scope = backgroundScope,
             config = StopDetectionConfig(),
         )
         SensorRegularityMonitor(
             motionSource = shared,
-            activeRunStateSource = run,
+            runSessionRepository = run,
             availability = MotionSensorAvailability { true },
             clock = clock,
             scope = backgroundScope,
@@ -107,7 +81,7 @@ class SharedMotionSourceLifecycleTest {
         id: String?,
         state: RunState = RunState.ACTIVE,
     ) {
-        run.snapshot.value = id?.let { ActiveRunSnapshot(it, state) }
+        if (id == null) run.resetToIdle() else run.setActive(id, state)
     }
 
     @Test

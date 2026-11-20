@@ -2,10 +2,13 @@ package com.trazo.app.domain.repository
 
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.InitializedRunSession
+import com.trazo.app.domain.model.map.RoutePoint
+import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.time.Instant
 
 /**
  * Fake en memoria de [RunSessionRepository] para tests JVM.
@@ -30,9 +33,48 @@ class FakeRunSessionRepository : RunSessionRepository {
         summaries[summary.id] = summary
     }
 
+    /** Estados que dejaron `markStopped`, `markMoving` y `pausePersonally` cuando tuvieron éxito, en orden. */
+    val appliedStates = mutableListOf<RunState>()
+
+    /** Cuántas de las próximas llamadas a esas tres transiciones se rechazan con `Result.failure`. */
+    var failNextTransitions = 0
+
     fun setSession(session: RunSession) {
         sessionStateFlow.value = session
         inProgressStateFlow.value = session is RunSession.ActiveSession
+    }
+
+    /** Pone una sesión activa con [id] y [state]; [routePoints] es la traza (el último punto es la ubicación). */
+    fun setActive(
+        id: String,
+        state: RunState = RunState.ACTIVE,
+        routePoints: List<RoutePoint> = emptyList(),
+    ) {
+        setSession(
+            RunSession.ActiveSession(
+                id = id,
+                goal = RunGoal.FIVE_KILOMETERS,
+                state = state,
+                routePoints = routePoints,
+                startMonotonicTimestamp = 0L,
+                startedAt = Instant.fromEpochMilliseconds(0L),
+            ),
+        )
+    }
+
+    /** Aplica una transición de detección, salvo que toque rechazarla; registra el estado si tuvo éxito. */
+    private fun detectionTransition(change: (RunSession.ActiveSession) -> Result<RunState>): Result<Unit> {
+        if (failNextTransitions > 0) {
+            failNextTransitions--
+            return Result.failure(IllegalStateException("Rechazo simulado"))
+        }
+        val current =
+            sessionStateFlow.value as? RunSession.ActiveSession
+                ?: return Result.failure(IllegalStateException("No active run"))
+        return change(current).map { newState ->
+            sessionStateFlow.value = current.copy(state = newState)
+            appliedStates += newState
+        }
     }
 
     override fun attachActiveSession(session: InitializedRunSession) {
@@ -56,32 +98,18 @@ class FakeRunSessionRepository : RunSessionRepository {
         return Result.success(Unit)
     }
 
-    override suspend fun pausePersonally(): Result<Unit> {
-        val current =
-            sessionStateFlow.value as? RunSession.ActiveSession
-                ?: return Result.failure(IllegalStateException("No active run"))
-        sessionStateFlow.value = current.copy(state = RunState.PERSONAL_PAUSED)
-        return Result.success(Unit)
-    }
+    override suspend fun pausePersonally(): Result<Unit> = detectionTransition { Result.success(RunState.PERSONAL_PAUSED) }
 
-    override suspend fun markStopped(): Result<Unit> {
-        val current =
-            sessionStateFlow.value as? RunSession.ActiveSession
-                ?: return Result.failure(IllegalStateException("No active run"))
-        sessionStateFlow.value = current.copy(state = RunState.STOPPED)
-        return Result.success(Unit)
-    }
+    override suspend fun markStopped(): Result<Unit> = detectionTransition { Result.success(RunState.STOPPED) }
 
-    override suspend fun markMoving(): Result<Unit> {
-        val current =
-            sessionStateFlow.value as? RunSession.ActiveSession
-                ?: return Result.failure(IllegalStateException("No active run"))
-        if (current.state != RunState.STOPPED) {
-            return Result.failure(IllegalStateException("Not stopped"))
+    override suspend fun markMoving(): Result<Unit> =
+        detectionTransition { current ->
+            if (current.state != RunState.STOPPED) {
+                Result.failure(IllegalStateException("Not stopped"))
+            } else {
+                Result.success(RunState.ACTIVE)
+            }
         }
-        sessionStateFlow.value = current.copy(state = RunState.ACTIVE)
-        return Result.success(Unit)
-    }
 
     override suspend fun resumeSession(): Result<Unit> {
         val current =

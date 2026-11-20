@@ -8,10 +8,11 @@ import com.trazo.app.domain.model.stops.StopKind
 import com.trazo.app.domain.model.stops.StopPhase
 import com.trazo.app.domain.repository.MonotonicClock
 import com.trazo.app.domain.repository.MotionSource
-import com.trazo.app.domain.repository.RunStatePublisher
-import com.trazo.app.domain.repository.RunningRunSource
-import com.trazo.app.domain.repository.StopLocationProvider
+import com.trazo.app.domain.repository.RunSessionRepository
 import com.trazo.app.domain.repository.StopMonitor
+import com.trazo.app.domain.repository.lastKnownStopLocation
+import com.trazo.app.domain.repository.publishStopState
+import com.trazo.app.domain.repository.runningRunId
 import com.trazo.app.domain.usecases.Observation
 import com.trazo.app.domain.usecases.StillnessEstimator
 import com.trazo.app.domain.usecases.StopDetector
@@ -39,9 +40,7 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class SensorStopMonitor(
     private val motionSource: MotionSource,
-    private val runningRunSource: RunningRunSource,
-    private val locationProvider: StopLocationProvider,
-    private val publisher: RunStatePublisher,
+    private val runSessionRepository: RunSessionRepository,
     private val clock: MonotonicClock,
     scope: CoroutineScope,
     private val config: StopDetectionConfig = StopDetectionConfig(),
@@ -63,7 +62,7 @@ class SensorStopMonitor(
 
     init {
         scope.launch {
-            runningRunSource.runningRunId.distinctUntilChanged().collectLatest { runId ->
+            runSessionRepository.runningRunId.distinctUntilChanged().collectLatest { runId ->
                 if (runId == null) {
                     applyStep { detector.onRunStopped(it) }
                 } else {
@@ -110,10 +109,10 @@ class SensorStopMonitor(
                 while (isActive) {
                     delay(config.tickIntervalMillis)
                     observe(runId, reading.get())
-                    // Si el puerto rechaza, no se registra como publicado y se reintenta en el
+                    // Si el repositorio rechaza, no se registra como publicado y se reintenta en el
                     // siguiente tick mientras la fase siga requiriendo ese estado.
                     val desired = _state.value.phase.toRunState()
-                    if (desired != lastPublished && publisher.publish(runId, desired).isSuccess) {
+                    if (desired != lastPublished && runSessionRepository.publishStopState(runId, desired).isSuccess) {
                         lastPublished = desired
                     }
                 }
@@ -128,7 +127,7 @@ class SensorStopMonitor(
         val now = clock.nowMillis()
         // Sin muestras recientes no hay evidencia de quietud: se trata como «en movimiento».
         val isStill = reading != null && reading.isStill && now - reading.atMillis <= config.sampleStaleMillis
-        val observation = Observation(runId, now, isStill, locationProvider.lastKnown())
+        val observation = Observation(runId, now, isStill, runSessionRepository.lastKnownStopLocation())
         applyStep { detector.advance(it, observation) }
     }
 
