@@ -8,7 +8,6 @@ import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.repository.FakeRunSessionRepository
 import com.trazo.app.domain.repository.LocationClient
-import com.trazo.app.domain.services.GpsPointFilterPolicy
 import com.trazo.app.domain.usecases.AwaitPreciseLocationUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,7 +58,7 @@ class StartRunViewModelTest {
             StartRunViewModel(
                 runSessionRepository = repository,
                 locationStatusReader = { locationStatus },
-                awaitPreciseLocation = AwaitPreciseLocationUseCase(locationClient, GpsPointFilterPolicy()),
+                awaitPreciseLocation = AwaitPreciseLocationUseCase(locationClient),
                 monotonicClock = { monotonicNow },
                 clock =
                     object : Clock {

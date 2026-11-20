@@ -5,10 +5,10 @@ import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunSession
+import com.trazo.app.domain.model.map.isAccurate
 import com.trazo.app.domain.repository.LocationClient
 import com.trazo.app.domain.repository.MonotonicClock
 import com.trazo.app.domain.repository.RunSessionRepository
-import com.trazo.app.domain.services.GpsPointFilterPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -36,7 +36,6 @@ class RunSessionRepositoryImpl
     @Inject
     constructor(
         private val locationClient: LocationClient,
-        private val gpsPointFilterPolicy: GpsPointFilterPolicy,
         private val clock: MonotonicClock,
         @ApplicationScope private val applicationScope: CoroutineScope,
     ) : RunSessionRepository {
@@ -146,12 +145,7 @@ class RunSessionRepositoryImpl
                         delay(TIMER_INTERVAL_MILLIS.milliseconds)
                         updateActive { session ->
                             val now = clock.nowMillis()
-                            val signalLost =
-                                gpsPointFilterPolicy.isSignalLost(
-                                    lastValidLocationMonotonicTimestamp = session.signalReferenceAt(now),
-                                    currentMonotonicTimestamp = now,
-                                )
-                            session.tick(now, signalLost)
+                            session.tick(now, session.isSignalLostAt(now))
                         }
                     }
                 }
@@ -169,7 +163,7 @@ class RunSessionRepositoryImpl
             }
 
         private suspend fun processLocation(point: RoutePoint) {
-            if (!gpsPointFilterPolicy.isPointAccurate(point.accuracyMeters)) return
+            if (!point.isAccurate()) return
 
             updateActive { it.addPoint(point, clock.nowMillis()) }
         }
