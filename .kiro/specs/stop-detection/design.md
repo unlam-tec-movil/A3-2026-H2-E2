@@ -1,5 +1,28 @@
 # Documento de diseño · stop-detection (HU-05.1 · Frenadas y pausas personales)
 
+> **Revisión 2026-11-20 · convención de la cátedra (PR #114 y `refactor/convencion-catedra`).**
+> Esta nota manda sobre lo que se contradiga más abajo. Clases renombradas, movidas o eliminadas y
+> su reemplazo:
+>
+> - `RegularityRepository` / `RegularityRepositoryImpl` → `RegularityMonitor`, clase concreta en
+>   `domain/services/`.
+> - `StopDetectionRepository` / `StopDetectionRepositoryImpl` / `SensorStopMonitor` (data) →
+>   `StopMonitor` (interfaz) y `SensorStopMonitor` (implementación), ambos en `domain/services/`.
+>   Las paradas cerradas salen por `StopMonitor.closedStops` y las guarda `RecordStopsUseCase`.
+> - Adaptadores eliminados: `RunSessionRunningRunSource`, `RunSessionStatePublisher`,
+>   `RunSessionStopLocationProvider` y `RunSessionActiveRunStateSource`, con sus interfaces
+>   `RunningRunSource`, `RunStatePublisher`, `StopLocationProvider` y `ActiveRunStateSource`. Su
+>   lógica (incluidas las traducciones D1-D3 de `publishStopState`) vive dentro de los monitores.
+> - `GpsPointFilterPolicy` → reglas del modelo en `domain/model/map/GpsSignalRules.kt`
+>   (`RoutePoint.isAccurate()`, `GpsSignalRules.isSignalLost`, `ActiveSession.isSignalLostAt`).
+> - Interfaces de `domain/repository` → `data`, junto a su implementación: `RunSessionRepository` y
+>   `BrakeRepository` en `data/repository/`, `MotionSource` y `MotionSensorAvailability` en
+>   `data/sensors/`, `LocationClient` y `LocationStatusReader` en `data/location/`,
+>   `MonotonicClock` en `data/clock/`. El paquete `domain/repository` ya no existe.
+> - Nuevo `LocationRepository` (`data/repository/`): la UI y los casos de uso leen ubicación,
+>   calidad de señal y estado del permiso por ahí, no por `LocationClient`.
+> - Los monitores se proveen desde `di/MonitorModule.kt` (`@Singleton`, `@ApplicationScope`).
+
 > **Revisión 2026-11-19 · «Guardar una parada» (simplificación del dominio).** Esta sección manda
 > sobre lo que se contradiga más abajo:
 >
