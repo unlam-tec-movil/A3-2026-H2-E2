@@ -1,22 +1,23 @@
-package com.trazo.app.data.repository
+package com.trazo.app.domain.services
 
+import com.trazo.app.data.clock.MonotonicClock
+import com.trazo.app.data.repository.RunSessionRepository
+import com.trazo.app.data.sensors.MotionSensorAvailability
+import com.trazo.app.data.sensors.MotionSource
+import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
+import com.trazo.app.domain.model.regularity.ActiveRunSnapshot
 import com.trazo.app.domain.model.regularity.RegularityConfig
 import com.trazo.app.domain.model.regularity.RegularityState
 import com.trazo.app.domain.model.regularity.SegmentClass
-import com.trazo.app.domain.repository.MonotonicClock
-import com.trazo.app.domain.repository.MotionSensorAvailability
-import com.trazo.app.domain.repository.MotionSource
-import com.trazo.app.domain.repository.RegularityMonitor
-import com.trazo.app.domain.repository.RunSessionRepository
-import com.trazo.app.domain.repository.activeRunSnapshot
-import com.trazo.app.domain.services.RegularityMeter
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -25,17 +26,17 @@ import kotlinx.coroutines.launch
  * el recorrido en [RunState.ACTIVE]; cualquier otro estado descarta el tramo abierto y conserva los
  * cerrados. El valor se conserva al terminar el recorrido, hasta que empiece otro.
  */
-class SensorRegularityMonitor(
+class RegularityMonitor(
     private val motionSource: MotionSource,
     private val runSessionRepository: RunSessionRepository,
     availability: MotionSensorAvailability,
     private val clock: MonotonicClock,
     scope: CoroutineScope,
     config: RegularityConfig = RegularityConfig(),
-) : RegularityMonitor {
+) {
     private val meter = RegularityMeter(config)
     private val _state = MutableStateFlow(RegularityState(sensorAvailable = availability.isAvailable()))
-    override val state: StateFlow<RegularityState> = _state.asStateFlow()
+    val state: StateFlow<RegularityState> = _state.asStateFlow()
 
     private var lastRunId: String? = null
 
@@ -66,3 +67,13 @@ class SensorRegularityMonitor(
         }
     }
 }
+
+/** Recorrido en curso con su id y estado; `null` si la sesión está inactiva. Solo lee. */
+internal val RunSessionRepository.activeRunSnapshot: Flow<ActiveRunSnapshot?>
+    get() =
+        activeSession.map { session ->
+            when (session) {
+                is RunSession.ActiveSession -> ActiveRunSnapshot(session.id, session.state)
+                RunSession.Idle -> null
+            }
+        }

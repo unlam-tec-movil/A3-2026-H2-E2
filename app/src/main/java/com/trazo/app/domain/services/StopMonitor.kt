@@ -1,4 +1,4 @@
-package com.trazo.app.domain.repository
+package com.trazo.app.domain.services
 
 import com.trazo.app.domain.model.stops.ClosedStop
 import com.trazo.app.domain.model.stops.StopDetectionState
@@ -6,7 +6,11 @@ import com.trazo.app.domain.model.stops.StopKind
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
-/** Vigila el sensor durante el recorrido y expone en qué fase de detención está el corredor. */
+/**
+ * Vigila el sensor durante el recorrido y expone en qué fase de detención está el corredor. Es
+ * interfaz para que los consumidores (ViewModel, `RecordStopsUseCase`) se prueben con un fake; la
+ * implementación es [SensorStopMonitor].
+ */
 interface StopMonitor {
     val state: StateFlow<StopDetectionState>
 

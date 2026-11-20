@@ -1,16 +1,13 @@
 package com.trazo.app.data.di
 
 import android.os.SystemClock
-import com.trazo.app.data.repository.SensorRegularityMonitor
+import com.trazo.app.data.clock.MonotonicClock
 import com.trazo.app.data.sensors.AccelerometerMotionSource
 import com.trazo.app.data.sensors.AndroidMotionSensorAvailability
+import com.trazo.app.data.sensors.MotionSensorAvailability
+import com.trazo.app.data.sensors.MotionSource
 import com.trazo.app.data.sensors.SharedMotionSource
 import com.trazo.app.di.ApplicationScope
-import com.trazo.app.domain.repository.MonotonicClock
-import com.trazo.app.domain.repository.MotionSensorAvailability
-import com.trazo.app.domain.repository.MotionSource
-import com.trazo.app.domain.repository.RegularityMonitor
-import com.trazo.app.domain.repository.RunSessionRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -41,15 +38,5 @@ abstract class MotionSensorModule {
         @Provides
         @Singleton
         fun provideMonotonicClock(): MonotonicClock = MonotonicClock { SystemClock.elapsedRealtime() }
-
-        @Provides
-        @Singleton
-        fun provideRegularityMonitor(
-            motionSource: MotionSource,
-            runSessionRepository: RunSessionRepository,
-            availability: MotionSensorAvailability,
-            clock: MonotonicClock,
-            @ApplicationScope scope: CoroutineScope,
-        ): RegularityMonitor = SensorRegularityMonitor(motionSource, runSessionRepository, availability, clock, scope)
     }
 }

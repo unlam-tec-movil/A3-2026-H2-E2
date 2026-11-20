@@ -90,6 +90,9 @@ sealed interface RunSession {
         /** Instante desde el que se mide la pérdida de señal: último punto válido o última reanudación. */
         fun signalReferenceAt(nowMillis: Long): Long = lastValidLocationTimestamp ?: resumedAtMonotonicTimestamp ?: nowMillis
 
+        /** Si en [nowMillis] la señal ya se considera perdida, según [GpsSignalRules]. */
+        fun isSignalLostAt(nowMillis: Long): Boolean = GpsSignalRules.isSignalLost(signalReferenceAt(nowMillis), nowMillis)
+
         /** Avance del reloj: actualiza tiempo y velocidad promedio, y marca sin señal si se perdió. */
         fun tick(
             nowMillis: Long,

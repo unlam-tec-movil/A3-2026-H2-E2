@@ -1,7 +1,6 @@
 package com.trazo.app.data.repository
 
 import com.trazo.app.domain.model.stops.BrakeEvent
-import com.trazo.app.domain.repository.BrakeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

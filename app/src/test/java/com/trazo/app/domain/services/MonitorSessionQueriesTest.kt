@@ -1,5 +1,6 @@
-package com.trazo.app.domain.repository
+package com.trazo.app.domain.services
 
+import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
@@ -18,8 +19,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Instant
 
-/** Extensiones de [RunSessionRepository] que usan los monitores de paradas y de regularidad. */
-class RunSessionRepositoryExtTest {
+/**
+ * Consultas y traducciones sobre [RunSessionRepository] que usan los monitores: `runningRunId`,
+ * `lastKnownStopLocation` y `publishStopState` ([SensorStopMonitor]) y `activeRunSnapshot`
+ * ([RegularityMonitor]).
+ */
+class MonitorSessionQueriesTest {
     /** Replica los orígenes permitidos acordados con Persona 3 (D1-D3); falla fuera de ellos. */
     private class DetectionOriginsRepository : RunSessionRepository {
         val session = MutableStateFlow<RunSession>(RunSession.Idle)

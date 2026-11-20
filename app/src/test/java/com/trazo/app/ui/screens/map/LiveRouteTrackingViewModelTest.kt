@@ -1,21 +1,17 @@
 package com.trazo.app.ui.screens.map
 
+import com.trazo.app.data.repository.FakeLocationRepository
+import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.map.FrozenRunSummary
-import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
-import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunMetrics
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.repository.LocationClient
-import com.trazo.app.domain.repository.RunSessionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -35,7 +31,7 @@ import kotlin.time.Clock
 class LiveRouteTrackingViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var fakeRepository: FakeRunSessionRepository
-    private lateinit var fakeLocationClient: FakeLocationClient
+    private lateinit var fakeLocationRepository: FakeLocationRepository
     private lateinit var viewModel: LiveRouteTrackingViewModel
 
     @Before
@@ -43,12 +39,12 @@ class LiveRouteTrackingViewModelTest {
         Dispatchers.setMain(testDispatcher)
 
         fakeRepository = FakeRunSessionRepository()
-        fakeLocationClient = FakeLocationClient()
+        fakeLocationRepository = FakeLocationRepository()
 
         viewModel =
             LiveRouteTrackingViewModel(
                 runSessionRepository = fakeRepository,
-                locationClient = fakeLocationClient,
+                locationRepository = fakeLocationRepository,
             )
     }
 
@@ -323,11 +319,5 @@ class LiveRouteTrackingViewModelTest {
         }
 
         override fun getFinishedSummary(id: String): FrozenRunSummary? = summaries[id]
-    }
-
-    private class FakeLocationClient : LocationClient {
-        override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> = emptyFlow()
-
-        override fun getSignalQualityUpdates(): Flow<GpsQuality> = emptyFlow()
     }
 }

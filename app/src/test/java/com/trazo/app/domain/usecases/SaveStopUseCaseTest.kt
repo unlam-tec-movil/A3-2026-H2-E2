@@ -1,9 +1,9 @@
 package com.trazo.app.domain.usecases
 
+import com.trazo.app.data.repository.BrakeRepository
 import com.trazo.app.domain.model.stops.BrakeEvent
 import com.trazo.app.domain.model.stops.ClosedStop
 import com.trazo.app.domain.model.stops.StopKind
-import com.trazo.app.domain.repository.BrakeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.junit.Assert.assertEquals

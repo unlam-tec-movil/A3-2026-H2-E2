@@ -2,7 +2,6 @@ package com.trazo.app.data.location
 
 import android.content.Context
 import com.trazo.app.domain.model.LocationStatus
-import com.trazo.app.domain.repository.LocationStatusReader
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 

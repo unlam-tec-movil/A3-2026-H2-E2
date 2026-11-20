@@ -1,17 +1,15 @@
 package com.trazo.app.ui.screens.map
 
-import com.trazo.app.domain.model.map.GpsQuality
+import com.trazo.app.data.repository.FakeLocationRepository
+import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.repository.FakeRunSessionRepository
-import com.trazo.app.domain.repository.LocationClient
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -34,12 +32,11 @@ class LiveRouteTrackingViewModelFlowsTest {
     private var locationPoints: List<RoutePoint> = emptyList()
     private var signalFailure: Throwable? = null
 
-    private val locationClient =
-        object : LocationClient {
-            override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> = flowOf(*locationPoints.toTypedArray())
-
-            override fun getSignalQualityUpdates(): Flow<GpsQuality> = flow { signalFailure?.let { throw it } }
-        }
+    private val locationRepository =
+        FakeLocationRepository(
+            locationUpdates = { flowOf(*locationPoints.toTypedArray()) },
+            signalQualityUpdates = { flow { signalFailure?.let { throw it } } },
+        )
 
     @Before
     fun setUp() {
@@ -54,7 +51,7 @@ class LiveRouteTrackingViewModelFlowsTest {
     private fun createViewModel() =
         LiveRouteTrackingViewModel(
             runSessionRepository = repository,
-            locationClient = locationClient,
+            locationRepository = locationRepository,
         )
 
     private fun session(state: RunState) =

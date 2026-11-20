@@ -16,7 +16,6 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.RoutePoint
-import com.trazo.app.domain.repository.LocationClient
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import kotlinx.coroutines.channels.awaitClose

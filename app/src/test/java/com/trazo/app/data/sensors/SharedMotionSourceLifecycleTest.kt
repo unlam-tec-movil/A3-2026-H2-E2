@@ -1,13 +1,11 @@
 package com.trazo.app.data.sensors
 
-import com.trazo.app.data.repository.SensorRegularityMonitor
-import com.trazo.app.data.repository.SensorStopMonitor
+import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.stops.MotionSample
 import com.trazo.app.domain.model.stops.StopDetectionConfig
-import com.trazo.app.domain.repository.FakeRunSessionRepository
-import com.trazo.app.domain.repository.MotionSensorAvailability
-import com.trazo.app.domain.repository.MotionSource
+import com.trazo.app.domain.services.RegularityMonitor
+import com.trazo.app.domain.services.SensorStopMonitor
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -57,7 +55,7 @@ class SharedMotionSourceLifecycleTest {
             scope = backgroundScope,
             config = StopDetectionConfig(),
         )
-        SensorRegularityMonitor(
+        RegularityMonitor(
             motionSource = shared,
             runSessionRepository = run,
             availability = MotionSensorAvailability { true },

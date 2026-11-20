@@ -1,6 +1,6 @@
 package com.trazo.app.domain.usecases
 
-import com.trazo.app.domain.repository.StopMonitor
+import com.trazo.app.domain.services.StopMonitor
 import javax.inject.Inject
 
 /**

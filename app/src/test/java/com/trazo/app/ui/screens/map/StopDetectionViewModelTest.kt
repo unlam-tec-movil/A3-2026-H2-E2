@@ -6,7 +6,7 @@ import com.trazo.app.domain.model.stops.QueryStatus
 import com.trazo.app.domain.model.stops.StopDetectionState
 import com.trazo.app.domain.model.stops.StopKind
 import com.trazo.app.domain.model.stops.StopPhase
-import com.trazo.app.domain.repository.StopMonitor
+import com.trazo.app.domain.services.StopMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow

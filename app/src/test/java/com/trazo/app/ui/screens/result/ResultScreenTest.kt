@@ -6,10 +6,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.trazo.app.R
+import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunMetrics
-import com.trazo.app.domain.repository.FakeRunSessionRepository
 import com.trazo.app.ui.theme.TrazoTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule

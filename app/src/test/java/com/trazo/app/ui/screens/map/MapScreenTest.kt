@@ -10,16 +10,12 @@ import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.trazo.app.R
-import com.trazo.app.domain.model.map.GpsQuality
-import com.trazo.app.domain.model.map.RoutePoint
+import com.trazo.app.data.repository.FakeLocationRepository
+import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.repository.FakeRunSessionRepository
-import com.trazo.app.domain.repository.LocationClient
 import com.trazo.app.ui.theme.TrazoTheme
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -36,17 +32,12 @@ class MapScreenTest {
     private val repository = FakeRunSessionRepository()
     private var startRunClicks = 0
 
-    private val silentLocationClient =
-        object : LocationClient {
-            override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> = emptyFlow()
-
-            override fun getSignalQualityUpdates(): Flow<GpsQuality> = emptyFlow()
-        }
+    private val silentLocationRepository = FakeLocationRepository()
 
     private fun createViewModel() =
         LiveRouteTrackingViewModel(
             runSessionRepository = repository,
-            locationClient = silentLocationClient,
+            locationRepository = silentLocationRepository,
         )
 
     private fun activeSession() =
