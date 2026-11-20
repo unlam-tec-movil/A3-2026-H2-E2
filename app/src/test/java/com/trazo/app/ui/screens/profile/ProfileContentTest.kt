@@ -1,6 +1,9 @@
 package com.trazo.app.ui.screens.profile
 
 import androidx.annotation.StringRes
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -40,12 +43,16 @@ class ProfileContentTest {
         }
     }
 
+    private fun assertTextShown(text: String) {
+        composeTestRule.onNodeWithText(text).performScrollTo().assertIsDisplayed()
+    }
+
     // 2.1, 2.3
     @Test
     fun initialState_showsEmptyRunsMessage() {
         setContent(ProfileUiState())
 
-        composeTestRule.onNodeWithText(string(R.string.profile_empty_runs)).performScrollTo().assertIsDisplayed()
+        assertTextShown(string(R.string.profile_empty_runs))
     }
 
     // 5.1, 5.2, 5.3
@@ -62,5 +69,56 @@ class ProfileContentTest {
             .performClick()
 
         assertEquals(1, settingsClicks)
+    }
+
+    @Test
+    fun sectionTitles_areShownAsHeadings() {
+        setContent(ProfileUiState())
+
+        listOf(R.string.profile_stats_title, R.string.profile_runs_title).forEach { titleRes ->
+            composeTestRule
+                .onNodeWithText(string(titleRes))
+                .performScrollTo()
+                .assertIsDisplayed()
+                .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+        }
+    }
+
+    @Test
+    fun initialState_showsZeroTotalsWithTheirLabels() {
+        setContent(ProfileUiState())
+
+        assertTextShown(string(R.string.profile_stats_runs_label))
+        assertTextShown(string(R.string.profile_stats_distance_label))
+        assertTextShown(string(R.string.profile_stats_time_label))
+        assertTextShown("0 recorridos")
+        assertTextShown("0 km")
+        assertTextShown("00:00:00")
+    }
+
+    @Test
+    fun oneRun_usesSingular() {
+        setContent(ProfileUiState(totalRuns = 1))
+
+        assertTextShown("1 recorrido")
+    }
+
+    @Test
+    fun withTotals_showsFormattedValues() {
+        setContent(ProfileUiState(totalRuns = 2, totalDistanceKm = 8.5, totalTimeSeconds = 3_300L))
+
+        assertTextShown("2 recorridos")
+        assertTextShown("8,5 km")
+        assertTextShown("00:55:00")
+    }
+
+    // start-run, requisito 9: el «+» solo vive en Actividad.
+    @Test
+    fun doesNotShowStartRunFab() {
+        setContent(ProfileUiState())
+
+        composeTestRule
+            .onNodeWithContentDescription(string(R.string.start_run_fab_description))
+            .assertDoesNotExist()
     }
 }

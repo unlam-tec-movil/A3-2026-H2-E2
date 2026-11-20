@@ -12,5 +12,8 @@ class ProfileViewModelTest {
 
         assertEquals(ProfileUiState(), state)
         assertFalse(state.hasRecentRuns)
+        assertEquals(0, state.totalRuns)
+        assertEquals(0.0, state.totalDistanceKm, 0.0)
+        assertEquals(0L, state.totalTimeSeconds)
     }
 }
