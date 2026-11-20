@@ -1,9 +1,8 @@
 package com.trazo.app.ui.screens.startrun
 
-import com.trazo.app.data.location.LocationClient
+import com.trazo.app.data.repository.FakeLocationRepository
 import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.domain.model.LocationStatus
-import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
@@ -13,7 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -42,12 +40,11 @@ class StartRunViewModelTest {
     private val startedAt = Instant.fromEpochMilliseconds(1_700_000_000_000L)
     private val monotonicNow = 42_000L
 
-    private val locationClient =
-        object : LocationClient {
-            override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> = locationUpdates
-
-            override fun getSignalQualityUpdates(): Flow<GpsQuality> = emptyFlow()
-        }
+    private val locationRepository =
+        FakeLocationRepository(
+            locationUpdates = { locationUpdates },
+            locationStatus = { locationStatus },
+        )
 
     private lateinit var viewModel: StartRunViewModel
 
@@ -57,8 +54,8 @@ class StartRunViewModelTest {
         viewModel =
             StartRunViewModel(
                 runSessionRepository = repository,
-                locationStatusReader = { locationStatus },
-                awaitPreciseLocation = AwaitPreciseLocationUseCase(locationClient),
+                locationRepository = locationRepository,
+                awaitPreciseLocation = AwaitPreciseLocationUseCase(locationRepository),
                 monotonicClock = { monotonicNow },
                 clock =
                     object : Clock {

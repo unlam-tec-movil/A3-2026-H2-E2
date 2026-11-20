@@ -1,6 +1,6 @@
 package com.trazo.app.domain.usecases
 
-import com.trazo.app.data.location.LocationClient
+import com.trazo.app.data.repository.LocationRepository
 import com.trazo.app.domain.model.map.GpsSignalRules
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.isAccurate
@@ -14,10 +14,10 @@ import javax.inject.Inject
 class AwaitPreciseLocationUseCase
     @Inject
     constructor(
-        private val locationClient: LocationClient,
+        private val locationRepository: LocationRepository,
     ) {
         suspend operator fun invoke(): RoutePoint =
-            locationClient
+            locationRepository
                 .getLocationUpdates(INTERVAL_MILLIS)
                 .first { it.isAccurate() }
 

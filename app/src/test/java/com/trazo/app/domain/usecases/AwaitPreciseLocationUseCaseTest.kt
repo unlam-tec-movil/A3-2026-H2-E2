@@ -1,10 +1,8 @@
 package com.trazo.app.domain.usecases
 
-import com.trazo.app.data.location.LocationClient
-import com.trazo.app.domain.model.map.GpsQuality
+import com.trazo.app.data.repository.FakeLocationRepository
 import com.trazo.app.domain.model.map.RoutePoint
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -22,12 +20,7 @@ class AwaitPreciseLocationUseCaseTest {
             monotonicTimestampMillis = 0L,
         )
 
-    private fun clientOf(updates: Flow<RoutePoint>) =
-        object : LocationClient {
-            override fun getLocationUpdates(intervalMillis: Long): Flow<RoutePoint> = updates
-
-            override fun getSignalQualityUpdates(): Flow<GpsQuality> = emptyFlow()
-        }
+    private fun clientOf(updates: Flow<RoutePoint>) = FakeLocationRepository(locationUpdates = { updates })
 
     // 8.2, 8.3, 10.1
     @Test

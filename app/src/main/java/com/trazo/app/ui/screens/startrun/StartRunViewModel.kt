@@ -3,7 +3,7 @@ package com.trazo.app.ui.screens.startrun
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trazo.app.data.clock.MonotonicClock
-import com.trazo.app.data.location.LocationStatusReader
+import com.trazo.app.data.repository.LocationRepository
 import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.domain.model.map.InitializedRunSession
@@ -64,7 +64,7 @@ class StartRunViewModel
     @Inject
     constructor(
         private val runSessionRepository: RunSessionRepository,
-        private val locationStatusReader: LocationStatusReader,
+        private val locationRepository: LocationRepository,
         private val awaitPreciseLocation: AwaitPreciseLocationUseCase,
         private val monotonicClock: MonotonicClock,
         private val clock: Clock,
@@ -105,7 +105,7 @@ class StartRunViewModel
         /** Oculta la opción y revisa la ubicación antes de abrir el modal. */
         fun onOptionClick() {
             _uiState.update { it.copy(isOptionVisible = false) }
-            val status = locationStatusReader.read()
+            val status = locationRepository.readLocationStatus()
             if (status == LocationStatus.PERMISSION_DENIED) {
                 effects.trySend(StartRunEffect.RequestLocationPermission)
             } else {
@@ -115,7 +115,7 @@ class StartRunViewModel
 
         /** Vuelve a leer la ubicación después del diálogo de permisos del sistema. */
         fun onPermissionResult() {
-            showDialogOrIssue(locationStatusReader.read())
+            showDialogOrIssue(locationRepository.readLocationStatus())
         }
 
         /** Marca una meta. Si ya había otra, queda solo la nueva. */
@@ -171,7 +171,7 @@ class StartRunViewModel
             } catch (
                 @Suppress("TooGenericExceptionCaught") error: Exception,
             ) {
-                val status = locationStatusReader.read()
+                val status = locationRepository.readLocationStatus()
                 val issue = if (status == LocationStatus.READY) LocationStatus.DEVICE_LOCATION_OFF else status
                 _uiState.update { it.copy(waitingGoal = null, locationIssue = issue) }
             }
