@@ -27,7 +27,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class RegularityRepositoryImplTest {
+class SensorRegularityMonitorTest {
     private class FakeMotionSource : MotionSource {
         private val shared = MutableSharedFlow<MotionSample>()
         var activeCollectors = 0
@@ -53,7 +53,7 @@ class RegularityRepositoryImplTest {
     private fun TestScope.repository(
         available: Boolean = true,
         source: MotionSource = motion,
-    ) = RegularityRepositoryImpl(
+    ) = SensorRegularityMonitor(
         motionSource = source,
         activeRunStateSource = runs,
         availability = MotionSensorAvailability { available },

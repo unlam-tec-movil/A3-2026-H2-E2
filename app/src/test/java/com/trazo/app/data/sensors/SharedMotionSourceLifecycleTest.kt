@@ -1,6 +1,6 @@
 package com.trazo.app.data.sensors
 
-import com.trazo.app.data.repository.RegularityRepositoryImpl
+import com.trazo.app.data.repository.SensorRegularityMonitor
 import com.trazo.app.data.repository.SensorStopMonitor
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.regularity.ActiveRunSnapshot
@@ -83,7 +83,7 @@ class SharedMotionSourceLifecycleTest {
             scope = backgroundScope,
             config = StopDetectionConfig(),
         )
-        RegularityRepositoryImpl(
+        SensorRegularityMonitor(
             motionSource = shared,
             activeRunStateSource = run,
             availability = MotionSensorAvailability { true },
