@@ -13,7 +13,6 @@ import com.trazo.app.domain.repository.RunStatePublisher
 import com.trazo.app.domain.repository.RunningRunSource
 import com.trazo.app.domain.repository.StopLocationProvider
 import com.trazo.app.domain.repository.StopMonitor
-import com.trazo.app.domain.usecases.SaveStopUseCase
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -52,8 +51,7 @@ abstract class StopDetectionModule {
             locationProvider: StopLocationProvider,
             publisher: RunStatePublisher,
             clock: MonotonicClock,
-            saveStop: SaveStopUseCase,
             @ApplicationScope scope: CoroutineScope,
-        ): StopMonitor = SensorStopMonitor(motionSource, runningRunSource, locationProvider, publisher, clock, saveStop, scope)
+        ): StopMonitor = SensorStopMonitor(motionSource, runningRunSource, locationProvider, publisher, clock, scope)
     }
 }

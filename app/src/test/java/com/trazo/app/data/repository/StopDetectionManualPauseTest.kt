@@ -9,6 +9,8 @@ import com.trazo.app.domain.repository.MotionSource
 import com.trazo.app.domain.repository.RunStatePublisher
 import com.trazo.app.domain.repository.RunningRunSource
 import com.trazo.app.domain.repository.StopLocationProvider
+import com.trazo.app.domain.repository.StopMonitor
+import com.trazo.app.domain.usecases.RecordStopsUseCase
 import com.trazo.app.domain.usecases.SaveStopUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
@@ -74,11 +77,17 @@ class StopDetectionManualPauseTest {
                 },
             publisher = publisher,
             clock = { testScheduler.currentTime },
-            saveStop = SaveStopUseCase(brakes),
             scope = backgroundScope,
             config = StopDetectionConfig(),
             idGenerator = { "b${nextId++}" },
-        )
+        ).also { recordStops(it) }
+
+    /** Guarda las paradas cerradas como en la app: `RecordStopsUseCase` suscripto desde el inicio. */
+    private fun TestScope.recordStops(monitor: StopMonitor) {
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            RecordStopsUseCase(monitor, SaveStopUseCase(brakes))()
+        }
+    }
 
     /** Muestras quietas (magnitud constante) cada 100 ms virtuales, siempre; el repositorio decide si las lee. */
     private fun TestScope.emitStillSamplesForever() {

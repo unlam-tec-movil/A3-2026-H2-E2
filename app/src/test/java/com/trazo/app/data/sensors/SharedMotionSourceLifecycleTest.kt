@@ -1,6 +1,5 @@
 package com.trazo.app.data.sensors
 
-import com.trazo.app.data.repository.InMemoryBrakeRepository
 import com.trazo.app.data.repository.RegularityRepositoryImpl
 import com.trazo.app.data.repository.SensorStopMonitor
 import com.trazo.app.domain.model.map.RunState
@@ -14,7 +13,6 @@ import com.trazo.app.domain.repository.MotionSource
 import com.trazo.app.domain.repository.RunStatePublisher
 import com.trazo.app.domain.repository.RunningRunSource
 import com.trazo.app.domain.repository.StopLocationProvider
-import com.trazo.app.domain.usecases.SaveStopUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -82,7 +80,6 @@ class SharedMotionSourceLifecycleTest {
                     ) = Result.success(Unit)
                 },
             clock = clock,
-            saveStop = SaveStopUseCase(InMemoryBrakeRepository()),
             scope = backgroundScope,
             config = StopDetectionConfig(),
         )

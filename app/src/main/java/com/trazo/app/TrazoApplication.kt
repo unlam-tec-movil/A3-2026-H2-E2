@@ -2,15 +2,33 @@ package com.trazo.app
 
 import android.app.Application
 import android.net.http.HttpResponseCache
+import com.trazo.app.di.ApplicationScope
+import com.trazo.app.domain.usecases.RecordStopsUseCase
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
+import javax.inject.Inject
 
 @HiltAndroidApp
 class TrazoApplication : Application() {
+    @Inject
+    lateinit var recordStops: RecordStopsUseCase
+
+    @Inject
+    @field:ApplicationScope
+    lateinit var applicationScope: CoroutineScope
+
     override fun onCreate() {
         super.onCreate()
         installHttpCache()
+        startRecordingStops()
+    }
+
+    /** Guarda las paradas que se cierran; arranca antes de cualquier recorrido para no perder ninguna. */
+    private fun startRecordingStops() {
+        applicationScope.launch { recordStops() }
     }
 
     /** Caché HTTP para los tiles del mapa: menos tráfico a CARTO y zonas recientes sin red. */
