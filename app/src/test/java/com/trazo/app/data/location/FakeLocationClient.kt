@@ -35,6 +35,11 @@ class FakeLocationClient : LocationClient {
         locationUpdates.subscriptionCount.first { it > 0 }
     }
 
+    /** Espera a que nadie escuche la ubicación: el repositorio cortó el GPS. */
+    suspend fun awaitNoLocationSubscriber() {
+        locationUpdates.subscriptionCount.first { it == 0 }
+    }
+
     fun sendLocation(point: RoutePoint) {
         locationUpdates.tryEmit(point)
     }

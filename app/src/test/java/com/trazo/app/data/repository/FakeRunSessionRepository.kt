@@ -62,19 +62,27 @@ class FakeRunSessionRepository : RunSessionRepository {
         )
     }
 
+    /**
+     * Aplica una transición con las reglas reales de [RunSession.ActiveSession], para que el fake no
+     * acepte orígenes que el modelo rechaza. Un origen inválido devuelve `Result.failure`.
+     */
+    private fun modelTransition(change: (RunSession.ActiveSession) -> RunSession.ActiveSession): Result<RunState> {
+        val current =
+            sessionStateFlow.value as? RunSession.ActiveSession
+                ?: return Result.failure(IllegalStateException("No active run"))
+        return runCatching { change(current) }.map { next ->
+            sessionStateFlow.value = next
+            next.state
+        }
+    }
+
     /** Aplica una transición de detección, salvo que toque rechazarla; registra el estado si tuvo éxito. */
-    private fun detectionTransition(change: (RunSession.ActiveSession) -> Result<RunState>): Result<Unit> {
+    private fun detectionTransition(change: (RunSession.ActiveSession) -> RunSession.ActiveSession): Result<Unit> {
         if (failNextTransitions > 0) {
             failNextTransitions--
             return Result.failure(IllegalStateException("Rechazo simulado"))
         }
-        val current =
-            sessionStateFlow.value as? RunSession.ActiveSession
-                ?: return Result.failure(IllegalStateException("No active run"))
-        return change(current).map { newState ->
-            sessionStateFlow.value = current.copy(state = newState)
-            appliedStates += newState
-        }
+        return modelTransition(change).map { newState -> appliedStates += newState }
     }
 
     override fun attachActiveSession(session: InitializedRunSession) {
@@ -90,37 +98,15 @@ class FakeRunSessionRepository : RunSessionRepository {
         )
     }
 
-    override suspend fun pauseSession(): Result<Unit> {
-        val current =
-            sessionStateFlow.value as? RunSession.ActiveSession
-                ?: return Result.failure(IllegalStateException("No active run"))
-        sessionStateFlow.value = current.copy(state = RunState.PAUSED)
-        return Result.success(Unit)
-    }
+    override suspend fun pauseSession(): Result<Unit> = modelTransition { it.pause(NOW_MILLIS) }.map { }
 
-    override suspend fun pausePersonally(): Result<Unit> = detectionTransition { Result.success(RunState.PERSONAL_PAUSED) }
+    override suspend fun pausePersonally(): Result<Unit> = detectionTransition { it.pausePersonally(NOW_MILLIS) }
 
-    override suspend fun markStopped(): Result<Unit> = detectionTransition { Result.success(RunState.STOPPED) }
+    override suspend fun markStopped(): Result<Unit> = detectionTransition { it.markStopped(NOW_MILLIS) }
 
-    override suspend fun markMoving(): Result<Unit> =
-        detectionTransition { current ->
-            if (current.state != RunState.STOPPED) {
-                Result.failure(IllegalStateException("Not stopped"))
-            } else {
-                Result.success(RunState.ACTIVE)
-            }
-        }
+    override suspend fun markMoving(): Result<Unit> = detectionTransition { it.markMoving(NOW_MILLIS) }
 
-    override suspend fun resumeSession(): Result<Unit> {
-        val current =
-            sessionStateFlow.value as? RunSession.ActiveSession
-                ?: return Result.failure(IllegalStateException("No active run"))
-        if (current.state != RunState.PAUSED && current.state != RunState.PERSONAL_PAUSED) {
-            return Result.failure(IllegalStateException("Cannot manually resume"))
-        }
-        sessionStateFlow.value = current.copy(state = RunState.ACTIVE)
-        return Result.success(Unit)
-    }
+    override suspend fun resumeSession(): Result<Unit> = modelTransition { it.resume(NOW_MILLIS) }.map { }
 
     override suspend fun finishSession(): Result<FrozenRunSummary> {
         val current =
@@ -154,5 +140,10 @@ class FakeRunSessionRepository : RunSessionRepository {
     override fun getFinishedSummary(id: String): FrozenRunSummary? {
         summaryLookups += id
         return summaries[id]
+    }
+
+    private companion object {
+        /** Reloj fijo de las transiciones: el fake no mide tiempo. */
+        const val NOW_MILLIS = 0L
     }
 }

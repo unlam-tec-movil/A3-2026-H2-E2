@@ -30,29 +30,41 @@ sealed interface RunSession {
             return accumulatedElapsedTimeMillis + currentSegment
         }
 
-        /** Pausa manual del corredor. */
+        /**
+         * Si el recorrido sigue registrando: en [RunState.ACTIVE] y en [RunState.STOPPED] (una frenada
+         * es parte del recorrido, stop-detection D3) corren el temporizador y el GPS.
+         */
+        val isTracking: Boolean
+            get() = state == RunState.ACTIVE || state == RunState.STOPPED
+
+        /** Pausa manual del corredor, también en medio de una frenada. */
         fun pause(nowMillis: Long): ActiveSession {
-            check(state == RunState.ACTIVE) { "El recorrido no está en curso." }
+            check(isTracking) { "El recorrido no está en curso." }
             return frozenAt(nowMillis, RunState.PAUSED)
         }
 
-        /** Pausa personal, después de contestar la consulta de detención. */
+        /** Pausa personal, después de contestar la consulta de detención (stop-detection D1). */
         fun pausePersonally(nowMillis: Long): ActiveSession {
-            check(state == RunState.ACTIVE) { "El recorrido no está en curso." }
+            check(isTracking) { "El recorrido no está en curso." }
             return frozenAt(nowMillis, RunState.PERSONAL_PAUSED)
         }
 
-        /** Detención automática (frenada). */
+        /** Detención automática (frenada): el tramo sigue abierto y el tiempo cuenta (stop-detection D3). */
         fun markStopped(nowMillis: Long): ActiveSession {
             check(state == RunState.ACTIVE) { "El recorrido no está activo." }
-            return frozenAt(nowMillis, RunState.STOPPED)
+            return copy(state = RunState.STOPPED, metrics = metricsAt(nowMillis))
         }
 
-        /** Vuelve a moverse después de una detención automática. */
-        fun markMoving(nowMillis: Long): ActiveSession {
-            check(state == RunState.STOPPED) { "La sesión no está detenida automáticamente." }
-            return activeFrom(nowMillis)
-        }
+        /**
+         * Vuelve a moverse después de una frenada o de una pausa personal (stop-detection D2). Desde la
+         * frenada el tramo ya estaba abierto; desde la pausa personal se abre uno nuevo.
+         */
+        fun markMoving(nowMillis: Long): ActiveSession =
+            when (state) {
+                RunState.STOPPED -> copy(state = RunState.ACTIVE, metrics = metricsAt(nowMillis))
+                RunState.PERSONAL_PAUSED -> activeFrom(nowMillis)
+                else -> throw IllegalStateException("La sesión no está detenida ni en pausa personal.")
+            }
 
         /** Reanuda una pausa manual o personal. */
         fun resume(nowMillis: Long): ActiveSession {
@@ -62,12 +74,12 @@ sealed interface RunSession {
             return activeFrom(nowMillis)
         }
 
-        /** Suma un punto preciso a la traza y recalcula las métricas. Fuera de [RunState.ACTIVE] no cambia nada. */
+        /** Suma un punto preciso a la traza y recalcula las métricas. Si no [isTracking], no cambia nada. */
         fun addPoint(
             point: RoutePoint,
             nowMillis: Long,
         ): ActiveSession {
-            if (state != RunState.ACTIVE) return this
+            if (!isTracking) return this
 
             val additionalDistance = routePoints.lastOrNull()?.distanceMetersTo(point) ?: 0.0
             val totalDistance = metrics.distanceMeters + additionalDistance
@@ -98,7 +110,7 @@ sealed interface RunSession {
             nowMillis: Long,
             signalLost: Boolean,
         ): ActiveSession {
-            if (state != RunState.ACTIVE) return this
+            if (!isTracking) return this
 
             return copy(
                 gpsQuality = if (signalLost) GpsQuality.NO_SIGNAL else gpsQuality,
@@ -106,8 +118,8 @@ sealed interface RunSession {
             )
         }
 
-        /** Calidad de señal informada por el GPS. Fuera de [RunState.ACTIVE] no cambia nada. */
-        fun withGpsQuality(quality: GpsQuality): ActiveSession = if (state == RunState.ACTIVE) copy(gpsQuality = quality) else this
+        /** Calidad de señal informada por el GPS. Si no [isTracking], no cambia nada. */
+        fun withGpsQuality(quality: GpsQuality): ActiveSession = if (isTracking) copy(gpsQuality = quality) else this
 
         /** Resumen final del recorrido, con las métricas cerradas en [nowMillis]. */
         fun toFrozenSummary(nowMillis: Long): FrozenRunSummary =
