@@ -1,4 +1,4 @@
-package com.trazo.app.domain.usecases
+package com.trazo.app.domain.services
 
 import com.trazo.app.domain.model.regularity.RegularityConfig
 import com.trazo.app.domain.model.regularity.SegmentClass

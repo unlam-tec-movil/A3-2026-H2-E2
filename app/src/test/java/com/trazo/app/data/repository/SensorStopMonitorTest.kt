@@ -1,5 +1,6 @@
 package com.trazo.app.data.repository
 
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.stops.MotionSample
 import com.trazo.app.domain.model.stops.QueryStatus
@@ -7,20 +8,20 @@ import com.trazo.app.domain.model.stops.StopDetectionConfig
 import com.trazo.app.domain.model.stops.StopKind
 import com.trazo.app.domain.model.stops.StopLocation
 import com.trazo.app.domain.model.stops.StopPhase
+import com.trazo.app.domain.repository.FakeRunSessionRepository
 import com.trazo.app.domain.repository.MotionSource
-import com.trazo.app.domain.repository.RunStatePublisher
-import com.trazo.app.domain.repository.RunningRunSource
-import com.trazo.app.domain.repository.StopLocationProvider
+import com.trazo.app.domain.repository.StopMonitor
+import com.trazo.app.domain.usecases.RecordStopsUseCase
 import com.trazo.app.domain.usecases.SaveStopUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
@@ -46,37 +47,10 @@ class SensorStopMonitorTest {
         suspend fun emit(sample: MotionSample) = shared.emit(sample)
     }
 
-    private class FakeRunningRunSource : RunningRunSource {
-        val id = MutableStateFlow<String?>(null)
-        override val runningRunId: Flow<String?> = id
-    }
-
-    private class FakePublisher : RunStatePublisher {
-        val published = mutableListOf<Pair<String, RunState>>()
-        var failNext = 0
-
-        override suspend fun publish(
-            runId: String,
-            state: RunState,
-        ): Result<Unit> {
-            if (failNext > 0) {
-                failNext--
-                return Result.failure(IllegalStateException("origen no válido"))
-            }
-            published += runId to state
-            return Result.success(Unit)
-        }
-    }
-
     private val location = StopLocation(-34.6, -58.4, 5f)
-    private val locationProvider =
-        object : StopLocationProvider {
-            override fun lastKnown() = location
-        }
     private val config = StopDetectionConfig()
     private val motion = FakeMotionSource()
-    private val run = FakeRunningRunSource()
-    private val publisher = FakePublisher()
+    private val run = FakeRunSessionRepository()
     private val brakes = InMemoryBrakeRepository()
     private var nextId = 0
 
@@ -85,15 +59,19 @@ class SensorStopMonitorTest {
     private fun TestScope.monitor() =
         SensorStopMonitor(
             motionSource = motion,
-            runningRunSource = run,
-            locationProvider = locationProvider,
-            publisher = publisher,
+            runSessionRepository = run,
             clock = { testScheduler.currentTime },
-            saveStop = SaveStopUseCase(brakes),
             scope = backgroundScope,
             config = config,
             idGenerator = { "b${nextId++}" },
-        )
+        ).also { recordStops(it) }
+
+    /** Guarda las paradas cerradas como en la app: `RecordStopsUseCase` suscripto desde el inicio. */
+    private fun TestScope.recordStops(monitor: StopMonitor) {
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            RecordStopsUseCase(monitor, SaveStopUseCase(brakes))()
+        }
+    }
 
     /** Emite muestras quietas (magnitud constante) cada 100 ms virtuales hasta [untilMillis]. */
     private fun TestScope.emitStillSamplesUntil(untilMillis: Long) {
@@ -103,6 +81,11 @@ class SensorStopMonitorTest {
                 delay(100)
             }
         }
+    }
+
+    /** Recorrido activo cuyo último punto de la traza es [location]. */
+    private fun startRun(id: String) {
+        run.setActive(id, routePoints = listOf(RoutePoint(location.latitude, location.longitude, location.accuracyMeters, 0f, 0L)))
     }
 
     private fun TestScope.advance(millis: Long) {
@@ -127,7 +110,7 @@ class SensorStopMonitorTest {
     fun `ocho segundos quieto inicia una frenada con ubicacion sin guardarla todavia`() =
         runTest {
             val monitor = monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(20_000)
 
             advance(10_000)
@@ -142,7 +125,7 @@ class SensorStopMonitorTest {
     fun `mantenerse quieto no genera una segunda frenada`() =
         runTest {
             val monitor = monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(40_000)
 
             advance(19_000)
@@ -155,7 +138,7 @@ class SensorStopMonitorTest {
     fun `retomar sin contestar guarda la frenada`() =
         runTest {
             val monitor = monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(10_000)
             advance(10_000)
 
@@ -171,12 +154,12 @@ class SensorStopMonitorTest {
     fun `al dejar de haber recorrido se deja de leer el sensor y se guarda la frenada abierta`() =
         runTest {
             val monitor = monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(60_000)
             advance(10_000)
             assertEquals(1, motion.activeCollectors)
 
-            run.id.value = null
+            run.resetToIdle()
             advance(100)
 
             assertEquals(0, motion.activeCollectors)
@@ -188,15 +171,15 @@ class SensorStopMonitorTest {
     fun `cada frenada guardada lleva el id de su recorrido`() =
         runTest {
             monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(120_000)
             advance(10_000)
-            run.id.value = null
+            run.resetToIdle()
             advance(100)
 
-            run.id.value = "r2"
+            startRun("r2")
             advance(12_000)
-            run.id.value = null
+            run.resetToIdle()
             advance(100)
 
             assertEquals(listOf("r1", "r2"), saved.map { it.runId })
@@ -206,11 +189,11 @@ class SensorStopMonitorTest {
     fun `pasar a otro recorrido sin pausa guarda la frenada abierta del anterior`() =
         runTest {
             val monitor = monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(60_000)
             advance(10_000)
 
-            run.id.value = "r2"
+            startRun("r2")
             advance(100)
 
             assertEquals(listOf("r1"), saved.map { it.runId })
@@ -221,7 +204,7 @@ class SensorStopMonitorTest {
     fun `un sensor mudo tras quieto no inicia una frenada`() =
         runTest {
             val monitor = monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(2_000)
 
             advance(30_000)
@@ -235,7 +218,7 @@ class SensorStopMonitorTest {
     fun `contestar pausa personal no guarda la frenada ni inicia otra`() =
         runTest {
             val monitor = monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(60_000)
             advance(22_000)
             val pending = (monitor.state.value.phase as StopPhase.Braking)
@@ -244,7 +227,7 @@ class SensorStopMonitorTest {
 
             monitor.answer(StopKind.PERSONAL_PAUSE)
             advance(20_000)
-            run.id.value = null
+            run.resetToIdle()
             advance(100)
 
             assertTrue(saved.isEmpty())
@@ -255,13 +238,13 @@ class SensorStopMonitorTest {
     fun `contestar frenada concurrente con los ticks la guarda una sola vez`() =
         runTest {
             val monitor = monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(60_000)
             advance(22_000)
 
             backgroundScope.launch { monitor.answer(StopKind.BRAKE) }
             advance(5_000)
-            run.id.value = null
+            run.resetToIdle()
             advance(100)
 
             assertEquals(listOf("b0"), saved.map { it.id })
@@ -271,7 +254,7 @@ class SensorStopMonitorTest {
     fun `contestar frenada la guarda en el momento`() =
         runTest {
             val monitor = monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(60_000)
             advance(22_000)
 
@@ -285,19 +268,19 @@ class SensorStopMonitorTest {
     fun `una frenada publica STOPPED una sola vez`() =
         runTest {
             monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(60_000)
 
             advance(15_000)
 
-            assertEquals(listOf("r1" to RunState.STOPPED), publisher.published)
+            assertEquals(listOf(RunState.STOPPED), run.appliedStates)
         }
 
     @Test
     fun `clasificar como pausa personal publica PERSONAL_PAUSED`() =
         runTest {
             val monitor = monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(60_000)
             advance(22_000)
 
@@ -306,7 +289,7 @@ class SensorStopMonitorTest {
 
             assertEquals(
                 listOf(RunState.STOPPED, RunState.PERSONAL_PAUSED),
-                publisher.published.map { it.second },
+                run.appliedStates,
             )
         }
 
@@ -314,17 +297,17 @@ class SensorStopMonitorTest {
     fun `retomar el movimiento publica ACTIVE`() =
         runTest {
             monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(10_000)
             advance(10_000)
-            assertEquals(listOf(RunState.STOPPED), publisher.published.map { it.second })
+            assertEquals(listOf(RunState.STOPPED), run.appliedStates)
 
             // El sensor calla: sin evidencia se trata como movimiento y tras 1,5 s se retoma.
             advance(5_000)
 
             assertEquals(
                 listOf(RunState.STOPPED, RunState.ACTIVE),
-                publisher.published.map { it.second },
+                run.appliedStates,
             )
         }
 
@@ -332,29 +315,29 @@ class SensorStopMonitorTest {
     fun `con pausa manual no se publica nada`() =
         runTest {
             monitor()
-            run.id.value = "r1"
+            startRun("r1")
             emitStillSamplesUntil(60_000)
             advance(10_000)
-            run.id.value = null
+            run.pauseSession()
             advance(100)
-            val before = publisher.published.size
+            val before = run.appliedStates.size
 
             advance(20_000)
 
-            assertEquals(before, publisher.published.size)
-            assertFalse(publisher.published.any { it.second == RunState.PAUSED })
+            assertEquals(before, run.appliedStates.size)
+            assertFalse(run.appliedStates.any { it == RunState.PAUSED })
         }
 
     @Test
     fun `si el puerto rechaza la publicacion se reintenta en el siguiente ciclo`() =
         runTest {
             monitor()
-            publisher.failNext = 2
-            run.id.value = "r1"
+            run.failNextTransitions = 2
+            startRun("r1")
             emitStillSamplesUntil(60_000)
 
             advance(12_000)
 
-            assertEquals(listOf("r1" to RunState.STOPPED), publisher.published)
+            assertEquals(listOf(RunState.STOPPED), run.appliedStates)
         }
 }

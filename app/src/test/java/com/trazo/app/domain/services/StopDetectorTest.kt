@@ -1,4 +1,4 @@
-package com.trazo.app.domain.usecases
+package com.trazo.app.domain.services
 
 import com.trazo.app.domain.model.stops.ClosedStop
 import com.trazo.app.domain.model.stops.QueryStatus

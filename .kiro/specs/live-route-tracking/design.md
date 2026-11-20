@@ -1,5 +1,27 @@
 # Documento de Diseño Técnico: live-route-tracking (HU-04)
 
+> **Revisión 2026-11-20 · refactor de dominio de sesión.** Esta nota manda sobre lo que se
+> contradiga más abajo. Clases eliminadas o renombradas y su reemplazo:
+>
+> - `GetActiveRunSessionUseCase`, `AttachActiveRunSessionUseCase`, `PauseRunUseCase`,
+>   `ResumeRunUseCase`, `FinishRunUseCase` y `GetFinishedRunSummaryUseCase` → eliminados: solo
+>   pasaban la llamada. Los ViewModels usan `RunSessionRepository` directo (`activeSession`,
+>   `attachActiveSession`, `pauseSession`, `resumeSession`, `finishSession`, `getFinishedSummary`).
+> - `RawLocationPoint` → `RoutePoint` (`LocationClient.getLocationUpdates` emite `RoutePoint`).
+> - `StopDetectionRepository` → `StopMonitor` (implementación `SensorStopMonitor`); las paradas
+>   cerradas salen por `StopMonitor.closedStops` y las guarda `RecordStopsUseCase`.
+> - `RegularityRepository` → `RegularityMonitor` (implementación `SensorRegularityMonitor`).
+> - Adaptadores `RunSessionRunningRunSource`, `RunSessionStatePublisher`,
+>   `RunSessionStopLocationProvider` y `RunSessionActiveRunStateSource` (con sus interfaces
+>   `RunningRunSource`, `RunStatePublisher`, `StopLocationProvider` y `ActiveRunStateSource`) →
+>   extensiones de dominio en `RunSessionRepositoryExt.kt`: `runningRunId`, `publishStopState`,
+>   `lastKnownStopLocation()` y `activeRunSnapshot`.
+> - Las reglas de la sesión (transiciones, distancia, tiempo acumulado, objetivo cumplido) pasan
+>   de `RunSessionRepositoryImpl` a `RunSession.ActiveSession`; la distancia es
+>   `RoutePoint.distanceMetersTo`. El repositorio usa `MonotonicClock` en lugar de `SystemClock`.
+> - `GpsPointFilterPolicy` pasa a `domain/services/`. `LocationModule` se unió a
+>   `RunSessionModule`.
+
 ## Overview
 
 Este documento especifica la arquitectura técnica y el diseño detallado para la funcionalidad de **Seguimiento del Recorrido en Vivo** (`HU-04`), correspondiente a Trazo v0.6.

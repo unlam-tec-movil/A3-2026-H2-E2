@@ -1,17 +1,16 @@
 package com.trazo.app.data.di
 
 import android.os.SystemClock
-import com.trazo.app.data.repository.RegularityRepositoryImpl
-import com.trazo.app.data.repository.RunSessionActiveRunStateSource
+import com.trazo.app.data.repository.SensorRegularityMonitor
 import com.trazo.app.data.sensors.AccelerometerMotionSource
 import com.trazo.app.data.sensors.AndroidMotionSensorAvailability
 import com.trazo.app.data.sensors.SharedMotionSource
 import com.trazo.app.di.ApplicationScope
-import com.trazo.app.domain.repository.ActiveRunStateSource
 import com.trazo.app.domain.repository.MonotonicClock
 import com.trazo.app.domain.repository.MotionSensorAvailability
 import com.trazo.app.domain.repository.MotionSource
-import com.trazo.app.domain.repository.RegularityRepository
+import com.trazo.app.domain.repository.RegularityMonitor
+import com.trazo.app.domain.repository.RunSessionRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -31,10 +30,6 @@ abstract class MotionSensorModule {
     @Singleton
     abstract fun bindMotionSensorAvailability(implementation: AndroidMotionSensorAvailability): MotionSensorAvailability
 
-    @Binds
-    @Singleton
-    abstract fun bindActiveRunStateSource(implementation: RunSessionActiveRunStateSource): ActiveRunStateSource
-
     companion object {
         @Provides
         @Singleton
@@ -49,12 +44,12 @@ abstract class MotionSensorModule {
 
         @Provides
         @Singleton
-        fun provideRegularityRepository(
+        fun provideRegularityMonitor(
             motionSource: MotionSource,
-            activeRunStateSource: ActiveRunStateSource,
+            runSessionRepository: RunSessionRepository,
             availability: MotionSensorAvailability,
             clock: MonotonicClock,
             @ApplicationScope scope: CoroutineScope,
-        ): RegularityRepository = RegularityRepositoryImpl(motionSource, activeRunStateSource, availability, clock, scope)
+        ): RegularityMonitor = SensorRegularityMonitor(motionSource, runSessionRepository, availability, clock, scope)
     }
 }

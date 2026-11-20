@@ -8,7 +8,8 @@ import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.usecases.GpsPointFilterPolicy
+import com.trazo.app.domain.repository.MonotonicClock
+import com.trazo.app.domain.services.GpsPointFilterPolicy
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
@@ -46,6 +47,7 @@ class RunSessionRepositoryImplTest {
             RunSessionRepositoryImpl(
                 locationClient = fakeLocationClient,
                 gpsPointFilterPolicy = GpsPointFilterPolicy(),
+                clock = MonotonicClock { SystemClock.elapsedRealtime() },
                 applicationScope = applicationScope,
             )
     }
@@ -66,6 +68,9 @@ class RunSessionRepositoryImplTest {
                 startMonotonicTimestamp = SystemClock.elapsedRealtime(),
                 startedAt = Clock.System.now(),
             )
+        // El colector de señal corre en otro hilo y puede aplicar el valor del GPS antes de leer la
+        // sesión: con el GPS informando señal débil, el resultado es el mismo en cualquier orden.
+        fakeLocationClient.sendSignalQuality(GpsQuality.WEAK_SIGNAL)
 
         repository.attachActiveSession(initializedSession)
 

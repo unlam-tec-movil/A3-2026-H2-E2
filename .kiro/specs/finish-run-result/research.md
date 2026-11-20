@@ -1,5 +1,27 @@
 # Investigación · finish-run-result
 
+> **Revisión 2026-11-20 · refactor de dominio de sesión.** Esta nota manda sobre lo que se
+> contradiga más abajo. Clases eliminadas o renombradas y su reemplazo:
+>
+> - `GetActiveRunSessionUseCase`, `AttachActiveRunSessionUseCase`, `PauseRunUseCase`,
+>   `ResumeRunUseCase`, `FinishRunUseCase` y `GetFinishedRunSummaryUseCase` → eliminados: solo
+>   pasaban la llamada. Los ViewModels usan `RunSessionRepository` directo (`activeSession`,
+>   `attachActiveSession`, `pauseSession`, `resumeSession`, `finishSession`, `getFinishedSummary`).
+> - `RawLocationPoint` → `RoutePoint` (`LocationClient.getLocationUpdates` emite `RoutePoint`).
+> - `StopDetectionRepository` → `StopMonitor` (implementación `SensorStopMonitor`); las paradas
+>   cerradas salen por `StopMonitor.closedStops` y las guarda `RecordStopsUseCase`.
+> - `RegularityRepository` → `RegularityMonitor` (implementación `SensorRegularityMonitor`).
+> - Adaptadores `RunSessionRunningRunSource`, `RunSessionStatePublisher`,
+>   `RunSessionStopLocationProvider` y `RunSessionActiveRunStateSource` (con sus interfaces
+>   `RunningRunSource`, `RunStatePublisher`, `StopLocationProvider` y `ActiveRunStateSource`) →
+>   extensiones de dominio en `RunSessionRepositoryExt.kt`: `runningRunId`, `publishStopState`,
+>   `lastKnownStopLocation()` y `activeRunSnapshot`.
+> - Las reglas de la sesión (transiciones, distancia, tiempo acumulado, objetivo cumplido) pasan
+>   de `RunSessionRepositoryImpl` a `RunSession.ActiveSession`; la distancia es
+>   `RoutePoint.distanceMetersTo`. El repositorio usa `MonotonicClock` en lugar de `SystemClock`.
+> - `GpsPointFilterPolicy` pasa a `domain/services/`. `LocationModule` se unió a
+>   `RunSessionModule`.
+
 > **Nota (2026-11-11):** esta investigación se hizo con los requisitos originales. Dos supuestos
 > cambiaron por las decisiones de la reunión de equipo (ver `team-notes/README.md`) y los
 > requisitos vigentes están en `requirements.md`:

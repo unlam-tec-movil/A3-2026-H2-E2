@@ -1,17 +1,15 @@
 package com.trazo.app.data.repository
 
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.model.regularity.ActiveRunSnapshot
 import com.trazo.app.domain.model.regularity.RegularityConfig
 import com.trazo.app.domain.model.stops.MotionSample
-import com.trazo.app.domain.repository.ActiveRunStateSource
+import com.trazo.app.domain.repository.FakeRunSessionRepository
 import com.trazo.app.domain.repository.MotionSensorAvailability
 import com.trazo.app.domain.repository.MotionSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
@@ -27,7 +25,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class RegularityRepositoryImplTest {
+class SensorRegularityMonitorTest {
     private class FakeMotionSource : MotionSource {
         private val shared = MutableSharedFlow<MotionSample>()
         var activeCollectors = 0
@@ -41,21 +39,16 @@ class RegularityRepositoryImplTest {
         suspend fun emit(sample: MotionSample) = shared.emit(sample)
     }
 
-    private class FakeActiveRunStateSource : ActiveRunStateSource {
-        val run = MutableStateFlow<ActiveRunSnapshot?>(null)
-        override val activeRun: Flow<ActiveRunSnapshot?> = run
-    }
-
     private val motion = FakeMotionSource()
-    private val runs = FakeActiveRunStateSource()
+    private val runs = FakeRunSessionRepository()
     private val config = RegularityConfig()
 
     private fun TestScope.repository(
         available: Boolean = true,
         source: MotionSource = motion,
-    ) = RegularityRepositoryImpl(
+    ) = SensorRegularityMonitor(
         motionSource = source,
-        activeRunStateSource = runs,
+        runSessionRepository = runs,
         availability = MotionSensorAvailability { available },
         clock = { testScheduler.currentTime },
         scope = backgroundScope,
@@ -81,7 +74,7 @@ class RegularityRepositoryImplTest {
         id: String?,
         state: RunState = RunState.ACTIVE,
     ) {
-        runs.run.value = id?.let { ActiveRunSnapshot(it, state) }
+        if (id == null) runs.resetToIdle() else runs.setActive(id, state)
     }
 
     @Test

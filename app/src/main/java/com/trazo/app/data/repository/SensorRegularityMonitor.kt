@@ -4,12 +4,13 @@ import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.regularity.RegularityConfig
 import com.trazo.app.domain.model.regularity.RegularityState
 import com.trazo.app.domain.model.regularity.SegmentClass
-import com.trazo.app.domain.repository.ActiveRunStateSource
 import com.trazo.app.domain.repository.MonotonicClock
 import com.trazo.app.domain.repository.MotionSensorAvailability
 import com.trazo.app.domain.repository.MotionSource
-import com.trazo.app.domain.repository.RegularityRepository
-import com.trazo.app.domain.usecases.RegularityMeter
+import com.trazo.app.domain.repository.RegularityMonitor
+import com.trazo.app.domain.repository.RunSessionRepository
+import com.trazo.app.domain.repository.activeRunSnapshot
+import com.trazo.app.domain.services.RegularityMeter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,14 +25,14 @@ import kotlinx.coroutines.launch
  * el recorrido en [RunState.ACTIVE]; cualquier otro estado descarta el tramo abierto y conserva los
  * cerrados. El valor se conserva al terminar el recorrido, hasta que empiece otro.
  */
-class RegularityRepositoryImpl(
+class SensorRegularityMonitor(
     private val motionSource: MotionSource,
-    private val activeRunStateSource: ActiveRunStateSource,
+    private val runSessionRepository: RunSessionRepository,
     availability: MotionSensorAvailability,
     private val clock: MonotonicClock,
     scope: CoroutineScope,
     config: RegularityConfig = RegularityConfig(),
-) : RegularityRepository {
+) : RegularityMonitor {
     private val meter = RegularityMeter(config)
     private val _state = MutableStateFlow(RegularityState(sensorAvailable = availability.isAvailable()))
     override val state: StateFlow<RegularityState> = _state.asStateFlow()
@@ -40,7 +41,7 @@ class RegularityRepositoryImpl(
 
     init {
         scope.launch {
-            activeRunStateSource.activeRun.distinctUntilChanged().collectLatest { snapshot ->
+            runSessionRepository.activeRunSnapshot.distinctUntilChanged().collectLatest { snapshot ->
                 meter.reset()
                 if (snapshot == null) return@collectLatest
                 if (snapshot.runId != lastRunId) {

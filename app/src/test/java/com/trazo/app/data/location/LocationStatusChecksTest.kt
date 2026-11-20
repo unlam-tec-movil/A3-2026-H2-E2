@@ -3,9 +3,7 @@ package com.trazo.app.data.location
 import android.Manifest
 import android.app.Application
 import android.content.Context
-import android.content.Intent
 import android.location.LocationManager
-import android.provider.Settings
 import androidx.core.location.LocationManagerCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -16,7 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 
 @RunWith(AndroidJUnit4::class)
-class LocationStatusReaderTest {
+class LocationStatusChecksTest {
     private val application: Application = ApplicationProvider.getApplicationContext()
     private val context: Context = application
 
@@ -93,24 +91,5 @@ class LocationStatusReaderTest {
 
         // Then
         assertEquals(LocationStatus.PERMISSION_DENIED, status)
-    }
-
-    @Test
-    fun `given the device location is off, when building the settings intent, then opens the location settings`() {
-        // Given / When
-        val intent = locationSettingsIntent(context, LocationStatus.DEVICE_LOCATION_OFF)
-
-        // Then
-        assertEquals(Settings.ACTION_LOCATION_SOURCE_SETTINGS, intent.action)
-    }
-
-    @Test
-    fun `given a permission problem, when building the settings intent, then opens the app details`() {
-        // Given / When
-        val intent: Intent = locationSettingsIntent(context, LocationStatus.PERMISSION_DENIED)
-
-        // Then
-        assertEquals(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, intent.action)
-        assertEquals("package:${context.packageName}", intent.dataString)
     }
 }

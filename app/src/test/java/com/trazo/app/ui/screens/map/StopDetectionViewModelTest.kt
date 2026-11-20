@@ -1,6 +1,7 @@
 package com.trazo.app.ui.screens.map
 
 import com.trazo.app.domain.model.stops.BrakeEvent
+import com.trazo.app.domain.model.stops.ClosedStop
 import com.trazo.app.domain.model.stops.QueryStatus
 import com.trazo.app.domain.model.stops.StopDetectionState
 import com.trazo.app.domain.model.stops.StopKind
@@ -8,8 +9,10 @@ import com.trazo.app.domain.model.stops.StopPhase
 import com.trazo.app.domain.repository.StopMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -32,6 +35,7 @@ class StopDetectionViewModelTest {
         val flow = MutableStateFlow(StopDetectionState())
         val classifications = mutableListOf<StopKind>()
         override val state: StateFlow<StopDetectionState> = flow
+        override val closedStops: Flow<ClosedStop> = emptyFlow()
 
         override fun answer(kind: StopKind) {
             classifications += kind
