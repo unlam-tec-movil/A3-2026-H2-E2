@@ -1,21 +1,19 @@
 package com.trazo.app.data.repository
 
-import android.os.SystemClock
 import com.trazo.app.di.ApplicationScope
 import com.trazo.app.domain.model.map.FrozenRunSummary
-import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
-import com.trazo.app.domain.model.map.RunMetrics
 import com.trazo.app.domain.model.map.RunSession
-import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.repository.LocationClient
+import com.trazo.app.domain.repository.MonotonicClock
 import com.trazo.app.domain.repository.RunSessionRepository
 import com.trazo.app.domain.usecases.GpsPointFilterPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,29 +25,28 @@ import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.atan2
-import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * Guarda la sesión en curso y maneja el GPS y el reloj mientras está activa. Las reglas (transiciones,
+ * distancia, tiempo, objetivo) son de [RunSession.ActiveSession]; acá solo se aplican con el mutex.
+ */
 @Singleton
 class RunSessionRepositoryImpl
     @Inject
     constructor(
         private val locationClient: LocationClient,
         private val gpsPointFilterPolicy: GpsPointFilterPolicy,
+        private val clock: MonotonicClock,
         @ApplicationScope private val applicationScope: CoroutineScope,
     ) : RunSessionRepository {
         private val mutex = Mutex()
 
         private val _activeSession = MutableStateFlow<RunSession>(RunSession.Idle)
-
-        override val activeSession: StateFlow<RunSession> =
-            _activeSession.asStateFlow()
+        override val activeSession: StateFlow<RunSession> = _activeSession.asStateFlow()
 
         private val _isRunInProgress = MutableStateFlow(false)
-
-        override val isRunInProgress: StateFlow<Boolean> =
-            _isRunInProgress.asStateFlow()
+        override val isRunInProgress: StateFlow<Boolean> = _isRunInProgress.asStateFlow()
 
         private val finishedSummaries = ConcurrentHashMap<String, FrozenRunSummary>()
 
@@ -58,255 +55,32 @@ class RunSessionRepositoryImpl
         private var timerJob: Job? = null
 
         override fun attachActiveSession(session: InitializedRunSession) {
-            if (_activeSession.value is RunSession.ActiveSession) {
-                return
-            }
+            if (_activeSession.value is RunSession.ActiveSession) return
 
             stopJobs()
-
-            val now = SystemClock.elapsedRealtime()
-
-            _activeSession.value =
-                RunSession.ActiveSession(
-                    id = session.id,
-                    goal = session.goal,
-                    state = RunState.ACTIVE,
-                    routePoints = emptyList(),
-                    metrics = RunMetrics(),
-                    startMonotonicTimestamp = session.startMonotonicTimestamp,
-                    startedAt = session.startedAt,
-                    isDemoMode = session.isDemoMode,
-                    lastValidLocationTimestamp = null,
-                    accumulatedElapsedTimeMillis = 0L,
-                    resumedAtMonotonicTimestamp = now,
-                    gpsQuality = GpsQuality.WEAK_SIGNAL,
-                    goalReached = false,
-                )
-
+            _activeSession.value = RunSession.ActiveSession.start(session, clock.nowMillis())
             _isRunInProgress.value = true
-
             startTracking()
         }
 
-        override suspend fun pauseSession(): Result<Unit> =
-            mutex.withLock {
-                try {
-                    val session = requireActiveSession()
+        override suspend fun pauseSession(): Result<Unit> = transition(resumesTracking = false) { it.pause(clock.nowMillis()) }
 
-                    check(session.state == RunState.ACTIVE) {
-                        "El recorrido no está en curso."
-                    }
+        override suspend fun pausePersonally(): Result<Unit> = transition(resumesTracking = false) { it.pausePersonally(clock.nowMillis()) }
 
-                    val now = SystemClock.elapsedRealtime()
-                    val elapsedTime = calculateElapsedTime(session, now)
+        override suspend fun markStopped(): Result<Unit> = transition(resumesTracking = false) { it.markStopped(clock.nowMillis()) }
 
-                    stopJobs()
+        override suspend fun markMoving(): Result<Unit> = transition(resumesTracking = true) { it.markMoving(clock.nowMillis()) }
 
-                    _activeSession.value =
-                        session.copy(
-                            state = RunState.PAUSED,
-                            metrics =
-                                session.metrics.copy(
-                                    elapsedTimeSeconds = elapsedTime / 1_000L,
-                                    averageSpeedKmh =
-                                        calculateAverageSpeed(
-                                            session.metrics.distanceMeters,
-                                            elapsedTime,
-                                        ),
-                                ),
-                            accumulatedElapsedTimeMillis = elapsedTime,
-                            resumedAtMonotonicTimestamp = null,
-                        )
-
-                    Result.success(Unit)
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (exception: Exception) {
-                    Result.failure(exception)
-                }
-            }
-
-        override suspend fun pausePersonally(): Result<Unit> =
-            mutex.withLock {
-                try {
-                    val session = requireActiveSession()
-
-                    check(session.state == RunState.ACTIVE) {
-                        "El recorrido no está en curso."
-                    }
-
-                    val now = SystemClock.elapsedRealtime()
-                    val elapsedTime = calculateElapsedTime(session, now)
-
-                    stopJobs()
-
-                    _activeSession.value =
-                        session.copy(
-                            state = RunState.PERSONAL_PAUSED,
-                            metrics =
-                                session.metrics.copy(
-                                    elapsedTimeSeconds = elapsedTime / 1_000L,
-                                    averageSpeedKmh =
-                                        calculateAverageSpeed(
-                                            session.metrics.distanceMeters,
-                                            elapsedTime,
-                                        ),
-                                ),
-                            accumulatedElapsedTimeMillis = elapsedTime,
-                            resumedAtMonotonicTimestamp = null,
-                        )
-
-                    Result.success(Unit)
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (exception: Exception) {
-                    Result.failure(exception)
-                }
-            }
-
-        override suspend fun markStopped(): Result<Unit> =
-            mutex.withLock {
-                try {
-                    val session = requireActiveSession()
-
-                    check(session.state == RunState.ACTIVE) {
-                        "El recorrido no está activo."
-                    }
-
-                    val now = SystemClock.elapsedRealtime()
-                    val elapsedTime = calculateElapsedTime(session, now)
-
-                    stopJobs()
-
-                    _activeSession.value =
-                        session.copy(
-                            state = RunState.STOPPED,
-                            metrics =
-                                session.metrics.copy(
-                                    elapsedTimeSeconds = elapsedTime / 1_000L,
-                                    averageSpeedKmh =
-                                        calculateAverageSpeed(
-                                            session.metrics.distanceMeters,
-                                            elapsedTime,
-                                        ),
-                                ),
-                            accumulatedElapsedTimeMillis = elapsedTime,
-                            resumedAtMonotonicTimestamp = null,
-                        )
-
-                    Result.success(Unit)
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (exception: Exception) {
-                    Result.failure(exception)
-                }
-            }
-
-        override suspend fun markMoving(): Result<Unit> =
-            mutex.withLock {
-                try {
-                    val session = requireActiveSession()
-
-                    check(session.state == RunState.STOPPED) {
-                        "La sesión no está detenida automáticamente."
-                    }
-
-                    val now = SystemClock.elapsedRealtime()
-
-                    _activeSession.value =
-                        session.copy(
-                            state = RunState.ACTIVE,
-                            lastValidLocationTimestamp = null,
-                            resumedAtMonotonicTimestamp = now,
-                            gpsQuality = GpsQuality.WEAK_SIGNAL,
-                        )
-
-                    startTracking()
-
-                    Result.success(Unit)
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (exception: Exception) {
-                    Result.failure(exception)
-                }
-            }
-
-        override suspend fun resumeSession(): Result<Unit> =
-            mutex.withLock {
-                try {
-                    val session = requireActiveSession()
-
-                    check(
-                        session.state == RunState.PAUSED ||
-                            session.state == RunState.PERSONAL_PAUSED,
-                    ) {
-                        "El recorrido no está pausado manualmente."
-                    }
-
-                    val now = SystemClock.elapsedRealtime()
-
-                    _activeSession.value =
-                        session.copy(
-                            state = RunState.ACTIVE,
-                            lastValidLocationTimestamp = null,
-                            resumedAtMonotonicTimestamp = now,
-                            gpsQuality = GpsQuality.WEAK_SIGNAL,
-                        )
-
-                    startTracking()
-
-                    Result.success(Unit)
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (exception: Exception) {
-                    Result.failure(exception)
-                }
-            }
+        override suspend fun resumeSession(): Result<Unit> = transition(resumesTracking = true) { it.resume(clock.nowMillis()) }
 
         override suspend fun finishSession(): Result<FrozenRunSummary> =
-            mutex.withLock {
-                try {
-                    val session = requireActiveSession()
-
-                    val now = SystemClock.elapsedRealtime()
-                    val elapsedTime = calculateElapsedTime(session, now)
-
-                    stopJobs()
-
-                    val finalMetrics =
-                        session.metrics.copy(
-                            elapsedTimeSeconds = elapsedTime / 1_000L,
-                            averageSpeedKmh =
-                                calculateAverageSpeed(
-                                    session.metrics.distanceMeters,
-                                    elapsedTime,
-                                ),
-                        )
-
-                    val summary =
-                        FrozenRunSummary(
-                            id = session.id,
-                            goal = session.goal,
-                            routePoints = session.routePoints.toList(),
-                            metrics = finalMetrics,
-                            startedAt = session.startedAt,
-                            startedAtMonotonicTimestamp = session.startMonotonicTimestamp,
-                            finishedAtMonotonicTimestamp = now,
-                            goalReached = session.goalReached,
-                            isDemoMode = session.isDemoMode,
-                        )
-
-                    finishedSummaries[summary.id] = summary
-
-                    _activeSession.value = RunSession.Idle
-                    _isRunInProgress.value = false
-
-                    Result.success(summary)
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (exception: Exception) {
-                    Result.failure(exception)
-                }
+            locked {
+                val summary = requireActiveSession().toFrozenSummary(clock.nowMillis())
+                stopJobs()
+                finishedSummaries[summary.id] = summary
+                _activeSession.value = RunSession.Idle
+                _isRunInProgress.value = false
+                summary
             }
 
         override fun resetToIdle() {
@@ -317,231 +91,87 @@ class RunSessionRepositoryImpl
 
         override fun getFinishedSummary(id: String): FrozenRunSummary? = finishedSummaries[id]
 
-        private fun startTracking() {
-            startLocationUpdates()
-            startSignalUpdates()
-            startTimer()
-        }
-
-        private fun startLocationUpdates() {
-            locationJob?.cancel()
-
-            locationJob =
-                applicationScope.launch {
-                    locationClient
-                        .getLocationUpdates(
-                            intervalMillis = LOCATION_INTERVAL_MILLIS,
-                        ).catch { exception ->
-                            if (exception is CancellationException) {
-                                throw exception
-                            }
-                        }.collect { point ->
-                            processLocation(point)
-                        }
-                }
-        }
-
-        private fun startSignalUpdates() {
-            signalJob?.cancel()
-
-            signalJob =
-                applicationScope.launch {
-                    locationClient
-                        .getSignalQualityUpdates()
-                        .catch { exception ->
-                            if (exception is CancellationException) {
-                                throw exception
-                            }
-                        }.collect { quality ->
-                            mutex.withLock {
-                                val session = _activeSession.value as? RunSession.ActiveSession ?: return@withLock
-
-                                if (session.state == RunState.ACTIVE) {
-                                    _activeSession.value =
-                                        session.copy(
-                                            gpsQuality = quality,
-                                        )
-                                }
-                            }
-                        }
-                }
-        }
-
-        private suspend fun processLocation(point: RoutePoint) {
-            if (!gpsPointFilterPolicy.isPointAccurate(point.accuracyMeters)) {
-                return
+        /**
+         * Aplica una transición de la sesión activa. Al pausar o detenerse corta el GPS y el reloj antes
+         * de guardar; al volver a moverse los arranca después.
+         */
+        private suspend fun transition(
+            resumesTracking: Boolean,
+            change: (RunSession.ActiveSession) -> RunSession.ActiveSession,
+        ): Result<Unit> =
+            locked {
+                val next = change(requireActiveSession())
+                if (!resumesTracking) stopJobs()
+                _activeSession.value = next
+                if (resumesTracking) startTracking()
             }
 
+        /** Ejecuta [block] con el mutex y convierte cualquier error (salvo la cancelación) en `Result.failure`. */
+        private suspend fun <T> locked(block: () -> T): Result<T> =
             mutex.withLock {
-                val session = _activeSession.value as? RunSession.ActiveSession ?: return@withLock
-
-                if (session.state != RunState.ACTIVE) {
-                    return@withLock
+                try {
+                    Result.success(block())
+                } catch (exception: CancellationException) {
+                    throw exception
+                } catch (exception: Exception) {
+                    Result.failure(exception)
                 }
+            }
 
-                val previousPoint = session.routePoints.lastOrNull()
-
-                val additionalDistance =
-                    previousPoint?.let {
-                        calculateDistanceMeters(it, point)
-                    } ?: 0.0
-
-                val totalDistance =
-                    session.metrics.distanceMeters + additionalDistance
-
-                val goalReached =
-                    session.goalReached ||
-                        totalDistance >= session.goal.distanceKm * 1_000.0
-
-                val elapsedTime =
-                    calculateElapsedTime(
-                        session,
-                        SystemClock.elapsedRealtime(),
-                    )
-
-                val currentSpeed =
-                    point.speedMetersPerSecond
-                        .coerceAtLeast(0f) * 3.6
-
-                val metrics =
-                    RunMetrics(
-                        elapsedTimeSeconds = elapsedTime / 1_000L,
-                        distanceMeters = totalDistance,
-                        currentSpeedKmh = currentSpeed,
-                        averageSpeedKmh =
-                            calculateAverageSpeed(
-                                totalDistance,
-                                elapsedTime,
-                            ),
-                    )
-
-                _activeSession.value =
-                    session.copy(
-                        routePoints = session.routePoints + point,
-                        metrics = metrics,
-                        lastValidLocationTimestamp = point.monotonicTimestampMillis,
-                        goalReached = goalReached,
-                    )
+        /** Cambia la sesión activa, si la hay, dentro del mutex. */
+        private suspend fun updateActive(change: (RunSession.ActiveSession) -> RunSession.ActiveSession) {
+            mutex.withLock {
+                val session = _activeSession.value as? RunSession.ActiveSession ?: return
+                _activeSession.value = change(session)
             }
         }
 
-        private fun startTimer() {
-            timerJob?.cancel()
+        private fun startTracking() {
+            locationJob?.cancel()
+            locationJob =
+                collectIgnoringErrors(locationClient.getLocationUpdates(intervalMillis = LOCATION_INTERVAL_MILLIS)) { point ->
+                    processLocation(point)
+                }
 
+            signalJob?.cancel()
+            signalJob =
+                collectIgnoringErrors(locationClient.getSignalQualityUpdates()) { quality ->
+                    updateActive { it.withGpsQuality(quality) }
+                }
+
+            timerJob?.cancel()
             timerJob =
                 applicationScope.launch {
                     while (isActive) {
                         delay(TIMER_INTERVAL_MILLIS.milliseconds)
-
-                        mutex.withLock {
-                            val session = _activeSession.value as? RunSession.ActiveSession ?: return@withLock
-
-                            if (session.state != RunState.ACTIVE) {
-                                return@withLock
-                            }
-
-                            val now = SystemClock.elapsedRealtime()
-
-                            val elapsedTime =
-                                calculateElapsedTime(
-                                    session,
-                                    now,
-                                )
-
-                            val timeoutReference =
-                                session.lastValidLocationTimestamp
-                                    ?: session.resumedAtMonotonicTimestamp
-                                    ?: now
-
+                        updateActive { session ->
+                            val now = clock.nowMillis()
                             val signalLost =
                                 gpsPointFilterPolicy.isSignalLost(
-                                    lastValidLocationMonotonicTimestamp = timeoutReference,
+                                    lastValidLocationMonotonicTimestamp = session.signalReferenceAt(now),
                                     currentMonotonicTimestamp = now,
                                 )
-
-                            _activeSession.value =
-                                session.copy(
-                                    gpsQuality =
-                                        if (signalLost) {
-                                            GpsQuality.NO_SIGNAL
-                                        } else {
-                                            session.gpsQuality
-                                        },
-                                    metrics =
-                                        session.metrics.copy(
-                                            elapsedTimeSeconds = elapsedTime / 1_000L,
-                                            averageSpeedKmh =
-                                                calculateAverageSpeed(
-                                                    session.metrics.distanceMeters,
-                                                    elapsedTime,
-                                                ),
-                                        ),
-                                )
+                            session.tick(now, signalLost)
                         }
                     }
                 }
         }
 
-        private fun calculateElapsedTime(
-            session: RunSession.ActiveSession,
-            now: Long,
-        ): Long {
-            val currentSegment =
-                session.resumedAtMonotonicTimestamp
-                    ?.let { (now - it).coerceAtLeast(0L) }
-                    ?: 0L
+        /** Recolecta [flow] en el scope de la app; un error del GPS corta ese flujo sin tirar la app. */
+        private fun <T> collectIgnoringErrors(
+            flow: Flow<T>,
+            action: suspend (T) -> Unit,
+        ): Job =
+            applicationScope.launch {
+                flow
+                    .catch { exception -> if (exception is CancellationException) throw exception }
+                    .collect { action(it) }
+            }
 
-            return session.accumulatedElapsedTimeMillis + currentSegment
-        }
+        private suspend fun processLocation(point: RoutePoint) {
+            if (!gpsPointFilterPolicy.isPointAccurate(point.accuracyMeters)) return
 
-        private fun calculateAverageSpeed(
-            distanceMeters: Double,
-            elapsedMillis: Long,
-        ): Double {
-            if (elapsedMillis <= 0L) return 0.0
-
-            val elapsedHours = elapsedMillis / 3_600_000.0
-
-            return (distanceMeters / 1_000.0) / elapsedHours
-        }
-
-        private fun calculateDistanceMeters(
-            first: RoutePoint,
-            second: RoutePoint,
-        ): Double {
-            val earthRadiusMeters = 6_371_000.0
-
-            val latitudeDifference =
-                Math.toRadians(
-                    second.latitude - first.latitude,
-                )
-
-            val longitudeDifference =
-                Math.toRadians(
-                    second.longitude - first.longitude,
-                )
-
-            val firstLatitude = Math.toRadians(first.latitude)
-            val secondLatitude = Math.toRadians(second.latitude)
-
-            val a =
-                Math.sin(latitudeDifference / 2).let {
-                    it * it
-                } +
-                    Math.cos(firstLatitude) *
-                    Math.cos(secondLatitude) *
-                    Math.sin(longitudeDifference / 2).let {
-                        it * it
-                    }
-
-            val centralAngle =
-                2 *
-                    atan2(
-                        sqrt(a.coerceIn(0.0, 1.0)),
-                        sqrt((1.0 - a).coerceAtLeast(0.0)),
-                    )
-
-            return earthRadiusMeters * centralAngle
+            updateActive { it.addPoint(point, clock.nowMillis()) }
         }
 
         private fun requireActiveSession(): RunSession.ActiveSession =
@@ -551,10 +181,8 @@ class RunSessionRepositoryImpl
         private fun stopJobs() {
             locationJob?.cancel()
             locationJob = null
-
             signalJob?.cancel()
             signalJob = null
-
             timerJob?.cancel()
             timerJob = null
         }
