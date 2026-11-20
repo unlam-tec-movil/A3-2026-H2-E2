@@ -49,7 +49,7 @@ class RunSessionRulesTest {
     }
 
     @Test
-    fun `el tiempo acumulado no cuenta las pausas`() {
+    fun `el tiempo acumulado no cuenta las pausas pero si las frenadas`() {
         val session =
             started
                 .pause(nowMillis = 11_000L)
@@ -57,7 +57,63 @@ class RunSessionRulesTest {
                 .markStopped(nowMillis = 46_000L)
                 .markMoving(nowMillis = 50_000L)
 
-        assertEquals(10_000L + 5_000L + 2_000L, session.elapsedAt(nowMillis = 52_000L))
+        // 10 s antes de la pausa, 5 s activo, 4 s de frenada (D3) y 2 s activo.
+        assertEquals(10_000L + 5_000L + 4_000L + 2_000L, session.elapsedAt(nowMillis = 52_000L))
+    }
+
+    @Test
+    fun `una frenada deja el tramo abierto y sigue registrando (D3)`() {
+        val stopped = started.markStopped(nowMillis = 6_000L)
+
+        assertEquals(RunState.STOPPED, stopped.state)
+        assertTrue(stopped.isTracking)
+        assertEquals(1_000L, stopped.resumedAtMonotonicTimestamp)
+        assertEquals(5L, stopped.metrics.elapsedTimeSeconds)
+        assertEquals(10L, stopped.tick(nowMillis = 11_000L, signalLost = false).metrics.elapsedTimeSeconds)
+        assertEquals(GpsQuality.FULL_SIGNAL, stopped.withGpsQuality(GpsQuality.FULL_SIGNAL).gpsQuality)
+        val withPoint = stopped.addPoint(point(-34.6, atMillis = 7_000L), nowMillis = 7_000L)
+        assertEquals(1, withPoint.routePoints.size)
+    }
+
+    @Test
+    fun `volver a moverse desde una frenada no reinicia el tramo ni la senal`() {
+        val withPoint = started.withGpsQuality(GpsQuality.FULL_SIGNAL).addPoint(point(-34.6, atMillis = 2_000L), 2_000L)
+
+        val moving = withPoint.markStopped(nowMillis = 4_000L).markMoving(nowMillis = 9_000L)
+
+        assertEquals(RunState.ACTIVE, moving.state)
+        assertEquals(1_000L, moving.resumedAtMonotonicTimestamp)
+        assertEquals(2_000L, moving.lastValidLocationTimestamp)
+        assertEquals(GpsQuality.FULL_SIGNAL, moving.gpsQuality)
+        assertEquals(8L, moving.metrics.elapsedTimeSeconds)
+    }
+
+    @Test
+    fun `pausa personal desde una frenada congela el tiempo con la frenada incluida (D1)`() {
+        val paused = started.markStopped(nowMillis = 6_000L).pausePersonally(nowMillis = 9_000L)
+
+        assertEquals(RunState.PERSONAL_PAUSED, paused.state)
+        assertFalse(paused.isTracking)
+        assertNull(paused.resumedAtMonotonicTimestamp)
+        assertEquals(8_000L, paused.elapsedAt(nowMillis = 60_000L))
+    }
+
+    @Test
+    fun `volver a moverse desde la pausa personal abre un tramo nuevo (D2)`() {
+        val moving = started.pausePersonally(nowMillis = 3_000L).markMoving(nowMillis = 10_000L)
+
+        assertEquals(RunState.ACTIVE, moving.state)
+        assertEquals(10_000L, moving.resumedAtMonotonicTimestamp)
+        assertEquals(GpsQuality.WEAK_SIGNAL, moving.gpsQuality)
+        assertEquals(2_000L + 5_000L, moving.elapsedAt(nowMillis = 15_000L))
+    }
+
+    @Test
+    fun `la pausa manual tambien se puede desde una frenada`() {
+        val paused = started.markStopped(nowMillis = 6_000L).pause(nowMillis = 8_000L)
+
+        assertEquals(RunState.PAUSED, paused.state)
+        assertEquals(7_000L, paused.elapsedAt(nowMillis = 60_000L))
     }
 
     @Test
@@ -80,23 +136,34 @@ class RunSessionRulesTest {
         assertEquals(RunState.STOPPED, started.markStopped(2_000L).state)
         assertEquals(RunState.ACTIVE, started.markStopped(2_000L).markMoving(3_000L).state)
         assertEquals(RunState.ACTIVE, started.pausePersonally(2_000L).resume(3_000L).state)
+        assertEquals(RunState.PERSONAL_PAUSED, started.markStopped(2_000L).pausePersonally(3_000L).state)
+        assertEquals(RunState.ACTIVE, started.pausePersonally(2_000L).markMoving(3_000L).state)
+        assertEquals(RunState.PAUSED, started.markStopped(2_000L).pause(3_000L).state)
     }
 
     @Test
-    fun `las transiciones invalidas lanzan el mismo mensaje que antes`() {
+    fun `las transiciones invalidas lanzan IllegalStateException con su mensaje`() {
         val paused = started.pause(2_000L)
         val stopped = started.markStopped(2_000L)
+        val personalPaused = started.pausePersonally(2_000L)
 
         assertEquals("El recorrido no está en curso.", assertThrows(IllegalStateException::class.java) { paused.pause(3_000L) }.message)
         assertEquals(
             "El recorrido no está en curso.",
-            assertThrows(IllegalStateException::class.java) { stopped.pausePersonally(3_000L) }.message,
+            assertThrows(IllegalStateException::class.java) { personalPaused.pausePersonally(3_000L) }.message,
         )
         assertEquals("El recorrido no está activo.", assertThrows(IllegalStateException::class.java) { paused.markStopped(3_000L) }.message)
         assertEquals(
-            "La sesión no está detenida automáticamente.",
-            assertThrows(IllegalStateException::class.java) { started.markMoving(3_000L) }.message,
+            "El recorrido no está activo.",
+            assertThrows(IllegalStateException::class.java) { stopped.markStopped(3_000L) }.message,
         )
+        // D2: markMoving no reanuda una pausa manual ni actúa sobre un recorrido activo.
+        listOf(started, paused).forEach { session ->
+            assertEquals(
+                "La sesión no está detenida ni en pausa personal.",
+                assertThrows(IllegalStateException::class.java) { session.markMoving(3_000L) }.message,
+            )
+        }
         assertEquals(
             "El recorrido no está pausado manualmente.",
             assertThrows(IllegalStateException::class.java) { stopped.resume(3_000L) }.message,
@@ -126,12 +193,12 @@ class RunSessionRulesTest {
     }
 
     @Test
-    fun `fuera de ACTIVE los puntos, el reloj y la senal no cambian la sesion`() {
-        val paused = started.pause(2_000L)
-
-        assertSame(paused, paused.addPoint(point(-34.6, atMillis = 3_000L), nowMillis = 3_000L))
-        assertSame(paused, paused.tick(nowMillis = 30_000L, signalLost = true))
-        assertSame(paused, paused.withGpsQuality(GpsQuality.FULL_SIGNAL))
+    fun `en pausa los puntos, el reloj y la senal no cambian la sesion`() {
+        listOf(started.pause(2_000L), started.pausePersonally(2_000L)).forEach { paused ->
+            assertSame(paused, paused.addPoint(point(-34.6, atMillis = 3_000L), nowMillis = 3_000L))
+            assertSame(paused, paused.tick(nowMillis = 30_000L, signalLost = true))
+            assertSame(paused, paused.withGpsQuality(GpsQuality.FULL_SIGNAL))
+        }
     }
 
     @Test

@@ -63,6 +63,18 @@ class RunControlsTest {
         assertEquals(0, resumeClicks)
     }
 
+    // En una frenada el recorrido sigue en curso: se ve Pausar, habilitado, y también Finalizar.
+    @Test
+    fun stoppedRun_showsEnabledPause_andCallsOnPause() {
+        setContent(runState(RunState.STOPPED))
+
+        composeTestRule.onNodeWithContentDescription(string(R.string.map_pause)).assertIsEnabled().performClick()
+        composeTestRule.onNodeWithContentDescription(string(R.string.map_finish)).assertIsEnabled()
+
+        assertEquals(1, pauseClicks)
+        assertEquals(0, resumeClicks)
+    }
+
     @Test
     fun pausedRun_showsResume_andCallsOnResume() {
         setContent(runState(RunState.PAUSED))
