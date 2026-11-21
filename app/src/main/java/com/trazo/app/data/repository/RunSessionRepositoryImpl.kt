@@ -61,15 +61,15 @@ class RunSessionRepositoryImpl
             startTracking()
         }
 
-        override suspend fun pauseSession(): Result<Unit> = transition(resumesTracking = false) { it.pause(clock.nowMillis()) }
+        override suspend fun pauseSession(): Result<Unit> = transition { it.pause(clock.nowMillis()) }
 
-        override suspend fun pausePersonally(): Result<Unit> = transition(resumesTracking = false) { it.pausePersonally(clock.nowMillis()) }
+        override suspend fun pausePersonally(): Result<Unit> = transition { it.pausePersonally(clock.nowMillis()) }
 
-        override suspend fun markStopped(): Result<Unit> = transition(resumesTracking = false) { it.markStopped(clock.nowMillis()) }
+        override suspend fun markStopped(): Result<Unit> = transition { it.markStopped(clock.nowMillis()) }
 
-        override suspend fun markMoving(): Result<Unit> = transition(resumesTracking = true) { it.markMoving(clock.nowMillis()) }
+        override suspend fun markMoving(): Result<Unit> = transition { it.markMoving(clock.nowMillis()) }
 
-        override suspend fun resumeSession(): Result<Unit> = transition(resumesTracking = true) { it.resume(clock.nowMillis()) }
+        override suspend fun resumeSession(): Result<Unit> = transition { it.resume(clock.nowMillis()) }
 
         override suspend fun finishSession(): Result<FrozenRunSummary> =
             locked {
@@ -90,18 +90,16 @@ class RunSessionRepositoryImpl
         override fun getFinishedSummary(id: String): FrozenRunSummary? = finishedSummaries[id]
 
         /**
-         * Aplica una transición de la sesión activa. Al pausar o detenerse corta el GPS y el reloj antes
-         * de guardar; al volver a moverse los arranca después.
+         * Aplica una transición de la sesión activa. Si el estado nuevo no registra (pausas), corta el GPS
+         * y el reloj antes de guardar; si registra y estaban cortados, los arranca después. Entre activo
+         * y frenada siguen corriendo sin reiniciarse (stop-detection D3).
          */
-        private suspend fun transition(
-            resumesTracking: Boolean,
-            change: (RunSession.ActiveSession) -> RunSession.ActiveSession,
-        ): Result<Unit> =
+        private suspend fun transition(change: (RunSession.ActiveSession) -> RunSession.ActiveSession): Result<Unit> =
             locked {
                 val next = change(requireActiveSession())
-                if (!resumesTracking) stopJobs()
+                if (!next.isTracking) stopJobs()
                 _activeSession.value = next
-                if (resumesTracking) startTracking()
+                if (next.isTracking && timerJob == null) startTracking()
             }
 
         /** Ejecuta [block] con el mutex y convierte cualquier error (salvo la cancelación) en `Result.failure`. */

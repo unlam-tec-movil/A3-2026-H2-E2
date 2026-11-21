@@ -52,7 +52,7 @@ data class StartRunUiState(
 sealed interface StartRunEffect {
     data object RequestLocationPermission : StartRunEffect
 
-    data object NavigateToMap : StartRunEffect
+    data object NavigateToActivity : StartRunEffect
 }
 
 /**
@@ -142,7 +142,7 @@ class StartRunViewModel
             _uiState.update {
                 it.copy(isDialogVisible = false, selectedGoal = null, waitingGoal = goal)
             }
-            effects.trySend(StartRunEffect.NavigateToMap)
+            effects.trySend(StartRunEffect.NavigateToActivity)
             waitingJob?.cancel()
             waitingJob = viewModelScope.launch { awaitSignalAndStart(goal) }
         }

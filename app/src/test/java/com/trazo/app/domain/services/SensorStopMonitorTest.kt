@@ -4,6 +4,7 @@ import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.data.repository.InMemoryBrakeRepository
 import com.trazo.app.data.sensors.MotionSource
 import com.trazo.app.domain.model.map.RoutePoint
+import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.stops.MotionSample
 import com.trazo.app.domain.model.stops.QueryStatus
@@ -291,6 +292,29 @@ class SensorStopMonitorTest {
                 listOf(RunState.STOPPED, RunState.PERSONAL_PAUSED),
                 run.appliedStates,
             )
+        }
+
+    // stop-detection D1 y D2: el fake aplica las reglas reales de RunSession, así que la secuencia
+    // completa solo pasa si el modelo acepta STOPPED -> PERSONAL_PAUSED y PERSONAL_PAUSED -> ACTIVE.
+    @Test
+    fun `tras la pausa personal, retomar el movimiento vuelve a ACTIVE`() =
+        runTest {
+            val monitor = monitor()
+            startRun("r1")
+            emitStillSamplesUntil(30_000)
+            advance(22_000)
+            monitor.answer(StopKind.PERSONAL_PAUSE)
+            advance(1_000)
+
+            // El sensor calla a los 30 s: a los 32 s la última muestra es vieja (sin evidencia cuenta como
+            // movimiento) y a los 33,5 s se confirma la retomada. Se avanza hasta los 38 s.
+            advance(15_000)
+
+            assertEquals(
+                listOf(RunState.STOPPED, RunState.PERSONAL_PAUSED, RunState.ACTIVE),
+                run.appliedStates,
+            )
+            assertEquals(RunState.ACTIVE, (run.activeSession.value as RunSession.ActiveSession).state)
         }
 
     @Test

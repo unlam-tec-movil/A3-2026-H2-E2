@@ -15,7 +15,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Casos del «+» común que no cubre `HomeContentTest` (start-run, requisito 9). */
+/** Casos del «+» común que no cubre `ProfileContentTest` (start-run, requisito 9). */
 @RunWith(AndroidJUnit4::class)
 class StartRunFabTest {
     @get:Rule
@@ -40,12 +40,12 @@ class StartRunFabTest {
         }
 
         composeTestRule
-            .onNodeWithContentDescription(context.getString(R.string.home_start_run_fab_description))
+            .onNodeWithContentDescription(context.getString(R.string.start_run_fab_description))
             .assertIsDisplayed()
             .assertIsNotEnabled()
             .performClick()
 
         assertEquals(0, fabClicks)
-        composeTestRule.onNodeWithText(context.getString(R.string.home_start_run)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.start_run_fab_option)).assertDoesNotExist()
     }
 }

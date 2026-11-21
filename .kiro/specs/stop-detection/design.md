@@ -1,5 +1,19 @@
 # Documento de diseño · stop-detection (HU-05.1 · Frenadas y pausas personales)
 
+> **Revisión 2026-11-20 · D1–D3 implementadas (`fix/estados-de-parada`).** Esta nota manda sobre lo
+> que se contradiga más abajo («Cambio pendiente en `develop`», «todavía no están en `develop`»):
+>
+> - D1: `RunSession.ActiveSession.pausePersonally` acepta `ACTIVE` y `STOPPED`.
+> - D2: `markMoving` acepta `STOPPED` (sigue el mismo tramo) y `PERSONAL_PAUSED` (abre uno nuevo);
+>   rechaza `PAUSED` y `ACTIVE`.
+> - D3: en `STOPPED` el tramo sigue abierto: el tiempo cuenta, y los puntos, el reloj y la señal se
+>   aplican igual que en `ACTIVE` (`ActiveSession.isTracking`). `RunSessionRepositoryImpl` corta o
+>   arranca GPS y reloj según `isTracking` del estado nuevo, sin reiniciarlos entre `ACTIVE` y `STOPPED`.
+> - Decisión de Rocío: en `STOPPED` el control muestra «Pausar» habilitado, y `pause` acepta `ACTIVE` y
+>   `STOPPED` (la pausa manual saca el recorrido de la detección).
+> - Los fakes de prueba (`FakeRunSessionRepository`) delegan en las reglas de `ActiveSession`, para
+>   que los tests no acepten orígenes que el modelo rechaza.
+
 > **Revisión 2026-11-20 · convención de la cátedra (PR #114 y `refactor/convencion-catedra`).**
 > Esta nota manda sobre lo que se contradiga más abajo. Clases renombradas, movidas o eliminadas y
 > su reemplazo:

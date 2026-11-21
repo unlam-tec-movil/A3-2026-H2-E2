@@ -36,8 +36,9 @@ data class LiveRouteTrackingUiState(
     val isStopped: Boolean
         get() = runState == RunState.STOPPED
 
+    /** En una frenada (STOPPED) el recorrido sigue en curso, así que también se puede pausar. */
     val canPause: Boolean
-        get() = isRunning && areControlActionsAllowed
+        get() = (isRunning || isStopped) && areControlActionsAllowed
 
     val canResume: Boolean
         get() = isPaused && areControlActionsAllowed

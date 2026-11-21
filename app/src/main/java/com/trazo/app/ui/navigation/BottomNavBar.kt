@@ -15,7 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.trazo.app.ui.theme.TrazoTheme
 
 /**
- * Barra de navegación inferior con las 3 pestañas de Trazo.
+ * Barra de navegación inferior con las 2 pestañas de Trazo.
  *
  * El ítem activo se distingue por el indicador primaryContainer, el ícono relleno y la
  * etiqueta en negrita (no solo por color). Los íconos no tienen descripción porque la
@@ -69,10 +69,10 @@ fun BottomNavBar(
 
 @Preview(showBackground = true)
 @Composable
-private fun BottomNavBarHomeSelectedPreview() {
+private fun BottomNavBarActivitySelectedPreview() {
     TrazoTheme {
         BottomNavBar(
-            currentRoute = TrazoDestination.HOME.route,
+            currentRoute = TrazoDestination.ACTIVITY.route,
             onDestinationSelected = {},
         )
     }

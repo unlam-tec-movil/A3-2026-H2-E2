@@ -210,6 +210,89 @@ class RunSessionRepositoryImplTest {
             assertEquals(RunState.ACTIVE, activeSession?.state)
         }
 
+    private fun accuratePoint(latitude: Double) =
+        RoutePoint(
+            latitude = latitude,
+            longitude = -58.3816,
+            accuracyMeters = 5f,
+            speedMetersPerSecond = 0f,
+            monotonicTimestampMillis = SystemClock.elapsedRealtime(),
+        )
+
+    private suspend fun awaitPoints(count: Int) {
+        withTimeout(3_000L.milliseconds) {
+            repository.activeSession.first { session ->
+                session is RunSession.ActiveSession && session.routePoints.size == count
+            }
+        }
+    }
+
+    // stop-detection D3: en una frenada el GPS sigue registrando la traza.
+    @Test
+    fun markStopped_keepsRecordingGpsPoints() =
+        runBlocking {
+            repository.attachActiveSession(
+                InitializedRunSession(
+                    id = "test-session",
+                    goal = RunGoal.THREE_KILOMETERS,
+                    startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
+                ),
+            )
+            fakeLocationClient.awaitLocationSubscriber()
+
+            assertTrue(repository.markStopped().isSuccess)
+            fakeLocationClient.sendLocation(accuratePoint(-34.6037))
+
+            awaitPoints(1)
+            val session = repository.activeSession.value as? RunSession.ActiveSession
+            assertEquals(RunState.STOPPED, session?.state)
+        }
+
+    // stop-detection D1 y D2: pausa personal desde una frenada corta el GPS; volver a moverse lo arranca.
+    @Test
+    fun pausePersonallyFromStopped_stopsGps_andMarkMovingRestartsIt() =
+        runBlocking {
+            repository.attachActiveSession(
+                InitializedRunSession(
+                    id = "test-session",
+                    goal = RunGoal.THREE_KILOMETERS,
+                    startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
+                ),
+            )
+            fakeLocationClient.awaitLocationSubscriber()
+            assertTrue(repository.markStopped().isSuccess)
+
+            assertTrue(repository.pausePersonally().isSuccess)
+            assertEquals(RunState.PERSONAL_PAUSED, (repository.activeSession.value as? RunSession.ActiveSession)?.state)
+            withTimeout(3_000L.milliseconds) { fakeLocationClient.awaitNoLocationSubscriber() }
+
+            assertTrue(repository.markMoving().isSuccess)
+            assertEquals(RunState.ACTIVE, (repository.activeSession.value as? RunSession.ActiveSession)?.state)
+            withTimeout(3_000L.milliseconds) { fakeLocationClient.awaitLocationSubscriber() }
+            fakeLocationClient.sendLocation(accuratePoint(-34.6037))
+            awaitPoints(1)
+        }
+
+    @Test
+    fun pauseSessionFromStopped_pausesTheRun() =
+        runBlocking {
+            repository.attachActiveSession(
+                InitializedRunSession(
+                    id = "test-session",
+                    goal = RunGoal.THREE_KILOMETERS,
+                    startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
+                ),
+            )
+            assertTrue(repository.markStopped().isSuccess)
+
+            assertTrue(repository.pauseSession().isSuccess)
+
+            assertEquals(RunState.PAUSED, (repository.activeSession.value as? RunSession.ActiveSession)?.state)
+        }
+
     @Test
     fun locationUpdates_ignoresPointsWithAccuracyGreaterThan30Meters() =
         runBlocking {
