@@ -17,6 +17,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 
 internal const val RESULT_ROUTE = "result/{runId}"
+internal const val SETTINGS_ROUTE = "settings"
 
 /** Cambia de pestaña guardando y restaurando el estado de cada una, sin apilar pestañas repetidas. */
 internal fun NavController.navigateToTab(destination: TrazoDestination) {
@@ -32,19 +33,21 @@ internal fun NavController.navigateToTab(destination: TrazoDestination) {
  * como slot, así la navegación se prueba con pantallas falsas.
  *
  * - Abre en Actividad.
- * - La barra inferior se oculta en el resultado.
+ * - La barra inferior se oculta en el resultado y en la configuración.
  * - Salir del resultado vuelve a Actividad y saca el resultado de la pila.
  *
  * @param activityScreen pestaña Actividad; recibe cómo abrir el resultado de un recorrido (`runId`).
- * @param profileScreen pestaña Perfil.
+ * @param profileScreen pestaña Perfil; recibe cómo abrir la configuración (`onSettingsClick`).
  * @param resultScreen resultado del recorrido; recibe cómo volver a Actividad.
+ * @param settingsScreen pantalla Configuración; recibe cómo volver a la pantalla anterior.
  */
 @Composable
 internal fun TrazoScaffold(
     navController: NavHostController,
     activityScreen: @Composable (onNavigateToResult: (runId: String) -> Unit) -> Unit,
-    profileScreen: @Composable () -> Unit,
+    profileScreen: @Composable (onSettingsClick: () -> Unit) -> Unit,
     resultScreen: @Composable (onLeaveToActivity: () -> Unit) -> Unit,
+    settingsScreen: @Composable (onBackClick: () -> Unit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -52,11 +55,9 @@ internal fun TrazoScaffold(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        // El inset de la barra de estado no se consume acá: lo maneja cada pantalla
-        // (Perfil lo cubre con su barra superior).
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (currentRoute != RESULT_ROUTE) {
+            if (currentRoute != RESULT_ROUTE && currentRoute != SETTINGS_ROUTE) {
                 BottomNavBar(
                     currentRoute = currentRoute,
                     onDestinationSelected = navController::navigateToTab,
@@ -75,7 +76,9 @@ internal fun TrazoScaffold(
                 }
             }
             composable(TrazoDestination.PROFILE.route) {
-                profileScreen()
+                profileScreen {
+                    navController.navigate(SETTINGS_ROUTE) { launchSingleTop = true }
+                }
             }
             composable(
                 route = RESULT_ROUTE,
@@ -86,6 +89,11 @@ internal fun TrazoScaffold(
                         popUpTo(RESULT_ROUTE) { inclusive = true }
                         launchSingleTop = true
                     }
+                }
+            }
+            composable(SETTINGS_ROUTE) {
+                settingsScreen {
+                    navController.popBackStack()
                 }
             }
         }
