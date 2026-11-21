@@ -1,7 +1,5 @@
 package com.trazo.app.data.di
 
-import com.trazo.app.data.permissions.AndroidPermissionReader
-import com.trazo.app.data.permissions.PermissionReader
 import com.trazo.app.data.repository.PermissionRepository
 import com.trazo.app.data.repository.PermissionRepositoryImpl
 import dagger.Binds
@@ -13,10 +11,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class PermissionModule {
-    @Binds
-    @Singleton
-    abstract fun bindPermissionReader(impl: AndroidPermissionReader): PermissionReader
-
     @Binds
     @Singleton
     abstract fun bindPermissionRepository(impl: PermissionRepositoryImpl): PermissionRepository

@@ -34,7 +34,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trazo.app.R
 import com.trazo.app.domain.model.CameraPermissionStatus
-import com.trazo.app.domain.model.LocationPermissionState
+import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.ui.navigation.appDetailsSettingsIntent
 import com.trazo.app.ui.screens.settings.components.DemoModeSwitch
 import com.trazo.app.ui.screens.settings.components.PermissionRow
@@ -138,7 +138,7 @@ fun SettingsContent(
 
             PermissionRow(
                 label = stringResource(R.string.settings_location_label),
-                statusText = locationPermissionStatusText(state.locationPermissionState),
+                statusText = locationPermissionStatusText(state.locationStatus),
                 showSettingsButton = state.showLocationSettingsButton,
                 onSettingsClick = onLocationSettingsClick,
             )
@@ -178,7 +178,7 @@ private fun SettingsContentPreview() {
         SettingsContent(
             state =
                 SettingsUiState(
-                    locationPermissionState = LocationPermissionState.EXACT,
+                    locationStatus = LocationStatus.READY,
                     cameraPermissionStatus = CameraPermissionStatus.DENIED,
                     isDemoModeEnabled = true,
                     isRunInProgress = false,

@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.trazo.app.R
 import com.trazo.app.domain.model.CameraPermissionStatus
-import com.trazo.app.domain.model.LocationPermissionState
+import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 
@@ -71,11 +71,11 @@ fun PermissionRow(
 }
 
 @Composable
-fun locationPermissionStatusText(state: LocationPermissionState): String =
-    when (state) {
-        LocationPermissionState.EXACT -> stringResource(R.string.settings_permission_exact)
-        LocationPermissionState.APPROXIMATE -> stringResource(R.string.settings_permission_approximate)
-        LocationPermissionState.DENIED -> stringResource(R.string.settings_permission_denied)
+fun locationPermissionStatusText(status: LocationStatus): String =
+    when (status) {
+        LocationStatus.READY, LocationStatus.DEVICE_LOCATION_OFF -> stringResource(R.string.settings_permission_exact)
+        LocationStatus.APPROXIMATE_ONLY -> stringResource(R.string.settings_permission_approximate)
+        LocationStatus.PERMISSION_DENIED -> stringResource(R.string.settings_permission_denied)
     }
 
 @Composable

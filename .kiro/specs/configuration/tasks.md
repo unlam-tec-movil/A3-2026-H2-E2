@@ -1,116 +1,81 @@
 # Tasks Plan — Configuración
 
-## Resumen de Evaluación de Paquete para Lectura de Permisos
-* **Decisión:** El lector de permisos se aloja en `app/src/main/java/com/trazo/app/data/permissions/` (`PermissionReader.kt` / `AndroidPermissionReader.kt`).
-* **Justificación:** Moverlo de `data/location/` a `data/permissions/` expresa con claridad en la estructura del proyecto que su responsabilidad abarca múltiples permisos del sistema Android (tanto **Ubicación** como **Cámara**), evitando acoplar conceptos de cámara dentro del paquete exclusivo de GPS/Ubicación.
+## Resumen de Decisiones de Arquitectura y Refactorización
+* **Ubicación:** Se reutiliza `LocationRepository.readLocationStatus()` y el enum existente `LocationStatus`. Se elimina `LocationPermissionState`.
+* **Cámara:** `PermissionRepository` queda dedicado únicamente a la cámara (`readCameraPermissionStatus()`), implementado en `PermissionRepositoryImpl` llamando a Android directamente sin capas intermedias. Se eliminan `PermissionReader` y `AndroidPermissionReader`.
+* **Modo Demo:** `DemoModeRepositoryImpl` utiliza `SharedPreferences` directamente con `by lazy` para no leer el disco en `init`. Se eliminan `DemoModePreferences` y `SharedPreferencesDemoModePreferences`.
+* **Regla de Negocio:** La lógica de no alternar el modo demo con carrera en curso se traslada a `SetDemoModeUseCase` en `domain/usecases/`. `SettingsViewModel` solo delega en este caso de uso.
+* **Módulos Hilt:** `DemoModeModule` y `PermissionModule` mantienen un único `@Binds` cada uno.
 
 ---
 
 ## Plan de Tareas
 
-### Tarea 1: Modelos de Dominio y Lectores en `data/permissions/` [COMPLETADA]
-* **Capa / Componente:** `domain/model/` y `data/permissions/`
+### Tarea 1: Caso de Uso de Dominio para Modo Demo [COMPLETADA]
+* **Capa / Componente:** `domain/usecases/`
 * **Archivos Creados:**
-  * `app/src/main/java/com/trazo/app/domain/model/LocationPermissionState.kt`
-  * `app/src/main/java/com/trazo/app/data/permissions/PermissionReader.kt`
-  * `app/src/main/java/com/trazo/app/data/permissions/AndroidPermissionReader.kt`
-* **Requisitos Cubiertos:** Requirement 2.
+  * `app/src/main/java/com/trazo/app/domain/usecases/SetDemoModeUseCase.kt`
+  * `app/src/test/java/com/trazo/app/domain/usecases/SetDemoModeUseCaseTest.kt`
+* **Requisitos Cubiertos:** Requirement 5, Requirement 6.
 
 ---
 
-### Tarea 2: Fuente de Persistencia del Modo Demo en `data/local/` [COMPLETADA]
-* **Capa / Componente:** `data/local/`
-* **Archivos Creados:**
-  * `app/src/main/java/com/trazo/app/data/local/DemoModePreferences.kt`
-  * `app/src/main/java/com/trazo/app/data/local/SharedPreferencesDemoModePreferences.kt`
+### Tarea 2: Repositorio Directo de Modo Demo [COMPLETADA]
+* **Capa / Componente:** `data/repository/` y `data/di/`
+* **Archivos Modificados / Creados:**
+  * `app/src/main/java/com/trazo/app/data/repository/DemoModeRepositoryImpl.kt` (usa `SharedPreferences` con `by lazy`)
+  * `app/src/main/java/com/trazo/app/data/di/DemoModeModule.kt` (un solo `@Binds`)
+  * `app/src/test/java/com/trazo/app/data/repository/DemoModeRepositoryImplTest.kt` (pruebas Robolectric)
 * **Requisitos Cubiertos:** Requirement 5.
 
 ---
 
-### Tarea 3: Repositorios y Módulos Hilt en `data/repository/` y `data/di/` [COMPLETADA]
+### Tarea 3: Repositorio Simplificado de Permisos [COMPLETADA]
 * **Capa / Componente:** `data/repository/` y `data/di/`
-* **Archivos Creados:**
-  * `app/src/main/java/com/trazo/app/data/repository/PermissionRepository.kt`
-  * `app/src/main/java/com/trazo/app/data/repository/PermissionRepositoryImpl.kt`
-  * `app/src/main/java/com/trazo/app/data/repository/DemoModeRepository.kt`
-  * `app/src/main/java/com/trazo/app/data/repository/DemoModeRepositoryImpl.kt`
-  * `app/src/main/java/com/trazo/app/data/di/PermissionModule.kt`
-  * `app/src/main/java/com/trazo/app/data/di/DemoModeModule.kt`
-* **Requisitos Cubiertos:** Requirement 2, Requirement 5.
-
----
-
-### Tarea 4: Fakes Manuales de Prueba en `app/src/test/` [COMPLETADA]
-* **Capa / Componente:** `app/src/test/` (JVM Unit Tests)
-* **Archivos Creados:**
+* **Archivos Modificados / Creados:**
+  * `app/src/main/java/com/trazo/app/data/repository/PermissionRepository.kt` (solo cámara)
+  * `app/src/main/java/com/trazo/app/data/repository/PermissionRepositoryImpl.kt` (lee Android directamente)
+  * `app/src/main/java/com/trazo/app/data/di/PermissionModule.kt` (un solo `@Binds`)
+  * `app/src/test/java/com/trazo/app/data/repository/PermissionRepositoryImplTest.kt` (pruebas Robolectric)
   * `app/src/test/java/com/trazo/app/data/repository/FakePermissionRepository.kt`
-  * `app/src/test/java/com/trazo/app/data/repository/FakeDemoModeRepository.kt`
-* **Requisitos Cubiertos:** Requirement 2, Requirement 4, Requirement 5, Requirement 6.
+* **Requisitos Cubiertos:** Requirement 2.
 
 ---
 
-### Tarea 5: ViewModel, UI State y Pruebas Unitarias (`SettingsViewModelTest`) [COMPLETADA]
+### Tarea 4: Eliminación de Capas Intermedias Obsoletas [COMPLETADA]
+* **Archivos Eliminados:**
+  * `app/src/main/java/com/trazo/app/domain/model/LocationPermissionState.kt`
+  * `app/src/main/java/com/trazo/app/data/permissions/PermissionReader.kt`
+  * `app/src/main/java/com/trazo/app/data/permissions/AndroidPermissionReader.kt`
+  * `app/src/main/java/com/trazo/app/data/local/DemoModePreferences.kt`
+  * `app/src/main/java/com/trazo/app/data/local/SharedPreferencesDemoModePreferences.kt`
+* **Directorios Eliminados:** `data/permissions/` y `data/local/`.
+
+---
+
+### Tarea 5: ViewModel, UI State y Pruebas Unitarias [COMPLETADA]
 * **Capa / Componente:** `ui/screens/settings/` y `app/src/test/`
-* **Archivos Creados:**
-  * `app/src/main/java/com/trazo/app/ui/screens/settings/SettingsViewModel.kt`
-  * `app/src/test/java/com/trazo/app/ui/screens/settings/SettingsViewModelTest.kt`
+* **Archivos Modificados:**
+  * `app/src/main/java/com/trazo/app/ui/screens/settings/SettingsViewModel.kt` (`SettingsUiState` usa `LocationStatus`, `onDemoModeToggled` delega a `SetDemoModeUseCase`)
+  * `app/src/test/java/com/trazo/app/ui/screens/settings/SettingsViewModelTest.kt` (usa `FakeLocationRepository`, comprueba no persistencia con carrera activa)
 * **Requisitos Cubiertos:** Requirement 2, Requirement 4, Requirement 5, Requirement 6.
 
 ---
 
-### Tarea 6: Recursos de Cadenas de Texto (`strings.xml`) [COMPLETADA]
-* **Capa / Componente:** `res/values/strings.xml`
-* **Archivos Modificados:**
-  * `app/src/main/res/values/strings.xml`
-* **Requisitos Cubiertos:** Requirement 1, Requirement 2, Requirement 3, Requirement 5, Requirement 6.
-
----
-
-### Tarea 7: Componentes de UI de Configuración [COMPLETADA]
-* **Capa / Componente:** `ui/screens/settings/components/`
-* **Archivos Creados:**
-  * `app/src/main/java/com/trazo/app/ui/screens/settings/components/PermissionRow.kt`
-  * `app/src/main/java/com/trazo/app/ui/screens/settings/components/DemoModeSwitch.kt`
-* **Requisitos Cubiertos:** Requirement 2, Requirement 3, Requirement 5, Requirement 6.
-
----
-
-### Tarea 8: Composable Principal `SettingsScreen.kt` con Único `@Preview` [COMPLETADA]
+### Tarea 6: Componentes de UI y Composable Principal [COMPLETADA]
 * **Capa / Componente:** `ui/screens/settings/`
-* **Archivos Creados:**
-  * `app/src/main/java/com/trazo/app/ui/screens/settings/SettingsScreen.kt`
-* **Requisitos Cubiertos:** Requirement 1, Requirement 2, Requirement 3, Requirement 4, Requirement 5, Requirement 6.
-
----
-
-### Tarea 9: Navegación e Integración en `TrazoApp.kt` y Pruebas de Navegación [COMPLETADA]
-* **Capa / Componente:** `ui/navigation/` y `ui/screens/profile/`
 * **Archivos Modificados:**
-  * `app/src/main/java/com/trazo/app/ui/navigation/TrazoApp.kt`
-  * `app/src/main/java/com/trazo/app/ui/navigation/TrazoScaffold.kt`
-  * `app/src/test/java/com/trazo/app/ui/navigation/TrazoScaffoldTest.kt`
-* **Requisitos Cubiertos:** Requirement 1, Requirement 3.
-
----
-
-### Tarea 10: Verificación Técnica Automatizada y Linter [COMPLETADA]
-* **Resultados Obtenidos:**
-  * `./gradlew :app:ktlintCheck` $\rightarrow$ `BUILD SUCCESSFUL` (0 errores)
-  * `./gradlew :app:testDebugUnitTest` $\rightarrow$ `346 passed, 1 skipped, 0 failed`
-  * `./gradlew :app:lintDebug` $\rightarrow$ `BUILD SUCCESSFUL` (0 errores)
-  * `./gradlew :app:assembleDebug` $\rightarrow$ `BUILD SUCCESSFUL`
-  * `./gradlew :app:koverHtmlReportDebug` $\rightarrow$ `BUILD SUCCESSFUL` (Informe generado en `app/build/reports/kover/htmlDebug/index.html`)
-* **Requisitos Cubiertos:** Todos los requisitos.
-
----
-
-### Tarea 11: Verificación Manual de los 6 Escenarios en Emulador [A EJECUTAR POR EL USUARIO]
-* **Capa / Componente:** Pruebas Manuales de Aceptación
-* **Escenarios a Validar:**
-  1. **Req. 1:** Tocar el engranaje desde Perfil abre "Configuración" con secciones "Permisos" y "Modo demo".
-  2. **Req. 2:** Muestra el estado real de permisos (Ubicación: Precisa / Aproximada / Denegada; Cámara: Permitida / Denegada).
-  3. **Req. 3:** Tocar "Ir a configuración" abre los ajustes de la app en Android.
-  4. **Req. 4:** Modificar un permiso en los ajustes de Android y volver a la app actualiza el estado inmediatamente.
-  5. **Req. 5:** Sin carrera en curso, activar el interruptor muestra el mensaje *"Modo demo activado: los recorridos son simulados"* y persiste el cambio.
-  6. **Req. 6:** Con una carrera en curso, el interruptor aparece deshabilitado con el mensaje *"Finalizá el recorrido para cambiar el modo demo"*. Entrar y salir de Configuración no altera la carrera.
+  * `app/src/main/java/com/trazo/app/ui/screens/settings/components/PermissionRow.kt` (`locationPermissionStatusText` traduce `READY`/`DEVICE_LOCATION_OFF` a "Precisa", etc.)
+  * `app/src/main/java/com/trazo/app/ui/screens/settings/SettingsScreen.kt` (usa `state.locationStatus`)
+  * `app/src/test/java/com/trazo/app/ui/screens/settings/SettingsContentTest.kt`
 * **Requisitos Cubiertos:** Requirement 1, Requirement 2, Requirement 3, Requirement 4, Requirement 5, Requirement 6.
+
+---
+
+### Tarea 7: Verificación Técnica Automatizada y Linter [EN EJECUCIÓN]
+* **Comandos de Verificación:**
+  * `./gradlew :app:ktlintCheck`
+  * `./gradlew :app:testDebugUnitTest`
+  * `./gradlew :app:lintDebug`
+  * `./gradlew :app:koverVerifyDebug`
+  * `./gradlew :app:koverLogDebug`

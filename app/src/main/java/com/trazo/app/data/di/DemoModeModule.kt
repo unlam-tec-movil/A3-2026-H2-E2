@@ -1,7 +1,5 @@
 package com.trazo.app.data.di
 
-import com.trazo.app.data.local.DemoModePreferences
-import com.trazo.app.data.local.SharedPreferencesDemoModePreferences
 import com.trazo.app.data.repository.DemoModeRepository
 import com.trazo.app.data.repository.DemoModeRepositoryImpl
 import dagger.Binds
@@ -13,10 +11,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class DemoModeModule {
-    @Binds
-    @Singleton
-    abstract fun bindDemoModePreferences(impl: SharedPreferencesDemoModePreferences): DemoModePreferences
-
     @Binds
     @Singleton
     abstract fun bindDemoModeRepository(impl: DemoModeRepositoryImpl): DemoModeRepository

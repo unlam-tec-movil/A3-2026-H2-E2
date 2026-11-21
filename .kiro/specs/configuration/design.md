@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-La pantalla "Configuración" permite a los corredores consultar el estado real de los permisos de ubicación y cámara, acceder a los ajustes del sistema Android cuando faltan permisos, y gestionar el interruptor de "Modo demo" para simular carreras sin salir a la calle, asegurando que no se pueda modificar mientras un recorrido está en curso.
+La pantalla "Configuración" permite a los corredores consultar el estado real de los permisos de ubicación y cámara, acceder a los ajustes del sistema Android cuando faltan permisos, y gestionar el interruptor de "Modo demo" para simular carreras sin salir a la calle, asegurando mediante un caso de uso de dominio (`SetDemoModeUseCase`) que no se pueda modificar mientras un recorrido está en curso.
 
-Sigue la arquitectura por capas del proyecto (`ui → domain → data`) con interfaz e implementación de repositorios agrupadas en `data/repository/`, y la navegación de 2 pestañas principales (`ACTIVITY` y `PROFILE`).
+Sigue la arquitectura por capas del proyecto (`ui → domain → data`) con interfaz e implementación de repositorios agrupadas en `data/repository/`, reutilización directa de `LocationRepository.readLocationStatus()` para el estado de ubicación, y navegación de 2 pestañas principales (`ACTIVITY` y `PROFILE`).
 
 ---
 
@@ -19,14 +19,14 @@ graph TD
         DemoModeSwitch["components/DemoModeSwitch"]
     end
 
-    subgraph Domain ["Capa Domain (domain/model)"]
-        LocationPermissionState["LocationPermissionState (Enum)"]
+    subgraph Domain ["Capa Domain (domain/usecases, domain/model)"]
+        SetDemoModeUseCase["SetDemoModeUseCase"]
+        LocationStatus["LocationStatus (Enum)"]
         CameraPermissionStatus["CameraPermissionStatus (Enum)"]
     end
 
-    subgraph Data ["Capa Data (data/repository, data/permissions, data/local)"]
-        PermissionReader["PermissionReader / AndroidPermissionReader"]
-        DemoModePrefs["DemoModePreferences / SharedPreferencesDemoModePreferences"]
+    subgraph Data ["Capa Data (data/repository)"]
+        LocationRepo["LocationRepository / LocationRepositoryImpl"]
         PermissionRepo["PermissionRepository (Interfaz)"]
         PermissionRepoImpl["PermissionRepositoryImpl (Clase)"]
         DemoModeRepo["DemoModeRepository (Interfaz)"]
@@ -38,45 +38,40 @@ graph TD
     SettingsScreen --> PermissionRow
     SettingsScreen --> DemoModeSwitch
 
+    SettingsViewModel --> LocationRepo
     SettingsViewModel --> PermissionRepo
     SettingsViewModel --> DemoModeRepo
     SettingsViewModel --> RunSessionRepo
+    SettingsViewModel --> SetDemoModeUseCase
+
+    SetDemoModeUseCase --> DemoModeRepo
+    SetDemoModeUseCase --> RunSessionRepo
 
     PermissionRepoImpl -. implements .-> PermissionRepo
     DemoModeRepoImpl -. implements .-> DemoModeRepo
-
-    PermissionRepoImpl --> PermissionReader
-    DemoModeRepoImpl --> DemoModePrefs
 ```
 
 ---
 
 ## Package Structure & Component Inventory
 
-### 1. Archivos Nuevos
+### 1. Archivos
 
 #### Capa `domain`
-* `domain/model/LocationPermissionState.kt`
-  * Paquete: `com.trazo.app.domain.model`
-  * Propósito: Enum de dominio con los estados puros del permiso de ubicación (`EXACT`, `APPROXIMATE`, `DENIED`).
+* `domain/usecases/SetDemoModeUseCase.kt`
+  * Paquete: `com.trazo.app.domain.usecases`
+  * Propósito: Caso de uso que encapsula la regla de negocio del modo demo: si `runSessionRepository.isRunInProgress.value` es `true`, ignora la solicitud; si es `false`, delega la persistencia en `demoModeRepository.setDemoModeEnabled(enabled)`.
 
 #### Capa `data`
-* `data/permissions/PermissionReader.kt` & `AndroidPermissionReader.kt`
-  * Paquete: `com.trazo.app.data.permissions`
-  * Propósito: Lector que evalúa los permisos Android de ubicación (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`) y cámara (`CAMERA`).
-* `data/local/DemoModePreferences.kt` & `SharedPreferencesDemoModePreferences.kt`
-  * Paquete: `com.trazo.app.data.local`
-  * Propósito: Fuente de persistencia local `@Singleton` del valor del modo demo mediante `SharedPreferences`, actualizando un `MutableStateFlow` al escribir.
-  * **Justificación de tecnología**: La biblioteca `DataStore` no está incluida en el catálogo de dependencias del proyecto (`gradle/libs.versions.toml`). Se utiliza `SharedPreferences` en `data/local/` para mantener las dependencias livianas, 100 % locales y sin agregar librerías externas.
 * `data/repository/PermissionRepository.kt` & `PermissionRepositoryImpl.kt`
   * Paquete: `com.trazo.app.data.repository`
-  * Propósito: Interfaz e implementación unificada para consultar los estados reales de permisos de ubicación y cámara.
+  * Propósito: Interfaz e implementación exclusiva para consultar el estado del permiso de cámara (`readCameraPermissionStatus(): CameraPermissionStatus`). Lee `ContextCompat.checkSelfPermission` directamente sin capas intermedias.
 * `data/repository/DemoModeRepository.kt` & `DemoModeRepositoryImpl.kt`
   * Paquete: `com.trazo.app.data.repository`
-  * Propósito: Interfaz e implementación que expone `val isDemoModeEnabled: Flow<Boolean>` y la función `suspend fun setDemoModeEnabled(enabled: Boolean)`.
+  * Propósito: Interfaz e implementación que expone `val isDemoModeEnabled: Flow<Boolean>` y `suspend fun setDemoModeEnabled(enabled: Boolean)`. Implementado directamente con `SharedPreferences` usando `by lazy` tanto para las preferencias como para el flujo inicial, evitando lecturas a disco en el constructor (`init`).
 * `data/di/PermissionModule.kt` & `data/di/DemoModeModule.kt`
   * Paquete: `com.trazo.app.data.di`
-  * Propósito: Módulos Hilt (`@Module`, `@InstallIn(SingletonComponent::class)`) con anotaciones `@Binds` para vincular repositorios con sus implementaciones.
+  * Propósito: Módulos Hilt (`@Module`, `@InstallIn(SingletonComponent::class)`) con un único `@Binds` por módulo para vincular cada repositorio con su implementación.
 
 #### Capa `ui`
 * `ui/screens/settings/SettingsScreen.kt`
@@ -84,26 +79,13 @@ graph TD
   * Propósito: Composable principal que conecta `SettingsViewModel` y expone `SettingsContent` (stateless).
 * `ui/screens/settings/SettingsViewModel.kt`
   * Paquete: `com.trazo.app.ui.screens.settings`
-  * Propósito: ViewModel `@HiltViewModel` que gestiona `SettingsUiState` y responde a eventos del usuario.
+  * Propósito: ViewModel `@HiltViewModel` que expone `SettingsUiState`, consulta `locationRepository.readLocationStatus()`, `permissionRepository.readCameraPermissionStatus()`, y delega `onDemoModeToggled` directamente a `SetDemoModeUseCase`.
 * `ui/screens/settings/components/PermissionRow.kt`
   * Paquete: `com.trazo.app.ui.screens.settings.components`
-  * Propósito: Componente para cada permiso (Ubicación / Cámara) con etiqueta de estado y botón "Ir a configuración".
+  * Propósito: Componente para cada permiso (Ubicación / Cámara) con etiqueta de estado traducida mediante `stringResource` y botón "Ir a configuración".
 * `ui/screens/settings/components/DemoModeSwitch.kt`
   * Paquete: `com.trazo.app.ui.screens.settings.components`
-  * Propósito: Componente del interruptor de Modo Demo con avisos de estado y bloqueo cuando hay carrera activa.
-
-### 2. Archivos Modificados
-
-* `app/src/main/res/values/strings.xml`
-  * Agregar claves de texto con prefijo `settings_` en español rioplatense (voseo).
-* `app/src/main/java/com/trazo/app/ui/navigation/LocationSettingsIntent.kt`
-  * Agregar la función auxiliar `appDetailsSettingsIntent(context)` para abrir los ajustes de la app.
-* `app/src/main/java/com/trazo/app/ui/navigation/TrazoScaffold.kt`
-  * Registrar la constante `SETTINGS_ROUTE = "settings"`, el slot `settingsScreen` y ocultar la barra inferior en dicha ruta.
-* `app/src/main/java/com/trazo/app/ui/navigation/TrazoApp.kt`
-  * Conectar el parámetro `onSettingsClick` de `ProfileScreen` y proveer `SettingsScreen` al slot `settingsScreen`.
-* `app/src/test/java/com/trazo/app/ui/navigation/TrazoScaffoldTest.kt`
-  * Agregar prueba de navegación para `SETTINGS_ROUTE` y verificación del ocultamiento de la barra inferior.
+  * Propósito: Componente del interruptor de Modo Demo con avisos de estado y bloqueo visual cuando hay carrera activa.
 
 ---
 
@@ -115,10 +97,10 @@ graph TD
 | `ProfileScreen.kt` | `ui/screens/profile/ProfileScreen.kt` | Reutilizado / Conectado | Pasa la acción `onSettingsClick` al NavController. |
 | `RunSessionRepository.isRunInProgress` | `data/repository/RunSessionRepository.kt` | Reutilizado | Estado reactivo `StateFlow<Boolean>` para determinar si hay un recorrido en curso. |
 | `LocationSettingsIntent.kt` | `ui/navigation/LocationSettingsIntent.kt` | Reutilizado / Extendida | `appDetailsSettingsIntent(context)` abre los ajustes de la app (`ACTION_APPLICATION_DETAILS_SETTINGS`). |
+| `LocationStatus.kt` | `domain/model/LocationStatus.kt` | Reutilizado | Enum del estado de ubicación (`READY`, `DEVICE_LOCATION_OFF`, `APPROXIMATE_ONLY`, `PERMISSION_DENIED`). |
+| `LocationRepository.readLocationStatus()` | `data/repository/LocationRepository.kt` | **Reutilizado Directamente** | Reutilizado tanto para la pantalla de Configuración como para el inicio de recorrido, sin modificar su implementación. |
 | `CameraPermissionStatus.kt` | `domain/model/CameraPermissionStatus.kt` | Reutilizado | Enum del estado del permiso de cámara (`GRANTED`, `DENIED`, `UNKNOWN`). |
-| `TrazoTopBar.kt` | `ui/components/layout/TrazoTopBar.kt` | Reutilizado | Barra superior con título "Configuración" y botón de retorno. |
-| `PrimaryButton.kt` / `TrazoTheme` | `ui/components/common/` / `ui/theme/` | Reutilizados | Estilos, colores y botones del sistema de diseño Trazo. |
-| `LocationRepository.readLocationStatus()` | `data/repository/LocationRepository.kt` | **Intacto (Sin Cambios)** | Preservado exclusivamente para la verificación del estado del GPS en el inicio de recorrido. |
+| `SetDemoModeUseCase.kt` | `domain/usecases/SetDemoModeUseCase.kt` | Nuevo | Caso de uso que protege el cambio de modo demo cuando hay un recorrido activo. |
 
 ---
 
@@ -127,178 +109,81 @@ graph TD
 | Requisito | Componente / Clase Encargada | Detalles de Implementación |
 |---|---|---|
 | **Requirement 1: Abrir Configuración** | `ProfileScreen.kt` $\rightarrow$ `TrazoApp.kt` $\rightarrow$ `SettingsScreen.kt` | El engranaje invoca `onSettingsClick()`. `TrazoApp` ejecuta `navController.navigate("settings")`. `SettingsScreen` renderiza secciones "Permisos" y "Modo demo". |
-| **Requirement 2: Estado de los permisos** | `PermissionRepository` $\rightarrow$ `SettingsViewModel` $\rightarrow$ `PermissionRow.kt` | `SettingsViewModel` consulta `PermissionRepository` y almacena en `SettingsUiState` los enums `LocationPermissionState` y `CameraPermissionStatus` puros. La UI traduce con `stringResource`. |
-| **Requirement 3: Ir a la configuración del sistema** | `PermissionRow.kt` $\rightarrow$ `LocationSettingsIntent.kt` | Reutiliza `appDetailsSettingsIntent(context)` que abre los ajustes de la aplicación (`Settings.ACTION_APPLICATION_DETAILS_SETTINGS`) cuando Ubicación no es `EXACT` o Cámara no es `GRANTED`. |
+| **Requirement 2: Estado de los permisos** | `LocationRepository.readLocationStatus()` y `PermissionRepository.readCameraPermissionStatus()` $\rightarrow$ `SettingsViewModel` $\rightarrow$ `PermissionRow.kt` | `SettingsViewModel` consulta directamente `LocationRepository.readLocationStatus()` y `PermissionRepository.readCameraPermissionStatus()`. `SettingsUiState` guarda `LocationStatus` y `CameraPermissionStatus`. La UI mapea: `READY` y `DEVICE_LOCATION_OFF` $\rightarrow$ "Precisa"; `APPROXIMATE_ONLY` $\rightarrow$ "Aproximada"; `PERMISSION_DENIED` $\rightarrow$ "Denegada". |
+| **Requirement 3: Ir a la configuración del sistema** | `PermissionRow.kt` $\rightarrow$ `LocationSettingsIntent.kt` | Reutiliza `appDetailsSettingsIntent(context)` que abre los ajustes de la aplicación cuando Ubicación es `APPROXIMATE_ONLY` o `PERMISSION_DENIED`, o cuando Cámara no es `GRANTED`. |
 | **Requirement 4: Actualizar al volver de los ajustes** | `SettingsScreen.kt` (`DisposableEffect` / `ON_RESUME`) | Escucha el evento `ON_RESUME` del ciclo de vida en `SettingsScreen` para ejecutar `viewModel.onRefreshPermissions()`, reevaluando el estado inmediatamente. |
-| **Requirement 5: Activar y desactivar el modo demo** | `DemoModeRepository` $\rightarrow$ `SettingsViewModel` $\rightarrow$ `DemoModeSwitch.kt` | Cuando no hay recorrido en curso, permite cambiar el interruptor, persiste el valor en `DemoModePreferences` y la UI muestra `"Modo demo activado: los recorridos son simulados"` vía `R.string.settings_demo_mode_active_notice`. |
-| **Requirement 6: Modo demo con recorrido en curso** | `RunSessionRepository.isRunInProgress` $\rightarrow$ `SettingsViewModel` | `SettingsViewModel` expone `isRunInProgress` en `SettingsUiState`, deshabilita el Switch en la UI e **ignora programáticamente** cualquier llamada a `onDemoModeToggled` cuando `isRunInProgress == true`. La UI muestra `"Finalizá el recorrido para cambiar el modo demo"` vía `R.string.settings_demo_mode_running_notice`. |
+| **Requirement 5: Activar y desactivar el modo demo** | `SetDemoModeUseCase` $\rightarrow$ `DemoModeRepository` $\rightarrow$ `DemoModeSwitch.kt` | Cuando no hay recorrido en curso, `SetDemoModeUseCase` permite el cambio, `DemoModeRepositoryImpl` persiste en `SharedPreferences` y la UI muestra `"Modo demo activado: los recorridos son simulados"` vía `R.string.settings_demo_mode_active_notice`. |
+| **Requirement 6: Modo demo con recorrido en curso** | `RunSessionRepository.isRunInProgress` $\rightarrow$ `SetDemoModeUseCase` $\rightarrow$ `SettingsViewModel` | `SettingsUiState` expone `isRunInProgress` e `isDemoModeSwitchEnabled`. En la UI el Switch se deshabilita y muestra `"Finalizá el recorrido para cambiar el modo demo"`. `SettingsViewModel.onDemoModeToggled` delega ciegamente a `SetDemoModeUseCase`, que no hace nada si `isRunInProgress.value == true`. |
 
 ---
 
 ## Design Specifics
 
-### 1. Manejo Unificado e Independiente de Permisos
-Para respetar el requisito explícito de **no modificar `LocationRepository.readLocationStatus()`** (utilizado para advertir si la ubicación del dispositivo está desactivada al iniciar), se unifican las lecturas de permisos en un único repositorio en `data/repository/`:
+### 1. Reutilización de `LocationRepository.readLocationStatus()` y `LocationStatus`
+En lugar de crear un enum o lector duplicado, se aprovecha `LocationRepository.readLocationStatus()`, cuya evaluación en `LocationStatusChecks.kt` garantiza el orden:
+1. `ACCESS_FINE_LOCATION` concedido $\rightarrow$ `READY` (si ubicación del dispositivo activada) o `DEVICE_LOCATION_OFF` (si está desactivada).
+2. Solo `ACCESS_COARSE_LOCATION` concedido $\rightarrow$ `APPROXIMATE_ONLY`.
+3. Ninguno concedido $\rightarrow$ `PERMISSION_DENIED`.
 
+En la UI:
+* `READY` y `DEVICE_LOCATION_OFF` se muestran como **"Precisa"** (`R.string.settings_permission_exact`).
+* `APPROXIMATE_ONLY` se muestra como **"Aproximada"** (`R.string.settings_permission_approximate`).
+* `PERMISSION_DENIED` se muestra como **"Denegada"** (`R.string.settings_permission_denied`).
+* `showLocationSettingsButton` es `true` solo para `APPROXIMATE_ONLY` o `PERMISSION_DENIED`.
+
+### 2. `PermissionRepository` Simplificado
+`PermissionRepository` queda dedicado exclusivamente a permisos fuera de ubicación:
 ```kotlin
-// domain/model/LocationPermissionState.kt
-enum class LocationPermissionState { EXACT, APPROXIMATE, DENIED }
-
-// data/repository/PermissionRepository.kt
 interface PermissionRepository {
-    fun readLocationPermissionState(): LocationPermissionState
     fun readCameraPermissionStatus(): CameraPermissionStatus
 }
 ```
+Su implementación `PermissionRepositoryImpl` verifica `ContextCompat.checkSelfPermission` directamente con `@ApplicationContext private val context: Context`, eliminando la interfaz `PermissionReader`.
 
-En `AndroidPermissionReader.kt` (ubicado en `data/permissions/`):
-* Si `ACCESS_FINE_LOCATION` está concedido $\rightarrow$ `LocationPermissionState.EXACT` ("Precisa").
-* Si únicamente `ACCESS_COARSE_LOCATION` está concedido $\rightarrow$ `LocationPermissionState.APPROXIMATE` ("Aproximada").
-* Si ninguno está concedido $\rightarrow$ `LocationPermissionState.DENIED` ("Denegada").
-* Si `CAMERA` está concedido $\rightarrow$ `CameraPermissionStatus.GRANTED` ("Permitida"); si no es concedido o es `UNKNOWN` $\rightarrow$ se trata como no concedido (`showCameraSettingsButton = true`).
-* **Resultado:** El estado del permiso refleja estrictamente el otorgamiento del permiso Android, sin marcar "Denegada" cuando la ubicación del dispositivo está desactivada pero el permiso sí fue concedido.
+### 3. `DemoModeRepositoryImpl` Directo con Inicialización Perezosa
+`DemoModeRepositoryImpl` utiliza `SharedPreferences` sin intermediarios:
+* El acceso a `SharedPreferences` y a `MutableStateFlow` es `by lazy`.
+* No se realiza lectura a disco en el constructor (`init`), difiriendo el I/O hasta el primer consumo de `isDemoModeEnabled` o llamada a `setDemoModeEnabled`.
 
-### 2. ViewModel Desacoplado de Android
-`SettingsViewModel` inyecta `PermissionRepository`, `DemoModeRepository` y `RunSessionRepository`. En ningún momento el ViewModel utiliza `Context`, `ContextCompat` ni fuentes de datos directas.
-
-### 3. `SettingsUiState` Puro y Mapeo en UI
-`SettingsUiState` almacena únicamente modelos y enums de dominio:
+### 4. Regla del Modo Demo en Domain (`SetDemoModeUseCase`)
+La validación de no alterar el modo demo durante una carrera se extrae del ViewModel a la capa de dominio:
 ```kotlin
-data class SettingsUiState(
-    val locationPermissionState: LocationPermissionState = LocationPermissionState.DENIED,
-    val cameraPermissionStatus: CameraPermissionStatus = CameraPermissionStatus.DENIED,
-    val isDemoModeEnabled: Boolean = false,
-    val isRunInProgress: Boolean = false,
+class SetDemoModeUseCase @Inject constructor(
+    private val demoModeRepository: DemoModeRepository,
+    private val runSessionRepository: RunSessionRepository,
 ) {
-    val showLocationSettingsButton: Boolean
-        get() = locationPermissionState != LocationPermissionState.EXACT
-
-    val showCameraSettingsButton: Boolean
-        get() = cameraPermissionStatus != CameraPermissionStatus.GRANTED
-
-    val isDemoModeSwitchEnabled: Boolean
-        get() = !isRunInProgress
-}
-```
-En la UI Compose (`DemoModeSwitch.kt`), el mensaje de aviso se resuelve con `stringResource`:
-```kotlin
-val noticeText = when {
-    state.isRunInProgress -> stringResource(R.string.settings_demo_mode_running_notice)
-    state.isDemoModeEnabled -> stringResource(R.string.settings_demo_mode_active_notice)
-    else -> null
-}
-```
-
-### 4. Persistencia del Modo Demo y Protección en Curso
-* **Persistencia en `data/local/`**: `SharedPreferencesDemoModePreferences.kt` es una clase `@Singleton` que almacena la preferencia en `SharedPreferences` y actualiza un `MutableStateFlow<Boolean>` directamente al escribir.
-* **Protección Programática en ViewModel**:
-  ```kotlin
-  fun onDemoModeToggled(enabled: Boolean) {
-      if (runSessionRepository.isRunInProgress.value) {
-          // Ignora la solicitud si hay un recorrido en curso
-          return
-      }
-      viewModelScope.launch {
-          demoModeRepository.setDemoModeEnabled(enabled)
-      }
-  }
-  ```
-* **Continuidad del Recorrido Activo**: Entrar a Configuración y volver mientras un recorrido está en curso **no interrumpe ni altera la carrera**. La sesión vive en `RunSessionRepositoryImpl` (componente `@Singleton` administrado en el scope de la aplicación), por lo que navegar fuera del Mapa no cancela los coroutine jobs de tracking.
-
-### 5. Refresco Automático de Permisos (`ON_RESUME`)
-En `SettingsScreen.kt`:
-```kotlin
-val lifecycleOwner = LocalLifecycleOwner.current
-DisposableEffect(lifecycleOwner) {
-    val observer = LifecycleEventObserver { _, event ->
-        if (event == Lifecycle.Event.ON_RESUME) {
-            viewModel.onRefreshPermissions()
-        }
-    }
-    lifecycleOwner.lifecycle.addObserver(observer)
-    onDispose {
-        lifecycleOwner.lifecycle.removeObserver(observer)
+    suspend operator fun invoke(enabled: Boolean) {
+        if (runSessionRepository.isRunInProgress.value) return
+        demoModeRepository.setDemoModeEnabled(enabled)
     }
 }
 ```
-
-### 6. Apertura de Ajustes del Sistema Android
-Al presionar "Ir a configuración", `SettingsScreen` invoca `appDetailsSettingsIntent(context)` de `LocationSettingsIntent.kt` (que abre `Settings.ACTION_APPLICATION_DETAILS_SETTINGS` de la aplicación).
-
-### 7. Centralización de Textos
-Todos los textos visibles se cargan mediante `stringResource(R.string.settings_*)` desde `res/values/strings.xml` en español de Argentina con voseo:
-* `settings_title`: "Configuración"
-* `settings_back`: "Volver"
-* `settings_permissions_section`: "Permisos"
-* `settings_location_label`: "Ubicación"
-* `settings_camera_label`: "Cámara"
-* `settings_permission_exact`: "Precisa"
-* `settings_permission_approximate`: "Aproximada"
-* `settings_permission_denied`: "Denegada"
-* `settings_permission_granted`: "Permitida"
-* `settings_go_to_settings`: "Ir a configuración"
-* `settings_demo_mode_section`: "Modo demo"
-* `settings_demo_mode_label`: "Modo demo"
-* `settings_demo_mode_active_notice`: "Modo demo activado: los recorridos son simulados"
-* `settings_demo_mode_running_notice`: "Finalizá el recorrido para cambiar el modo demo"
-
----
-
-## Navigation & Screen Integration
-
-* **Destinos Principales:** `TrazoDestination` mantiene únicamente las 2 pestañas principales (`ACTIVITY` y `PROFILE`).
-* **Ruta Apilada:** La pantalla Configuración se registra en `NavHost` como la ruta apilada `SETTINGS_ROUTE = "settings"` (fuera del enum de pestañas).
-* **Conexión de Engranaje:** En `ProfileScreen.kt`, la barra superior invoca `onSettingsClick()`. En `TrazoApp.kt`, `onSettingsClick` ejecuta:
-  ```kotlin
-  navController.navigate(SETTINGS_ROUTE) { launchSingleTop = true }
-  ```
-* **Ocultamiento de Barra Inferior:** En `TrazoApp.kt`, `BottomNavBar` se oculta cuando `currentRoute == SETTINGS_ROUTE` (siguiendo el mismo patrón existente con `RESULT_ROUTE`).
-* **Botón de Volver:** La barra superior de `SettingsScreen` incluye el botón de retroceso con `contentDescription = stringResource(R.string.settings_back)` que invoca `onBackClick()`, ejecutando `navController.popBackStack()`.
+`SettingsViewModel.onDemoModeToggled` solo delega en el caso de uso sin bifurcaciones condicionales (`if`).
 
 ---
 
 ## Testing Strategy & Hand-Written Fakes
 
-Se crearán fakes escritos a mano en `app/src/test/java/com/trazo/app/`:
-* `FakePermissionRepository`: Permite alternar dinámicamente los estados de permisos de ubicación (`EXACT`, `APPROXIMATE`, `DENIED`) y cámara (`GRANTED`, `DENIED`, `UNKNOWN`).
-* `FakeDemoModeRepository`: Permite simular cambios de `isDemoModeEnabled` y verificar las llamadas a `setDemoModeEnabled`.
-* `FakeRunSessionRepository`: Permite controlar `isRunInProgress: StateFlow<Boolean>`.
+* `FakeLocationRepository`: Fake JVM existente para controlar `readLocationStatus()`.
+* `FakePermissionRepository`: Controla `cameraStatus` y registra llamadas a `readCameraPermissionStatus()`.
+* `FakeDemoModeRepository`: Registra llamadas en `setDemoModeCalls` y emite `isDemoModeEnabled`.
+* `FakeRunSessionRepository`: Permite alternar `isRunInProgress`.
 
-### Casos de Prueba Unitarias (`SettingsViewModelTest.kt`)
-1. **Valor Inicial Inmediato:** Comprobar que `uiState.value` antes de colectar ya refleja el estado retornado por los repositorios.
-2. **Permisos Concedidos:** Comprobar `LocationPermissionState.EXACT` y `CameraPermissionStatus.GRANTED` sin botones "Ir a configuración".
-3. **Permisos Denegados / Aproximados / Desconocidos:** Comprobar presencia del botón "Ir a configuración" cuando la ubicación es `APPROXIMATE` o `DENIED`, o cuando la cámara es `DENIED` o `UNKNOWN`.
-4. **Refresco en ON_RESUME (`onRefreshPermissions`):** Verificar que la reevaluación actualice el `uiState`.
-5. **Modo Demo Habilitado (Sin Carrera Activa):** Verificar activación del interruptor, llamada al repositorio y estado `isDemoModeEnabled == true`.
-6. **Modo Demo Inhabilitado (Carrera en Curso):** Cuando `isRunInProgress == true`, comprobar que `isDemoModeSwitchEnabled == false` y que la función `onDemoModeToggled` **ignore** cualquier solicitud sin persistir ni cambiar el estado.
-
----
-
-## Preview Strategy
-
-Se proporcionará **exactamente UN `@Preview`** en `SettingsScreen.kt` envolviendo `SettingsContent` en `TrazoTheme`:
-
-```kotlin
-@Preview(showBackground = true, widthDp = 360, heightDp = 640)
-@Composable
-private fun SettingsContentPreview() {
-    TrazoTheme {
-        SettingsContent(
-            state = SettingsUiState(
-                locationPermissionState = LocationPermissionState.EXACT,
-                cameraPermissionStatus = CameraPermissionStatus.DENIED,
-                isDemoModeEnabled = true,
-                isRunInProgress = false,
-            ),
-            onBackClick = {},
-            onLocationSettingsClick = {},
-            onCameraSettingsClick = {},
-            onDemoModeToggle = {}
-        )
-    }
-}
-```
-
----
-
-Me detengo en este punto conforme a tus instrucciones. Quedo a la espera de tu revisión y aprobación de las correcciones antes de continuar.
+### Pruebas Unitarias
+1. `SetDemoModeUseCaseTest`:
+   * Con recorrido en curso, no persiste.
+   * Sin recorrido en curso, persiste `true` y `false`.
+2. `SettingsViewModelTest`:
+   * Reflejo del estado inicial y visibilidad de botones.
+   * Botón de configuración de ubicación visible solo con `APPROXIMATE_ONLY` y `PERMISSION_DENIED`.
+   * Botón de configuración de cámara visible cuando no es `GRANTED`.
+   * Refresco de permisos en `onRefreshPermissions()`.
+   * Delegación en `onDemoModeToggled` y respeto del bloqueo con carrera activa.
+3. `SettingsContentTest`:
+   * Renderizado de textos ("Precisa", "Aproximada", "Denegada", "Permitida").
+   * Botones de ajuste según el estado de cada permiso.
+   * Comportamiento y avisos del switch de modo demo.
+4. `PermissionRepositoryImplTest` (Robolectric):
+   * Verificación de `readCameraPermissionStatus()` con permisos concedidos y denegados.
+5. `DemoModeRepositoryImplTest` (Robolectric):
+   * Valor por defecto (`false`), lectura previa (`true`), y actualización/persistencia reactiva.

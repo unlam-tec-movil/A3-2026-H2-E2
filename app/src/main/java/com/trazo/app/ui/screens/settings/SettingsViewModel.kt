@@ -3,10 +3,12 @@ package com.trazo.app.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trazo.app.data.repository.DemoModeRepository
+import com.trazo.app.data.repository.LocationRepository
 import com.trazo.app.data.repository.PermissionRepository
 import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.CameraPermissionStatus
-import com.trazo.app.domain.model.LocationPermissionState
+import com.trazo.app.domain.model.LocationStatus
+import com.trazo.app.domain.usecases.SetDemoModeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,13 +19,15 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SettingsUiState(
-    val locationPermissionState: LocationPermissionState = LocationPermissionState.DENIED,
+    val locationStatus: LocationStatus = LocationStatus.PERMISSION_DENIED,
     val cameraPermissionStatus: CameraPermissionStatus = CameraPermissionStatus.DENIED,
     val isDemoModeEnabled: Boolean = false,
     val isRunInProgress: Boolean = false,
 ) {
     val showLocationSettingsButton: Boolean
-        get() = locationPermissionState != LocationPermissionState.EXACT
+        get() =
+            locationStatus == LocationStatus.APPROXIMATE_ONLY ||
+                locationStatus == LocationStatus.PERMISSION_DENIED
 
     val showCameraSettingsButton: Boolean
         get() = cameraPermissionStatus != CameraPermissionStatus.GRANTED
@@ -36,9 +40,11 @@ data class SettingsUiState(
 class SettingsViewModel
     @Inject
     constructor(
+        private val locationRepository: LocationRepository,
         private val permissionRepository: PermissionRepository,
         private val demoModeRepository: DemoModeRepository,
         private val runSessionRepository: RunSessionRepository,
+        private val setDemoModeUseCase: SetDemoModeUseCase,
     ) : ViewModel() {
         private val permissionRefreshTrigger = MutableStateFlow(0)
 
@@ -48,11 +54,11 @@ class SettingsViewModel
                 demoModeRepository.isDemoModeEnabled,
                 runSessionRepository.isRunInProgress,
             ) { _, isDemoEnabled, isRunInProgress ->
-                val locationState = permissionRepository.readLocationPermissionState()
+                val locationStatus = locationRepository.readLocationStatus()
                 val cameraStatus = permissionRepository.readCameraPermissionStatus()
 
                 SettingsUiState(
-                    locationPermissionState = locationState,
+                    locationStatus = locationStatus,
                     cameraPermissionStatus = cameraStatus,
                     isDemoModeEnabled = isDemoEnabled,
                     isRunInProgress = isRunInProgress,
@@ -62,7 +68,7 @@ class SettingsViewModel
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue =
                     SettingsUiState(
-                        locationPermissionState = permissionRepository.readLocationPermissionState(),
+                        locationStatus = locationRepository.readLocationStatus(),
                         cameraPermissionStatus = permissionRepository.readCameraPermissionStatus(),
                         isDemoModeEnabled = false,
                         isRunInProgress = runSessionRepository.isRunInProgress.value,
@@ -74,11 +80,8 @@ class SettingsViewModel
         }
 
         fun onDemoModeToggled(enabled: Boolean) {
-            if (runSessionRepository.isRunInProgress.value) {
-                return
-            }
             viewModelScope.launch {
-                demoModeRepository.setDemoModeEnabled(enabled)
+                setDemoModeUseCase(enabled)
             }
         }
     }

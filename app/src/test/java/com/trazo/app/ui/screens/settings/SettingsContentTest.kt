@@ -18,7 +18,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.trazo.app.R
 import com.trazo.app.domain.model.CameraPermissionStatus
-import com.trazo.app.domain.model.LocationPermissionState
+import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.ui.theme.TrazoTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -54,10 +54,24 @@ class SettingsContentTest {
     }
 
     @Test
-    fun exactLocationAndGrantedCamera_showsExactAndGranted_andNoSettingsButton() {
+    fun readyLocationAndGrantedCamera_showsExactAndGranted_andNoSettingsButton() {
         setContent(
             SettingsUiState(
-                locationPermissionState = LocationPermissionState.EXACT,
+                locationStatus = LocationStatus.READY,
+                cameraPermissionStatus = CameraPermissionStatus.GRANTED,
+            ),
+        )
+
+        composeTestRule.onNodeWithText(string(R.string.settings_permission_exact)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(string(R.string.settings_permission_granted)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(string(R.string.settings_go_to_settings)).assertDoesNotExist()
+    }
+
+    @Test
+    fun deviceLocationOffAndGrantedCamera_showsExactAndGranted_andNoSettingsButton() {
+        setContent(
+            SettingsUiState(
+                locationStatus = LocationStatus.DEVICE_LOCATION_OFF,
                 cameraPermissionStatus = CameraPermissionStatus.GRANTED,
             ),
         )
@@ -71,7 +85,7 @@ class SettingsContentTest {
     fun deniedLocationAndDeniedCamera_showsDeniedAndTwoSettingsButtons() {
         setContent(
             SettingsUiState(
-                locationPermissionState = LocationPermissionState.DENIED,
+                locationStatus = LocationStatus.PERMISSION_DENIED,
                 cameraPermissionStatus = CameraPermissionStatus.DENIED,
             ),
         )
@@ -84,7 +98,7 @@ class SettingsContentTest {
     fun deniedLocationAndUnknownCamera_showsDeniedAndTwoSettingsButtons() {
         setContent(
             SettingsUiState(
-                locationPermissionState = LocationPermissionState.DENIED,
+                locationStatus = LocationStatus.PERMISSION_DENIED,
                 cameraPermissionStatus = CameraPermissionStatus.UNKNOWN,
             ),
         )
@@ -97,7 +111,7 @@ class SettingsContentTest {
     fun approximateLocationAndGrantedCamera_showsApproximateAndGranted_andOneSettingsButton() {
         setContent(
             SettingsUiState(
-                locationPermissionState = LocationPermissionState.APPROXIMATE,
+                locationStatus = LocationStatus.APPROXIMATE_ONLY,
                 cameraPermissionStatus = CameraPermissionStatus.GRANTED,
             ),
         )
@@ -111,7 +125,7 @@ class SettingsContentTest {
     fun clickLocationAndCameraSettingsButtons_triggersRespectiveCallbacks() {
         setContent(
             SettingsUiState(
-                locationPermissionState = LocationPermissionState.DENIED,
+                locationStatus = LocationStatus.PERMISSION_DENIED,
                 cameraPermissionStatus = CameraPermissionStatus.DENIED,
             ),
         )
