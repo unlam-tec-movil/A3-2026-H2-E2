@@ -142,6 +142,8 @@ fun MapScreen(
             onCancelFinish = {
                 viewModel.onCancelFinish()
             },
+            finishFailed = uiState.finishFailed,
+            isFinishing = uiState.isFinishing,
         )
 
         if (uiState.showShortRunDialog) {
@@ -182,6 +184,10 @@ fun MapScreen(
             goal = uiState.goal,
             onDismiss = {
                 viewModel.onCelebrationDismissed()
+            },
+            onFinish = {
+                viewModel.onCelebrationDismissed()
+                viewModel.onFinishRequested()
             },
         )
     }

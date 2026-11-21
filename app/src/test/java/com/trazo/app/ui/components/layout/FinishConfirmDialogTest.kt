@@ -1,6 +1,7 @@
 package com.trazo.app.ui.components.layout
 
 import android.content.Context
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -25,6 +26,8 @@ class FinishConfirmDialogTest {
     private fun showDialog(
         visible: Boolean,
         goalReached: Boolean,
+        finishFailed: Boolean = false,
+        isFinishing: Boolean = false,
     ) {
         composeTestRule.setContent {
             TrazoTheme {
@@ -33,6 +36,8 @@ class FinishConfirmDialogTest {
                     goalReached = goalReached,
                     onConfirmFinish = { confirmations++ },
                     onCancelFinish = { cancellations++ },
+                    finishFailed = finishFailed,
+                    isFinishing = isFinishing,
                 )
             }
         }
@@ -89,5 +94,26 @@ class FinishConfirmDialogTest {
         // Then
         assertEquals(1, cancellations)
         assertEquals(0, confirmations)
+    }
+
+    @Test
+    fun `given the finish failed, when the dialog is shown, then shows the error and the retry button`() {
+        // Given / When
+        showDialog(visible = true, goalReached = true, finishFailed = true)
+
+        // Then
+        composeTestRule.onNodeWithText(context.getString(R.string.map_finish_error)).assertExists()
+        composeTestRule.onNodeWithText(context.getString(R.string.map_retry)).performClick()
+        assertEquals(1, confirmations)
+    }
+
+    @Test
+    fun `given the finish is in progress, when the dialog is shown, then both buttons are disabled`() {
+        // Given / When
+        showDialog(visible = true, goalReached = true, isFinishing = true)
+
+        // Then
+        composeTestRule.onNodeWithText(context.getString(R.string.map_finish)).assertIsNotEnabled()
+        composeTestRule.onNodeWithText(context.getString(R.string.map_cancel)).assertIsNotEnabled()
     }
 }

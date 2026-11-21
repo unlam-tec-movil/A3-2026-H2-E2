@@ -153,6 +153,25 @@ class RunSessionRepositoryImplTest {
         }
 
     @Test
+    fun finishSession_storesBrakesAndRegularityInTheSummary() =
+        runBlocking {
+            repository.attachActiveSession(
+                InitializedRunSession(
+                    id = "test-session",
+                    goal = RunGoal.THREE_KILOMETERS,
+                    startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
+                ),
+            )
+
+            val result = repository.finishSession(brakeCount = 2, regularityPercent = 80).getOrThrow()
+
+            assertEquals(2, result.brakeCount)
+            assertEquals(80, result.regularityPercent)
+            assertEquals(result, repository.getFinishedSummary("test-session"))
+        }
+
+    @Test
     fun markStopped_changesStateToStopped_andResumeSessionCannotReactivateIt() =
         runBlocking {
             val initializedSession =

@@ -42,6 +42,8 @@
     <string name="map_goal_5km">5 km</string>
     <string name="map_goal_10km">10 km</string>
     <string name="map_goal_generic">tu meta</string>
+    <string name="map_finish_error">No se pudo finalizar el recorrido. Podés reintentar.</string>
+    <string name="map_retry">Reintentar</string>
 
     <!-- HU-05.1 Detección de frenadas -->
     <string name="map_brake_alert_title">Frenada detectada</string>

@@ -108,7 +108,17 @@ class FakeRunSessionRepository : RunSessionRepository {
 
     override suspend fun resumeSession(): Result<Unit> = modelTransition { it.resume(NOW_MILLIS) }.map { }
 
-    override suspend fun finishSession(): Result<FrozenRunSummary> {
+    /** Si es verdadero, la próxima llamada a [finishSession] falla sin tocar la sesión. */
+    var failNextFinish = false
+
+    override suspend fun finishSession(
+        brakeCount: Int,
+        regularityPercent: Int?,
+    ): Result<FrozenRunSummary> {
+        if (failNextFinish) {
+            failNextFinish = false
+            return Result.failure(IllegalStateException("Falla simulada"))
+        }
         val current =
             sessionStateFlow.value as? RunSession.ActiveSession
                 ?: return Result.failure(IllegalStateException("No active run"))
@@ -124,6 +134,8 @@ class FakeRunSessionRepository : RunSessionRepository {
                 finishedAtMonotonicTimestamp = 2000L,
                 goalReached = current.goalReached,
                 isDemoMode = current.isDemoMode,
+                brakeCount = brakeCount,
+                regularityPercent = regularityPercent,
             )
 
         summaries[summary.id] = summary

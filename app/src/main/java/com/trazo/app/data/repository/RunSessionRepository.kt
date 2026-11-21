@@ -22,7 +22,11 @@ interface RunSessionRepository {
 
     suspend fun resumeSession(): Result<Unit>
 
-    suspend fun finishSession(): Result<FrozenRunSummary>
+    /** Cierra la sesión y guarda su resumen con las frenadas y la regularidad que recibe. */
+    suspend fun finishSession(
+        brakeCount: Int = 0,
+        regularityPercent: Int? = null,
+    ): Result<FrozenRunSummary>
 
     fun resetToIdle()
 

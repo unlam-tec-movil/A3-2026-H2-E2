@@ -6,6 +6,7 @@ import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
+import com.trazo.app.domain.usecases.testFinishRunUseCase
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,6 +21,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -52,6 +54,7 @@ class LiveRouteTrackingViewModelFlowsTest {
         LiveRouteTrackingViewModel(
             runSessionRepository = repository,
             locationRepository = locationRepository,
+            finishRun = testFinishRunUseCase(repository),
         )
 
     private fun session(state: RunState) =
@@ -141,6 +144,64 @@ class LiveRouteTrackingViewModelFlowsTest {
 
             // Then
             assertTrue(effect is LiveRouteTrackingUiEffect.NavigateToResults)
+        }
+
+    @Test
+    fun `given the finish fails, when confirming, then keeps the run and the dialog offers a retry`() =
+        runTest {
+            // Given
+            repository.setSession(session(RunState.ACTIVE))
+            repository.failNextFinish = true
+            val viewModel = createViewModel()
+            keepStateHot(viewModel)
+
+            // When
+            viewModel.onConfirmFinish()
+
+            // Then
+            val state = viewModel.uiState.value
+            assertTrue(state.finishFailed)
+            assertFalse(state.isFinishing)
+            assertTrue(state.hasActiveRun)
+            assertTrue(repository.activeSession.value is RunSession.ActiveSession)
+        }
+
+    @Test
+    fun `given a failed finish, when retrying, then navigates to the results and clears the error`() =
+        runTest {
+            // Given
+            repository.setSession(session(RunState.ACTIVE))
+            repository.failNextFinish = true
+            val viewModel = createViewModel()
+            keepStateHot(viewModel)
+            viewModel.onConfirmFinish()
+
+            // When
+            viewModel.onConfirmFinish()
+            val effect = viewModel.uiEffect.first()
+
+            // Then
+            assertTrue(effect is LiveRouteTrackingUiEffect.NavigateToResults)
+            assertFalse(viewModel.uiState.value.finishFailed)
+            assertFalse(viewModel.uiState.value.showFinishConfirmDialog)
+        }
+
+    @Test
+    fun `given a failed finish, when cancelling, then the error is cleared`() =
+        runTest {
+            // Given
+            repository.setSession(session(RunState.ACTIVE))
+            repository.failNextFinish = true
+            val viewModel = createViewModel()
+            keepStateHot(viewModel)
+            viewModel.onConfirmFinish()
+
+            // When
+            viewModel.onCancelFinish()
+
+            // Then
+            assertFalse(viewModel.uiState.value.finishFailed)
+            assertFalse(viewModel.uiState.value.showFinishConfirmDialog)
         }
 
     @Test

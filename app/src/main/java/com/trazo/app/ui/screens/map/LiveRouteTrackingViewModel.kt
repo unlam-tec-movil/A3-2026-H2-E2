@@ -10,6 +10,7 @@ import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
+import com.trazo.app.domain.usecases.FinishRunUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -35,6 +36,7 @@ class LiveRouteTrackingViewModel
     constructor(
         private val runSessionRepository: RunSessionRepository,
         private val locationRepository: LocationRepository,
+        private val finishRun: FinishRunUseCase,
     ) : ViewModel() {
         private val activeSessionFlow = runSessionRepository.activeSession
 
@@ -44,6 +46,8 @@ class LiveRouteTrackingViewModel
         private val showShortRunDialogFlow = MutableStateFlow(false)
         private val showGoalCelebrationFlow = MutableStateFlow(false)
         private val isMapCenteredOnRunnerFlow = MutableStateFlow(true)
+        private val finishFailedFlow = MutableStateFlow(false)
+        private val isFinishingFlow = MutableStateFlow(false)
 
         private val _uiEffect = Channel<LiveRouteTrackingUiEffect>(Channel.BUFFERED)
 
@@ -125,6 +129,8 @@ class LiveRouteTrackingViewModel
                 showShortRunDialogFlow,
                 showGoalCelebrationFlow,
                 isMapCenteredOnRunnerFlow,
+                finishFailedFlow,
+                isFinishingFlow,
             ) { args: Array<Any?> ->
                 val session = args[0] as RunSession
                 val isRunInProgress = args[1] as Boolean
@@ -133,6 +139,8 @@ class LiveRouteTrackingViewModel
                 val showShort = args[4] as Boolean
                 val showCelebration = args[5] as Boolean
                 val isCentered = args[6] as Boolean
+                val finishFailed = args[7] as Boolean
+                val isFinishing = args[8] as Boolean
 
                 when (session) {
                     is RunSession.Idle -> {
@@ -155,6 +163,8 @@ class LiveRouteTrackingViewModel
                             showGoalCelebration = false,
                             areControlActionsAllowed = false,
                             rawDistanceMeters = 0.0,
+                            finishFailed = finishFailed,
+                            isFinishing = isFinishing,
                         )
                     }
 
@@ -181,6 +191,8 @@ class LiveRouteTrackingViewModel
                             showGoalCelebration = showCelebration,
                             areControlActionsAllowed = true,
                             rawDistanceMeters = session.metrics.distanceMeters,
+                            finishFailed = finishFailed,
+                            isFinishing = isFinishing,
                         )
                     }
                 }
@@ -209,6 +221,9 @@ class LiveRouteTrackingViewModel
         fun onFinishRequested() {
             if (!uiState.value.hasActiveRun) return
 
+            finishFailedFlow.value = false
+            isFinishingFlow.value = false
+
             val currentState = uiState.value
 
             if (currentState.rawDistanceMeters < 200.0) {
@@ -218,19 +233,34 @@ class LiveRouteTrackingViewModel
             }
         }
 
+        /**
+         * Finaliza el recorrido. El diálogo queda abierto mientras tanto: si sale bien se cierra y se
+         * navega al resultado; si falla, la sesión sigue intacta y el diálogo ofrece reintentar.
+         */
         fun onConfirmFinish() {
-            showFinishConfirmDialogFlow.value = false
+            if (isFinishingFlow.value) return
+
+            isFinishingFlow.value = true
+            finishFailedFlow.value = false
 
             viewModelScope.launch {
-                runSessionRepository.finishSession().onSuccess { summary ->
-                    _uiEffect.send(
-                        LiveRouteTrackingUiEffect.NavigateToResults(summary),
-                    )
-                }
+                finishRun()
+                    .onSuccess { summary ->
+                        isFinishingFlow.value = false
+                        showFinishConfirmDialogFlow.value = false
+                        _uiEffect.send(
+                            LiveRouteTrackingUiEffect.NavigateToResults(summary),
+                        )
+                    }.onFailure {
+                        isFinishingFlow.value = false
+                        finishFailedFlow.value = true
+                    }
             }
         }
 
         fun onCancelFinish() {
+            isFinishingFlow.value = false
+            finishFailedFlow.value = false
             showFinishConfirmDialogFlow.value = false
         }
 

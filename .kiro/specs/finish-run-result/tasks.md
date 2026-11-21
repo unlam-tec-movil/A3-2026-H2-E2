@@ -39,12 +39,14 @@
   - Acordado: Persona 3 agrega el botón y lo conecta al diálogo de confirmación existente; los archivos (`GoalCelebrationOverlay`, `MapScreen`, ViewModel) son suyos
   - Persona 3 también corrige el manejo de errores de `finishSession()` en `onConfirmFinish()` para poder reintentar sin perder la sesión (hoy no usa `onFailure`)
   - _Requirements: 1.1, 1.3_
-- [ ] 2.2 (Persona 3) Botón «Finalizar» en el aviso de meta
+- [x] 2.2 (Persona 3) Botón «Finalizar» en el aviso de meta
   - El aviso de meta alcanzada muestra «Finalizar» y lo conecta al diálogo de confirmación existente
+  - Hecho a partir del commit `1198e04` de Persona 3, que había quedado anterior al refactor: `GoalCelebrationOverlay(onFinish)` y la conexión en `MapScreen`; se borró la `rememberReduceMotion()` provisoria
   - _Depends: 2.1_
   - _Requirements: 1.1, 1.3_
-- [ ] 2.3 (Persona 3) Reintento si falla `finishSession()`
+- [x] 2.3 (Persona 3) Reintento si falla `finishSession()`
   - Si `finishSession()` falla, el corredor puede reintentar sin perder la sesión
+  - Hecho a partir del commit `1198e04`: el diálogo queda abierto con `isFinishing` (botones deshabilitados) y, si falla, `finishFailed` muestra `map_finish_error` y «Reintentar» (`map_retry`). A diferencia del commit, no se muestra el mensaje de la excepción
   - _Depends: 2.1_
   - _Requirements: 2.3, 3.3_
 
@@ -113,8 +115,11 @@
   - Productor listo: `LiveRouteTrackingUiState.suppressed` ya refleja aviso de meta, confirmación y aviso corto
   - Falta el consumidor: no hay código de `stop-detection` en `main`. Cuando exista su overlay, conectar `suppressed` y resolver la consulta pendiente como frenada (una sola vez, al pasar a visible)
   - _Requirements: 7.1, 7.2, 7.3_
-- [ ] 7.2 Frenadas y regularidad hacia «Guardar recorrido» (6.2) — bloqueada por `stop-detection` y HU-05.2
-  - `FrozenRunSummary` no trae frenadas ni regularidad; definir con esas specs y con `save-run` cómo llegan
+- [x] 7.2 Frenadas y regularidad hacia «Guardar recorrido» (6.2)
+  - `FrozenRunSummary` trae `brakeCount: Int` y `regularityPercent: Int?` (0..100, `null` sin tramos o sin sensor); `save-run` los lee con `getFinishedSummary(id)`
+  - Los junta `FinishRunUseCase` (`domain/usecases`) con `BrakeRepository`, `StopMonitor` y `RegularityMonitor`, y se los pasa a `finishSession(brakeCount, regularityPercent)`. Una frenada abierta al finalizar (se guarda recién después, por `closedStops`) se cuenta desde el monitor, y se une por id con las guardadas para no contarla dos veces
+  - El Resultado muestra la regularidad con `ResultFormatter.formatRegularity`; las frenadas no se muestran ahí
+  - `RegularityMonitor` arranca al iniciar la app (`TrazoApplication` lo inyecta), así que la regularidad ya se mide en la app real
   - _Requirements: 6.2_
 - [ ] 7.3 Limpieza del resumen — acordado: a cargo de Persona 3 (repositorio) y `save-run` (HU-07)
   - Persona 3 agrega `removeFinishedSummary(id)` a `RunSessionRepository`; `getFinishedSummary(id)` mantiene su nombre

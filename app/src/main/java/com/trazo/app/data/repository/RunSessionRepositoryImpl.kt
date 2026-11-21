@@ -71,9 +71,12 @@ class RunSessionRepositoryImpl
 
         override suspend fun resumeSession(): Result<Unit> = transition { it.resume(clock.nowMillis()) }
 
-        override suspend fun finishSession(): Result<FrozenRunSummary> =
+        override suspend fun finishSession(
+            brakeCount: Int,
+            regularityPercent: Int?,
+        ): Result<FrozenRunSummary> =
             locked {
-                val summary = requireActiveSession().toFrozenSummary(clock.nowMillis())
+                val summary = requireActiveSession().toFrozenSummary(clock.nowMillis(), brakeCount, regularityPercent)
                 stopJobs()
                 finishedSummaries[summary.id] = summary
                 _activeSession.value = RunSession.Idle

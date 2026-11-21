@@ -62,7 +62,10 @@ class MonitorSessionQueriesTest {
             return Result.success(Unit)
         }
 
-        override suspend fun finishSession(): Result<FrozenRunSummary> = error("no se usa")
+        override suspend fun finishSession(
+            brakeCount: Int,
+            regularityPercent: Int?,
+        ): Result<FrozenRunSummary> = error("no se usa")
 
         override fun resetToIdle() = error("no se usa")
 

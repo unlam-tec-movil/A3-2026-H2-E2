@@ -57,7 +57,7 @@ class ResultViewModel
                         goal = summary.goal,
                         distanceText = formatter.formatDistance(summary.metrics.distanceMeters),
                         timeText = formatter.formatElapsedTime(summary.metrics.elapsedTimeSeconds),
-                        regularityText = null,
+                        regularityText = summary.regularityPercent?.let(formatter::formatRegularity),
                     )
             }
         }

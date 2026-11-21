@@ -48,10 +48,17 @@ class ResultViewModelTest {
     }
 
     @Test
-    fun `regularity is absent because the summary has none`() {
+    fun `regularity is absent when the summary has none`() {
         repository.putFinishedSummary(summary("run-1", goalReached = true))
 
         assertNull(viewModel("run-1").uiState.value.regularityText)
+    }
+
+    @Test
+    fun `regularity is formatted from the summary`() {
+        repository.putFinishedSummary(summary("run-1", goalReached = true, regularityPercent = 80))
+
+        assertEquals("80 %", viewModel("run-1").uiState.value.regularityText)
     }
 
     @Test
@@ -88,6 +95,7 @@ class ResultViewModelTest {
         id: String,
         goalReached: Boolean,
         metrics: RunMetrics = RunMetrics(elapsedTimeSeconds = 1930L, distanceMeters = 5200.0),
+        regularityPercent: Int? = null,
     ) = FrozenRunSummary(
         id = id,
         goal = RunGoal.FIVE_KILOMETERS,
@@ -97,5 +105,6 @@ class ResultViewModelTest {
         startedAtMonotonicTimestamp = 1000L,
         finishedAtMonotonicTimestamp = 2000L,
         goalReached = goalReached,
+        regularityPercent = regularityPercent,
     )
 }

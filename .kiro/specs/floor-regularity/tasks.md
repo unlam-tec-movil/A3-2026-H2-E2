@@ -149,6 +149,7 @@
   - Correr en un teléfono real sobre piso parejo y sobre piso irregular y ajustar el umbral;
     registrar el valor final y cuánto influye la quietud previa a una frenada
   - El umbral acordado reemplaza al provisional y las pruebas siguen pasando
+  - Nota: desde que `TrazoApplication` inyecta `RegularityMonitor`, la regularidad se mide en la app real y aparece en el Resultado, que es lo que hacía falta para calibrar en un teléfono
   - _Boundary: RegularityConfig_
   - _Depends: 4.3_
   - _Requirements: 3.9_

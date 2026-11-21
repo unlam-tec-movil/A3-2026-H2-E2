@@ -245,6 +245,16 @@ class RunSessionRulesTest {
         assertEquals(1_000L, summary.startedAtMonotonicTimestamp)
         assertEquals(61_000L, summary.finishedAtMonotonicTimestamp)
         assertFalse(summary.goalReached)
+        assertEquals(0, summary.brakeCount)
+        assertNull(summary.regularityPercent)
+    }
+
+    @Test
+    fun `el resumen final lleva las frenadas y la regularidad que recibe`() {
+        val summary = started.toFrozenSummary(nowMillis = 61_000L, brakeCount = 2, regularityPercent = 80)
+
+        assertEquals(2, summary.brakeCount)
+        assertEquals(80, summary.regularityPercent)
     }
 
     @Test
