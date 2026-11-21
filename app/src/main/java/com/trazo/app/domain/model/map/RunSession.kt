@@ -1,5 +1,6 @@
 package com.trazo.app.domain.model.map
 
+import com.trazo.app.domain.model.stops.BrakeEvent
 import kotlin.time.Instant
 
 sealed interface RunSession {
@@ -127,7 +128,7 @@ sealed interface RunSession {
          */
         fun toFrozenSummary(
             nowMillis: Long,
-            brakeCount: Int = 0,
+            brakes: List<BrakeEvent> = emptyList(),
             regularityPercent: Int? = null,
         ): FrozenRunSummary =
             FrozenRunSummary(
@@ -140,7 +141,7 @@ sealed interface RunSession {
                 finishedAtMonotonicTimestamp = nowMillis,
                 goalReached = goalReached,
                 isDemoMode = isDemoMode,
-                brakeCount = brakeCount,
+                brakes = brakes,
                 regularityPercent = regularityPercent,
             )
 

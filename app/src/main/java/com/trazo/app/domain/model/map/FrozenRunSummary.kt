@@ -1,5 +1,6 @@
 package com.trazo.app.domain.model.map
 
+import com.trazo.app.domain.model.stops.BrakeEvent
 import kotlin.time.Instant
 
 data class FrozenRunSummary(
@@ -13,7 +14,9 @@ data class FrozenRunSummary(
     val goalReached: Boolean,
     val isDemoMode: Boolean = false,
     /** Frenadas del recorrido, incluida la que quedó abierta al finalizar. */
-    val brakeCount: Int = 0,
+    val brakes: List<BrakeEvent> = emptyList(),
     /** Regularidad del piso, 0..100; `null` si no hubo tramos medidos o no hay sensor. */
     val regularityPercent: Int? = null,
-)
+) {
+    val brakeCount: Int get() = brakes.size
+}

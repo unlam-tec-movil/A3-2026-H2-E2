@@ -116,8 +116,8 @@
   - Falta el consumidor: no hay código de `stop-detection` en `main`. Cuando exista su overlay, conectar `suppressed` y resolver la consulta pendiente como frenada (una sola vez, al pasar a visible)
   - _Requirements: 7.1, 7.2, 7.3_
 - [x] 7.2 Frenadas y regularidad hacia «Guardar recorrido» (6.2)
-  - `FrozenRunSummary` trae `brakeCount: Int` y `regularityPercent: Int?` (0..100, `null` sin tramos o sin sensor); `save-run` los lee con `getFinishedSummary(id)`
-  - Los junta `FinishRunUseCase` (`domain/usecases`) con `BrakeRepository`, `StopMonitor` y `RegularityMonitor`, y se los pasa a `finishSession(brakeCount, regularityPercent)`. Una frenada abierta al finalizar (se guarda recién después, por `closedStops`) se cuenta desde el monitor, y se une por id con las guardadas para no contarla dos veces
+  - `FrozenRunSummary` trae `brakes: List<BrakeEvent>` (con `brakeCount` calculado, igual que `SavedRun`) y `regularityPercent: Int?` (0..100, `null` sin tramos o sin sensor); `save-run` los lee con `getFinishedSummary(id)`
+  - Los junta `FinishRunUseCase` (`domain/usecases`) con `BrakeRepository`, `StopMonitor` y `RegularityMonitor`, y se los pasa a `finishSession(brakes, regularityPercent)`. Una frenada abierta al finalizar (se guarda recién después, por `closedStops`) se cuenta desde el monitor, y se une por id con las guardadas para no contarla dos veces
   - El Resultado muestra la regularidad con `ResultFormatter.formatRegularity`; las frenadas no se muestran ahí
   - `RegularityMonitor` arranca al iniciar la app (`TrazoApplication` lo inyecta), así que la regularidad ya se mide en la app real
   - _Requirements: 6.2_

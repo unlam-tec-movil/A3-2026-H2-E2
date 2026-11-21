@@ -10,6 +10,7 @@ import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
+import com.trazo.app.domain.model.stops.BrakeEvent
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
@@ -164,8 +165,14 @@ class RunSessionRepositoryImplTest {
                 ),
             )
 
-            val result = repository.finishSession(brakeCount = 2, regularityPercent = 80).getOrThrow()
+            val brakes =
+                listOf("b1", "b2").map {
+                    BrakeEvent(id = it, runId = "test-session", location = null, detectedAtMillis = 0L)
+                }
 
+            val result = repository.finishSession(brakes = brakes, regularityPercent = 80).getOrThrow()
+
+            assertEquals(brakes, result.brakes)
             assertEquals(2, result.brakeCount)
             assertEquals(80, result.regularityPercent)
             assertEquals(result, repository.getFinishedSummary("test-session"))

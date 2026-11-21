@@ -4,6 +4,7 @@ import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.data.repository.InMemoryBrakeRepository
 import com.trazo.app.data.sensors.MotionSensorAvailability
 import com.trazo.app.data.sensors.MotionSource
+import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.stops.BrakeEvent
 import com.trazo.app.domain.model.stops.ClosedStop
 import com.trazo.app.domain.model.stops.MotionSample
@@ -67,7 +68,10 @@ class FinishRunUseCaseTest {
     private fun brake(
         id: String,
         runId: String = RUN_ID,
-    ) = BrakeEvent(id = id, runId = runId, location = null, detectedAtMillis = 0L)
+        atMillis: Long = 0L,
+    ) = BrakeEvent(id = id, runId = runId, location = null, detectedAtMillis = atMillis)
+
+    private fun ids(summary: FrozenRunSummary) = summary.brakes.map { it.id }
 
     private fun braking(brake: BrakeEvent) =
         StopDetectionState(StopPhase.Braking(sinceMillis = 0L, brake = brake, query = QueryStatus.PENDING))
@@ -90,12 +94,13 @@ class FinishRunUseCaseTest {
         runTest {
             val finish = useCase()
             runs.setActive(RUN_ID)
-            brakes.save(brake("b1"))
-            brakes.save(brake("b2"))
+            brakes.save(brake("b2", atMillis = 2_000L))
+            brakes.save(brake("b1", atMillis = 1_000L))
             brakes.save(brake("otra", runId = "run-viejo"))
 
             val summary = finish().getOrThrow()
 
+            assertEquals(listOf("b1", "b2"), ids(summary))
             assertEquals(2, summary.brakeCount)
         }
 
@@ -104,12 +109,12 @@ class FinishRunUseCaseTest {
         runTest {
             val finish = useCase()
             runs.setActive(RUN_ID)
-            brakes.save(brake("b1"))
-            stops.flow.value = braking(brake("abierta"))
+            brakes.save(brake("b1", atMillis = 1_000L))
+            stops.flow.value = braking(brake("abierta", atMillis = 5_000L))
 
             val summary = finish().getOrThrow()
 
-            assertEquals(2, summary.brakeCount)
+            assertEquals(listOf("b1", "abierta"), ids(summary))
         }
 
     @Test
@@ -122,7 +127,7 @@ class FinishRunUseCaseTest {
 
             val summary = finish().getOrThrow()
 
-            assertEquals(1, summary.brakeCount)
+            assertEquals(listOf("b1"), ids(summary))
         }
 
     @Test
@@ -134,7 +139,7 @@ class FinishRunUseCaseTest {
 
             val summary = finish().getOrThrow()
 
-            assertEquals(0, summary.brakeCount)
+            assertEquals(emptyList<String>(), ids(summary))
         }
 
     @Test

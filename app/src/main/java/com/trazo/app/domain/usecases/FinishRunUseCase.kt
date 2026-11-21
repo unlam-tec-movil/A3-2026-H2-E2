@@ -29,22 +29,21 @@ class FinishRunUseCase
                 (runSessionRepository.activeSession.value as? RunSession.ActiveSession)?.id
                     ?: return Result.failure(IllegalStateException("No hay un recorrido activo."))
 
-            val openBrakeId =
+            val openBrake =
                 (stopMonitor.state.value.phase as? StopPhase.Braking)
                     ?.brake
                     ?.takeIf { it.runId == runId }
-                    ?.id
-            val savedBrakeIds =
-                brakeRepository.brakes.value
-                    .filter { it.runId == runId }
-                    .map { it.id }
-            val brakeCount = (savedBrakeIds + listOfNotNull(openBrakeId)).toSet().size
+            val savedBrakes = brakeRepository.brakes.value.filter { it.runId == runId }
+            val brakes =
+                (savedBrakes + listOfNotNull(openBrake))
+                    .distinctBy { it.id }
+                    .sortedBy { it.detectedAtMillis }
 
             val regularityPercent =
                 regularityMonitor.state.value
                     .takeIf { it.runId == runId }
                     ?.percentage
 
-            return runSessionRepository.finishSession(brakeCount, regularityPercent)
+            return runSessionRepository.finishSession(brakes, regularityPercent)
         }
     }

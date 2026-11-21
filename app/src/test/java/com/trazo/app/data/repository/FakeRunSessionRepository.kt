@@ -6,6 +6,7 @@ import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
+import com.trazo.app.domain.model.stops.BrakeEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.time.Instant
@@ -112,7 +113,7 @@ class FakeRunSessionRepository : RunSessionRepository {
     var failNextFinish = false
 
     override suspend fun finishSession(
-        brakeCount: Int,
+        brakes: List<BrakeEvent>,
         regularityPercent: Int?,
     ): Result<FrozenRunSummary> {
         if (failNextFinish) {
@@ -134,7 +135,7 @@ class FakeRunSessionRepository : RunSessionRepository {
                 finishedAtMonotonicTimestamp = 2000L,
                 goalReached = current.goalReached,
                 isDemoMode = current.isDemoMode,
-                brakeCount = brakeCount,
+                brakes = brakes,
                 regularityPercent = regularityPercent,
             )
 
