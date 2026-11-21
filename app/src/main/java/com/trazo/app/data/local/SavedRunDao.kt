@@ -13,4 +13,7 @@ interface SavedRunDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(run: SavedRunEntity)
+
+    @Query("SELECT * FROM saved_runs WHERE id = :id")
+    suspend fun getById(id: String): SavedRunEntity?
 }
