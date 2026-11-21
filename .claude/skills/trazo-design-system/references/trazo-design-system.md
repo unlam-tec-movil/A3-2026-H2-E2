@@ -8,8 +8,8 @@ Usá este documento para crear pantallas, componentes y código Compose nuevos. 
 ## 1. Contexto del producto
 
 - **Qué es:** un diario personal de recorridos para corredores recreativos de Buenos Aires. La app registra un recorrido libre con una meta de 3, 5 o 10 km. Mide distancia, tiempo, velocidad promedio, frenadas (acelerómetro) y regularidad del piso. Al terminar, el corredor lo guarda con título, destacados y hasta 2 fotos.
-- **Plataforma:** Android, Kotlin, Jetpack Compose, Material 3. Todo se guarda en el dispositivo (Room). No hay login ni perfil.
-- **Navegación:** barra inferior con 3 pestañas: **Inicio · Mapa · Historial**. Desde Inicio, el engranaje abre Configuración. El botón flotante "+" está en Inicio y en Mapa.
+- **Plataforma:** Android, Kotlin, Jetpack Compose, Material 3. Todo se guarda en el dispositivo (Room). No hay login ni cuentas: la pestaña Perfil es local.
+- **Navegación:** barra inferior con 2 pestañas: **Actividad · Perfil**. La app abre en Actividad (el mapa), que es la única pestaña con el botón flotante "+". Perfil reúne «Mis estadísticas» y «Mis recorridos», y desde su barra superior el engranaje abre Configuración.
 - **Usuario:** corredor de 18 a más de 40 años, principiante o intermedio, que usa la app **mientras corre**. Por eso los objetivos táctiles son grandes, las cifras se leen rápido y los textos son cortos.
 - **Idioma:** español rioplatense con voseo ("Escribí un título", "Podés agregar hasta 2 fotos"). La configuración regional es es-AR y se usa coma decimal ("5,2 km").
 
@@ -172,7 +172,7 @@ Fuente: **Roboto**, con la escala por defecto de Material 3 (`Typography()`), en
 | headlineLarge | 32/40 · Regular | Estados vacíos ("Todavía no hay recorridos") |
 | headlineMedium | 28/36 · Regular | Título de celebración ("¡Meta cumplida!"), métricas en recuadros |
 | headlineSmall | 24/32 · Regular | Título de modales y diálogos |
-| titleLarge | 22/28 · Regular | Barra superior ("Trazo", "Historial", "Guardar recorrido") |
+| titleLarge | 22/28 · Regular | Barra superior ("Trazo", "Guardar recorrido") |
 | titleMedium | 16/24 · Medium | Título de card de recorrido, valores de métricas en cards |
 | titleSmall | 14/20 · Medium | Encabezado de sección ("Actividad reciente") |
 | bodyLarge | 16/24 · Regular | Texto de inputs, párrafos |
@@ -253,7 +253,7 @@ En Compose: `Elevation.level1` (1 dp), `Elevation.level2` (3 dp) y `Elevation.le
 
 - **Material Symbols Rounded**, 24 dp, peso 400 (trazo de 2 dp), sin relleno.
 - El ícono del ítem activo de la barra de navegación va **relleno**.
-- Íconos de referencia: `home`, `map`, `history`, `add`, `pause`, `play_arrow`, `stop`, `my_location`, `photo_camera`, `settings`, `check`, `chevron_right`, `arrow_back`, `close`, `route` (distancia), `octagon` con guion (frenada), onda (regularidad), barras de señal (GPS).
+- Íconos de referencia: `directions_run` (Actividad), `person` (Perfil), `add`, `pause`, `play_arrow`, `stop`, `my_location`, `photo_camera`, `settings`, `check`, `chevron_right`, `arrow_back`, `close`, `route` (distancia), `octagon` con guion (frenada), onda (regularidad), barras de señal (GPS).
 - Si un botón tiene solo ícono, lleva `contentDescription` ("Pausar", "Finalizar", "Centrar en mi ubicación", "Configuración").
 
 ---
@@ -336,14 +336,14 @@ Los avisos que no requieren acción usan `role=status`. Los de error usan `role=
 
 ### 6.9 Card de recorrido
 
-**Card del Historial (completa):**
+**Card de «Mis recorridos» en Perfil (completa):**
 - Fondo blanco, borde outlineVariant de 1 dp, forma large, padding de 16 dp, separación interna de 14 dp.
 - Arriba: título en titleMedium, en una sola línea con "…" al desbordar, y la marca de estado a la derecha si es "Incompleto" o "Demo".
 - Debajo del título: fecha y meta en bodySmall onSurfaceVariant ("Mar 28 oct · 07:45 · Meta 10 km").
 - Grilla de 4 columnas: **Distancia · Tiempo · Frenadas · Regularidad**. Etiqueta en labelMedium onSurfaceVariant y valor en titleMedium tabular.
 - Toda la card es tocable y abre el detalle en un modal.
 
-**Card compacta (Actividad reciente en Inicio):**
+**Card compacta** (sin pantalla asignada desde que Inicio pasó a Perfil):
 - Fila con: miniatura de la traza de 64 dp (fondo Primary50, trazo Primary950 de 3 dp), título y fecha, "10,12 km · 58:40" con la marca opcional, y un chevron.
 
 ### 6.10 Panel del recorrido en curso
@@ -357,12 +357,12 @@ Los avisos que no requieren acción usan `role=status`. Los de error usan `role=
 
 ### 6.11 Barras de navegación
 
-- **Barra superior de Inicio:** fondo primary, 64 dp más el inset. "Trazo" en titleLarge blanco y el botón de engranaje (48 dp) a la derecha.
+- **Barra superior de Perfil:** fondo primary, 64 dp más el inset. "Trazo" en titleLarge blanco y el botón de engranaje (48 dp) a la derecha.
 - **Barra superior de pantallas secundarias** ("Guardar recorrido"): fondo surface, botón `arrow_back` de 48 dp y título en titleLarge onSurface.
-- **Barra superior de pestañas sin volver** ("Historial"): título en titleLarge y subtítulo con el resumen en bodySmall ("12 recorridos · 58,6 km").
-- **Barra superior del Mapa:** flotante, blanca, a 12 dp de los bordes, forma large, elevación level2. Lleva el título "Recorrido en curso" en titleMedium y el indicador de GPS a la derecha.
+- **Barra superior de pestañas sin volver** (sin uso desde que Historial pasó a «Mis recorridos» de Perfil): título en titleLarge y subtítulo con el resumen en bodySmall ("12 recorridos · 58,6 km").
+- **Barra superior de Actividad (mapa):** flotante, blanca, a 12 dp de los bordes, forma large, elevación level2. Lleva el título "Recorrido en curso" en titleMedium y el indicador de GPS a la derecha.
 - **Indicador de GPS:** píldora de 28 dp con barras de señal y el texto "GPS". Con buena señal usa Success200 / Success700. Con señal débil, Warning. Sin señal, Error.
-- **Barra de navegación inferior:** 80 dp, fondo surfaceContainer (Neutral200), 3 ítems.
+- **Barra de navegación inferior:** 80 dp, fondo surfaceContainer (Neutral200), 2 ítems: Actividad · Perfil.
   - Ítem activo: indicador primaryContainer de 64 × 32, ícono relleno onPrimaryContainer y etiqueta en negrita.
   - Ítems inactivos: ícono con trazo y etiqueta en labelMedium onSurfaceVariant. No se ven "desactivados": siguen siendo tocables.
 
@@ -389,12 +389,11 @@ Los avisos que no requieren acción usan `role=status`. Los de error usan `role=
 
 | Pantalla | Estructura |
 |---|---|
-| **Inicio** | Barra superior primary con "Trazo" y engranaje. "Actividad reciente" con "Ver todo". Lista de cards compactas. FAB "+". Barra de navegación (Inicio activo). **Estado vacío:** ilustración y "Todavía no hay recorridos" (headlineLarge) |
-| **Mapa** | Mapa a pantalla completa, también detrás de la barra de estado (íconos de estado oscuros). Barra superior flotante con GPS. Botón "Centrar". Alerta de frenada cuando corresponde. Panel del recorrido en curso. Barra de navegación (Mapa activo). Sin recorrido: trazas guardadas, panel en cero y FAB "+" |
+| **Actividad** (pantalla de inicio) | Mapa a pantalla completa, también detrás de la barra de estado (íconos de estado oscuros). Barra superior flotante con GPS. Botón "Centrar". Alerta de frenada cuando corresponde. Panel del recorrido en curso. Barra de navegación (Actividad activo). Sin recorrido: trazas guardadas, panel en cero y FAB "+" (el único de la app) |
+| **Perfil** | Barra superior primary con "Trazo" y engranaje. Con scroll: «Mis estadísticas» (titleMedium, encabezado) con 3 filas etiqueta/valor: "Recorridos guardados", "Distancia total" y "Tiempo total" (valor en titleMedium tabular, HH:MM:SS); y «Mis recorridos» con la lista de cards completas (más recientes primero). Sin FAB. Barra de navegación (Perfil activo). **Estado vacío:** ilustración y "Todavía no hay recorridos" |
 | **Modal "Iniciar nuevo recorrido"** | Scrim al 32 %. Modal extraLarge con el título (headlineSmall), "Seleccioná una meta:", chips 3/5/10 km, y botones "Cancelar" (outlined) y "Comenzar" (filled, deshabilitado sin meta) |
 | **¡Meta cumplida! / Recorrido finalizado** | Ver 6.13 |
 | **Guardar recorrido** | Barra superior con volver. Card de resumen (fecha, marca, 3 métricas). Campo de título. "¿Qué destacarías del recorrido?" (opcional) con chips. "Fotos" con contador. Botón fijo "Guardar recorrido". Si el corredor vuelve sin guardar, aparece el diálogo "¿Descartar el recorrido?" con "Descartar" y "Seguir editando" |
-| **Historial** | Barra superior con título y resumen. Lista de cards completas (más recientes primero). Barra de navegación (Historial activo). Estado vacío igual que Inicio |
 | **Detalle (modal)** | Mapa con la traza completa, título, métricas, meta y estado, destacados (se ocultan si no hay), grilla de fotos (se oculta si no hay) y marca "Demo" si corresponde |
 | **Configuración** | Secciones "Permisos" (ubicación: Precisa, Aproximada o Denegada; cámara: Permitida o Denegada; botón outlined "Ir a configuración") y "Modo demo" (switch en color tertiary). Durante un recorrido, el switch está deshabilitado y aparece "Finalizá el recorrido para cambiar el modo demo" |
 

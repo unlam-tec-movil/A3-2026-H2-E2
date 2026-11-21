@@ -1,5 +1,17 @@
 # Requirements Document
 
+> **Revisión 2026-11-20 · pestañas Actividad · Perfil.** Esta nota manda sobre lo que se
+> contradiga más abajo. La barra inferior pasa de 3 pestañas (Inicio · Mapa · Historial) a 2:
+>
+> - **Actividad** (antes Mapa, `ui/screens/map`): es la pantalla de inicio de la app y la única
+>   con el «+» para iniciar un recorrido. HU-03 (iniciar desde el Mapa) queda fusionada con HU-02:
+>   ya no hay un «+» en Inicio.
+> - **Perfil** (antes Inicio, `ui/screens/profile`): barra superior con "Trazo" y Configuración,
+>   «Mis estadísticas» (HU-16: recorridos guardados, distancia total y tiempo total) y
+>   «Mis recorridos», con el estado vacío «Todavía no hay recorridos».
+> - **Historial** deja de ser una pestaña: la lista de recorridos guardados pasa a
+>   «Mis recorridos» dentro de Perfil.
+
 ## Project Description (Input)
 
 Historias: HU-02 (Iniciar un recorrido y elegir la meta desde Inicio) y HU-03 (desde el Mapa)

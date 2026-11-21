@@ -1,0 +1,25 @@
+package com.trazo.app.domain.model.saved
+
+import com.trazo.app.domain.model.map.RoutePoint
+import com.trazo.app.domain.model.map.RunGoal
+import com.trazo.app.domain.model.stops.BrakeEvent
+import kotlin.time.Instant
+
+data class SavedRun(
+    val id: String,
+    val title: String,
+    val startedAt: Instant,
+    val goal: RunGoal,
+    val goalReached: Boolean,
+    val isDemo: Boolean,
+    val distanceMeters: Double,
+    val elapsedTimeSeconds: Long,
+    val averageSpeedKmh: Double,
+    val routePoints: List<RoutePoint>,
+    val brakes: List<BrakeEvent>,
+    val regularityPercent: Int?,
+    val highlights: List<String>,
+    val photoPaths: List<String>,
+) {
+    val brakeCount: Int get() = brakes.size
+}

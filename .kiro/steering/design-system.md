@@ -5,6 +5,8 @@ fileMatchPattern: ["app/src/main/java/**/ui/**/*.kt", "**/*Screen.kt"]
 
 # Design System · Trazo
 
+_updated_at: 2026-11-20_
+
 Memoria de proyecto para todo trabajo de UI (pantallas, componentes, tema, textos). La especificación completa, con medidas de cada componente, patrones de pantalla y ejemplos de Compose, está en la skill `trazo-design-system`, archivo `references/trazo-design-system.md`.
 
 ## Ubicación de archivos de UI
@@ -15,9 +17,8 @@ Sigue el documento "Estructura del proyecto Trazo". Carpetas y archivos siempre 
 ui/
 ├── navigation/          TrazoApp.kt (NavHost + Scaffold principal), BottomNavBar.kt
 ├── screens/
-│   ├── home/            HomeScreen.kt, HomeViewModel.kt, components/ (solo de esta pantalla)
-│   ├── map/             misma forma
-│   ├── history/
+│   ├── map/             pestaña Actividad: MapScreen.kt, MapViewModel.kt, components/ (solo de esta pantalla)
+│   ├── profile/         pestaña Perfil, misma forma
 │   ├── settings/
 │   ├── result/          «¡Meta cumplida!» / «Recorrido finalizado»
 │   └── saverun/         «Guardar recorrido»
@@ -41,13 +42,13 @@ Ubicación inicial de los componentes del sistema de diseño:
 |---|---|---|
 | `TrazoTopBar`, `ScreenContainer`, `SectionHeader` | `components/layout/` | Marco de varias pantallas |
 | `PrimaryButton`, `TrazoTextField`, `EmptyState`, `LoadingIndicator` | `components/common/` | Piezas usadas en varias pantallas |
-| `MetricValue` (valor + unidad, tabular) | `components/common/` | Lo usan map, result, history y saverun |
-| `StatusBadge` («Meta cumplida», «Incompleto», «Demo») | `components/common/` | Lo usan home e history |
-| `GoalChip` + modal «Iniciar nuevo recorrido» | `components/common/` | Se abre desde home y map |
+| `MetricValue` (valor + unidad, tabular) | `components/common/` | Lo usan map, result, profile y saverun |
+| `StatusBadge` («Meta cumplida», «Incompleto», «Demo») | `components/common/` | Lo usan profile («Mis recorridos») y result |
+| `GoalChip` + modal «Iniciar nuevo recorrido» | `components/common/` | Se abre desde el «+» de Actividad |
 | `BottomNavBar` | `navigation/` | Conoce las rutas |
-| `RecentRunItem` (card compacta) | `screens/home/components/` | Solo en Inicio |
-| `RunPanel`, `RunControls`, `BrakeAlert`, `GpsIndicator`, capa de traza | `screens/map/components/` | Solo en Mapa |
-| `RunCard` (card completa), `RunDetailSheet` | `screens/history/components/` | Solo en Historial |
+| `ProfileStatRow` (fila de «Mis estadísticas») | `screens/profile/components/` | Solo en Perfil |
+| `RunPanel`, `RunControls`, `BrakeAlert`, `GpsIndicator`, capa de traza | `screens/map/components/` | Solo en Actividad |
+| `RunCard` (card completa), `RunDetailSheet` | `screens/profile/components/` | Previstos en «Mis recorridos» de Perfil |
 | `HighlightChip`, `PhotoPicker` | `screens/saverun/components/` | Solo en Guardar recorrido |
 | `GoalReachedCard` | `screens/result/components/` | Solo en Resultado |
 | `PermissionRow`, switch de modo demo | `screens/settings/components/` | Solo en Configuración |
@@ -131,7 +132,7 @@ Reglas de formato:
 - **Campo de título:** outlined, 56 dp, obligatorio entre 3 y 50 caracteres, contador tabular, error "Escribí un título".
 - **Card de recorrido:** título en una línea con "…", fecha, y una grilla con Distancia · Tiempo · Frenadas · Regularidad.
 - **Panel en curso:** temporizador, controles, barra de progreso hacia la meta y métricas.
-- **Navegación:** 3 pestañas (Inicio · Mapa · Historial). Indicador primaryContainer e ícono relleno en el ítem activo.
+- **Navegación:** 2 pestañas (Actividad · Perfil). La app abre en Actividad y el «+» solo vive ahí. Indicador primaryContainer e ícono relleno en el ítem activo.
 - **Mapa:** traza en vivo en primary de 6 dp con borde blanco. Recorridos guardados en Primary500 al 75 %, 4 dp.
 
 ## Redacción
