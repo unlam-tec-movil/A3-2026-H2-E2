@@ -110,7 +110,7 @@
   - _Depends: 2.3, 3.4_
   - _Requirements: 3.1, 3.8, 5.8_
 
-- [ ] 5. Trazas guardadas en el mapa de Actividad (HU-12, dibujo)
+- [x] 5. Trazas guardadas en el mapa de Actividad (HU-12, dibujo)
 - [x] 5.1 Estado de las trazas guardadas en el ViewModel del mapa
   - Escribir primero los tests unitarios con repositorios falsos: sin trazas con recorrido en curso, sin trazas con ubicación aproximada, sin trazas si no hay recorridos, con trazas cuando se cumplen las tres condiciones, y que al guardarse un recorrido aparece su traza.
   - Hacer que el ViewModel combine los recorridos guardados, el estado «hay recorrido en curso» y la lectura de ubicación (precisa solo con permiso preciso y ubicación activada) y exponga las trazas a dibujar, releyendo la ubicación cuando se le avise.
