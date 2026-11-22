@@ -21,6 +21,7 @@ import com.trazo.app.ui.screens.profile.ProfileScreen
 import com.trazo.app.ui.screens.result.ResultScreen
 import com.trazo.app.ui.screens.rundetail.RunDetailDialog
 import com.trazo.app.ui.screens.rundetail.RunDetailViewModel
+import com.trazo.app.ui.screens.settings.SettingsScreen
 import com.trazo.app.ui.screens.startrun.StartRunEffect
 import com.trazo.app.ui.screens.startrun.StartRunViewModel
 import com.trazo.app.ui.screens.startrun.components.GpsWaitingNotice
@@ -89,7 +90,12 @@ fun TrazoApp() {
                 gpsWaitingNotice = gpsWaitingNotice,
             )
         },
-        profileScreen = { ProfileScreen(onSettingsClick = {}, onRunClick = runDetailViewModel::open) },
+        profileScreen = { onSettingsClick ->
+            ProfileScreen(
+                onSettingsClick = onSettingsClick,
+                onRunClick = runDetailViewModel::open,
+            )
+        },
         resultScreen = { onLeaveToActivity ->
             ResultScreen(
                 // Parche temporal (aprobado por Rocío): hasta que save-run (HU-07) publique
@@ -97,6 +103,9 @@ fun TrazoApp() {
                 onContinue = { _ -> onLeaveToActivity() },
                 onLeave = onLeaveToActivity,
             )
+        },
+        settingsScreen = { onBackClick ->
+            SettingsScreen(onBackClick = onBackClick)
         },
     )
 

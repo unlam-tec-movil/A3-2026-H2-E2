@@ -90,4 +90,20 @@
     <string name="map_stop_query_text">Llevás más de 20 segundos sin moverte. Elegí cómo contarla.</string>
     <string name="map_stop_query_brake">Frenada</string>
     <string name="map_stop_query_personal_pause">Pausa personal</string>
+
+    <!-- Configuración -->
+    <string name="settings_title">Configuración</string>
+    <string name="settings_back">Volver</string>
+    <string name="settings_permissions_section">Permisos</string>
+    <string name="settings_location_label">Ubicación</string>
+    <string name="settings_camera_label">Cámara</string>
+    <string name="settings_permission_exact">Precisa</string>
+    <string name="settings_permission_approximate">Aproximada</string>
+    <string name="settings_permission_denied">Denegada</string>
+    <string name="settings_permission_granted">Permitida</string>
+    <string name="settings_go_to_settings">Ir a configuración</string>
+    <string name="settings_demo_mode_section">Modo demo</string>
+    <string name="settings_demo_mode_label">Modo demo</string>
+    <string name="settings_demo_mode_active_notice">Modo demo activado: los recorridos son simulados</string>
+    <string name="settings_demo_mode_running_notice">Finalizá el recorrido para cambiar el modo demo</string>
 </resources>
