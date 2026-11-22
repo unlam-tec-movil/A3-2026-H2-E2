@@ -134,7 +134,7 @@
   - _Requirements: 5.1, 5.3, 5.4, 5.6, 5.7_
 
 - [ ] 6. Abrir el detalle tocando una traza (HU-12, recortable)
-- [ ] 6.1 (P) Búsqueda de la traza tocada
+- [x] 6.1 (P) Búsqueda de la traza tocada
   - Crear la regla pura que dice si la traza de un recorrido pasa a una distancia dada de un punto y que elige, entre los que coinciden, el recorrido más reciente. Una traza de menos de 2 puntos nunca coincide.
   - Escribir primero los tests unitarios: punto sobre la traza, fuera de la tolerancia, traza de 1 punto, dos trazas cruzadas (gana la más reciente) y lista vacía.
   - Listo cuando los tests de la regla pasan.
