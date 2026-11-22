@@ -40,7 +40,7 @@
   - _Boundary: SavedRunTotals_
   - _Requirements: 2.3, 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 2. Mis recorridos y Mis estadísticas en Perfil (HU-09, HU-16)
+- [x] 2. Mis recorridos y Mis estadísticas en Perfil (HU-09, HU-16)
 - [x] 2.1 Estado y ViewModel de Perfil con los recorridos guardados
   - Escribir primero los tests unitarios con un repositorio falso: lista vacía, recorridos del más reciente al más antiguo, recorrido nuevo que queda primero, totales actualizados al agregar, y marcas Incompleto y Demo, incluidas juntas.
   - Hacer que el ViewModel observe los recorridos guardados (solo lectura), arme las cards con su descripción accesible y los totales, y que «hay recorridos» se derive de la lista.
@@ -59,7 +59,7 @@
   - _Depends: 1.2_
   - _Requirements: 1.3, 1.4, 1.5, 1.6, 3.1, 5.8, 6.3, 6.4, 6.5, 6.7_
 
-- [ ] 2.3 Pantalla de Perfil con la lista y los totales
+- [x] 2.3 Pantalla de Perfil con la lista y los totales
   - Reemplazar la columna con scroll por una lista perezosa con «Mis estadísticas», el título «Mis recorridos» y las cards.
   - Mostrar el estado vacío (ilustración con «Todavía no hay recorridos», leído también por el lector de pantalla) solo mientras no hay recorridos, y los totales en cero en ese caso. Al llegar el primer recorrido, el estado vacío desaparece y aparece la card.
   - Recibir el aviso de toque sobre una card hacia afuera, sin abrir nada todavía.
