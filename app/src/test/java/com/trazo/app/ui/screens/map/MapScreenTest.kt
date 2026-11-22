@@ -12,6 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.trazo.app.R
 import com.trazo.app.data.repository.FakeLocationRepository
 import com.trazo.app.data.repository.FakeRunSessionRepository
+import com.trazo.app.data.repository.FakeSavedRunRepository
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
@@ -40,6 +41,7 @@ class MapScreenTest {
             runSessionRepository = repository,
             locationRepository = silentLocationRepository,
             finishRun = testFinishRunUseCase(repository),
+            savedRunRepository = FakeSavedRunRepository(),
         )
 
     private fun activeSession() =

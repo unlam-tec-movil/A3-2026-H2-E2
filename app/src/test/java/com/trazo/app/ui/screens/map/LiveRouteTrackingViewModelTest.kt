@@ -2,6 +2,7 @@ package com.trazo.app.ui.screens.map
 
 import com.trazo.app.data.repository.FakeLocationRepository
 import com.trazo.app.data.repository.FakeRunSessionRepository
+import com.trazo.app.data.repository.FakeSavedRunRepository
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunMetrics
 import com.trazo.app.domain.model.map.RunSession
@@ -43,6 +44,7 @@ class LiveRouteTrackingViewModelTest {
                 runSessionRepository = fakeRepository,
                 locationRepository = fakeLocationRepository,
                 finishRun = testFinishRunUseCase(fakeRepository),
+                savedRunRepository = FakeSavedRunRepository(),
             )
     }
 

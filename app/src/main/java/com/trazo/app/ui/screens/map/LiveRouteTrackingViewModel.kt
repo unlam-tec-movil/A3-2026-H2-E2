@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trazo.app.data.repository.LocationRepository
 import com.trazo.app.data.repository.RunSessionRepository
+import com.trazo.app.data.repository.SavedRunRepository
+import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.domain.model.map.InitializedRunSession
@@ -37,6 +39,7 @@ class LiveRouteTrackingViewModel
         private val runSessionRepository: RunSessionRepository,
         private val locationRepository: LocationRepository,
         private val finishRun: FinishRunUseCase,
+        private val savedRunRepository: SavedRunRepository,
     ) : ViewModel() {
         private val activeSessionFlow = runSessionRepository.activeSession
 
@@ -48,6 +51,22 @@ class LiveRouteTrackingViewModel
         private val isMapCenteredOnRunnerFlow = MutableStateFlow(true)
         private val finishFailedFlow = MutableStateFlow(false)
         private val isFinishingFlow = MutableStateFlow(false)
+
+        private val locationStatusFlow = MutableStateFlow(locationRepository.readLocationStatus())
+
+        /** Trazas a dibujar: hay recorridos guardados, ningún recorrido en curso y ubicación precisa. */
+        private val savedTracesFlow =
+            combine(
+                savedRunRepository.runs,
+                isRunInProgressFlow,
+                locationStatusFlow,
+            ) { runs, isRunInProgress, locationStatus ->
+                if (isRunInProgress || locationStatus != LocationStatus.READY) {
+                    emptyList()
+                } else {
+                    runs.map { SavedTraceUi(id = it.id, points = it.routePoints) }
+                }
+            }
 
         private val _uiEffect = Channel<LiveRouteTrackingUiEffect>(Channel.BUFFERED)
 
@@ -131,6 +150,7 @@ class LiveRouteTrackingViewModel
                 isMapCenteredOnRunnerFlow,
                 finishFailedFlow,
                 isFinishingFlow,
+                savedTracesFlow,
             ) { args: Array<Any?> ->
                 val session = args[0] as RunSession
                 val isRunInProgress = args[1] as Boolean
@@ -141,6 +161,9 @@ class LiveRouteTrackingViewModel
                 val isCentered = args[6] as Boolean
                 val finishFailed = args[7] as Boolean
                 val isFinishing = args[8] as Boolean
+
+                @Suppress("UNCHECKED_CAST")
+                val savedTraces = args[9] as List<SavedTraceUi>
 
                 when (session) {
                     is RunSession.Idle -> {
@@ -165,6 +188,7 @@ class LiveRouteTrackingViewModel
                             rawDistanceMeters = 0.0,
                             finishFailed = finishFailed,
                             isFinishing = isFinishing,
+                            savedTraces = savedTraces,
                         )
                     }
 
@@ -193,6 +217,7 @@ class LiveRouteTrackingViewModel
                             rawDistanceMeters = session.metrics.distanceMeters,
                             finishFailed = finishFailed,
                             isFinishing = isFinishing,
+                            savedTraces = savedTraces,
                         )
                     }
                 }
@@ -282,6 +307,11 @@ class LiveRouteTrackingViewModel
             viewModelScope.launch {
                 _uiEffect.send(LiveRouteTrackingUiEffect.OpenStartRunModal)
             }
+        }
+
+        /** Vuelve a leer la ubicación (permiso y estado del dispositivo): decide si se dibujan las trazas. */
+        fun onLocationStatusRefreshed() {
+            locationStatusFlow.value = locationRepository.readLocationStatus()
         }
 
         fun onCenterMapClicked() {
