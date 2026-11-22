@@ -51,7 +51,6 @@ class TrazoScaffoldTest {
                         Text(RESULT_SCREEN)
                         Button(onClick = onLeaveToActivity) { Text(LEAVE_RESULT) }
                     },
-                    settingsScreen = {},
                 )
             }
         }
