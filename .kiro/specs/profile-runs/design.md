@@ -223,7 +223,7 @@ La condición se calcula en el ViewModel combinando `runs`, `isRunInProgress` y 
 | 6.1, 6.2 | Voseo y coma decimal | `strings.xml`, `RunValueFormatter` | — | — |
 | 6.3 | Áreas táctiles de 48 dp | `RunCard`, botón cerrar | `Sizes.minTouchTarget` | — |
 | 6.4 | Estado no solo por color | `StatusBadge` | texto de la marca | — |
-| 6.5 | Descripción accesible de la card | `RunCard` | `RunCardUi.accessibilityLabel` | — |
+| 6.5 | Descripción accesible de la card | `RunCard` | frase armada en `RunCard` a partir de `RunCardUi` | — |
 | 6.6 | Descripción accesible del mapa | `RunTraceMap` | `contentDescription` | — |
 | 6.7 | Fuente al 200 % | `RunCard`, `RunDetailContent` | layout flexible, scroll vertical | — |
 | 6.8 | «Quitar animaciones» | `RunDetailDialog` | animación del sistema del diálogo | — |
@@ -307,14 +307,14 @@ data class RunCardUi(
     val distanceText: String,
     val durationText: String,
     val brakeCount: Int,
-    val regularityText: String,   // "80 %" o "–"
+    val regularityPercent: Int?,  // null si no hay dato
     val badges: List<StatusBadgeKind>,  // INCOMPLETE y/o DEMO; vacía si no tiene marcas
-    val accessibilityLabel: String,
 )
 ```
-- `ProfileUiState` mantiene los totales actuales (`totalRuns`, `totalDistanceKm`, `totalTimeSeconds`) y suma `runs: List<RunCardUi>`.
-- Un recorrido puede ser a la vez incompleto y demo, por eso la card recibe una lista de marcas.
-- Estado derivado con `combine`/`map` sobre `SavedRunRepository.runs` y `stateIn(WhileSubscribed)`.
+- `ProfileViewModel` no recibe `Context`: el estado lleva datos y no frases. La descripción accesible de la card, el «sin datos» de la regularidad y el texto de las marcas se arman en el Composable (`RunCard`) con `stringResource` y `pluralStringResource`.
+- `ProfileUiState` guarda `totals: SavedRunTotals` (en lugar de copiar cantidad, distancia y tiempo) y suma `runs: List<RunCardUi>`.
+- Un recorrido puede ser a la vez incompleto y demo, por eso la card recibe una lista de marcas. Las marcas salen de `SavedRun.badges()` (dominio); la card filtra «Meta cumplida».
+- Estado derivado con `map` sobre `SavedRunRepository.runs` y `stateIn(WhileSubscribed)`.
 
 #### RunDetailViewModel
 
@@ -325,21 +325,23 @@ data class RunDetailUi(
     val id: String,
     val title: String,
     val averageSpeedText: String,
-    val goalText: String,          // "Meta 10 km"
-    val statusBadge: StatusBadgeKind,   // GOAL_REACHED o INCOMPLETE
-    val isDemo: Boolean,
+    val goal: RunGoal,
+    val badges: List<StatusBadgeKind>,  // GOAL_REACHED o INCOMPLETE, y DEMO si corresponde
     val highlights: List<String>,
-    val photoPaths: List<String>,  // como máximo 2
+    val photoPaths: List<String>,  // las fotos del recorrido; el máximo (SavedRun.MAX_PHOTOS) es regla de dominio
     val routePoints: List<RoutePoint>,
-    val mapDescription: String,
+    val distanceText: String,      // "10,3 km"
+    val durationText: String,      // "00:55:00"
 )
 
 fun open(runId: String)
 fun close()
 val detail: StateFlow<RunDetailUi?>
 ```
-- Preconditions: `open` con un id que ya no existe deja `detail` en `null` (no abre nada).
-- Postconditions: `detail` refleja el recorrido abierto mientras exista en `runs`; `close()` lo deja en `null`.
+- `RunDetailViewModel` no recibe `Context`: el texto de la meta («Meta 10 km») y la descripción del mapa se arman en el Composable con `stringResource`, a partir de `goal`, `title`, `distanceText` y `durationText`.
+- El recorrido abierto se guarda en un `MutableStateFlow<SavedRun?>`; `open` lo pide con `SavedRunRepository.getById` y no mantiene toda la lista.
+- Preconditions: `open` con un id que no existe deja `detail` en `null` (no abre nada).
+- Postconditions: `detail` refleja el recorrido abierto; `close()` lo deja en `null`. No se cierra solo si el recorrido desaparece, porque no hay forma de borrar recorridos.
 - Las secciones de destacados y fotos se ocultan con listas vacías (3.4, 3.6).
 
 #### LiveRouteTrackingViewModel (cambios)

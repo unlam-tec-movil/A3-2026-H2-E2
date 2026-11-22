@@ -6,7 +6,7 @@ _Fecha: 2026-11-21 · Requisitos: `requirements.md` (generados, sin aprobar)_
 
 **Ya existe**
 - `domain/model/saved/SavedRun.kt`: título, fecha de inicio, meta, meta cumplida, demo, distancia, tiempo, velocidad promedio, traza, frenadas, regularidad (`Int?`), destacados y rutas de fotos. Tiene `brakeCount`.
-- `data/repository/SavedRunRepository` con `runs: Flow<List<SavedRun>>` (más reciente primero) y `save()`. La implementación es `InMemorySavedRunRepository` (`@Singleton` en `SavedRunModule`); se pierde al cerrar la app.
+- `data/repository/SavedRunRepository` con `runs: Flow<List<SavedRun>>` (más reciente primero) y `save()`. Cuando se escribió este análisis la implementación era `InMemorySavedRunRepository` (`@Singleton` en `SavedRunModule`) y se perdía al cerrar la app. Hoy es `SavedRunRepositoryImpl` (Room); el repositorio en memoria quedó en `app/src/test` como `FakeSavedRunRepository`, solo para tests.
 - Pestaña Perfil (`ui/screens/profile/`): `ProfileScreen`/`ProfileContent`, `ProfileViewModel` (hoy con estado fijo en cero y sin dependencias), `ProfileStatRow`, `EmptyState`, `ProfileStatsFormatter`. «Mis estadísticas» y el estado vacío de «Mis recorridos» ya se ven. `ProfileUiState.hasRecentRuns` no tiene lista de recorridos.
 - Recursos: `img_empty_runs`, strings `profile_*`, `Sizes.traceSavedWidth` y `traceSaved` (Primary500 al 75 %) en el tema, ya previstos para las trazas guardadas.
 - Mapa: `MapLayer` (MapCompose) dibuja un solo trazo en vivo (`route` + `route-outline`) y el pin del corredor. `MapScreen` usa `LiveRouteTrackingViewModel`, que ya expone `hasActiveRun` e `isRunInProgress`.
@@ -31,7 +31,7 @@ _Fecha: 2026-11-21 · Requisitos: `requirements.md` (generados, sin aprobar)_
 
 ## 3. Hallazgos que afectan los requisitos
 
-1. **Persistencia (R1.8)**. El repositorio es en memoria y Room está «previsto» pero no está en el catálogo (`tech.md`: sumar dependencia exige avisar al equipo). Hay que decidir: pasar a Room en esta spec, dejarlo a `save-run`, o relajar 1.8. Hoy lo contradice `InMemorySavedRunRepository`.
+1. **Persistencia (R1.8)**. El repositorio es en memoria y Room está «previsto» pero no está en el catálogo (`tech.md`: sumar dependencia exige avisar al equipo). Hay que decidir: pasar a Room en esta spec, dejarlo a `save-run`, o relajar 1.8. En ese momento lo contradecía `InMemorySavedRunRepository` (ahora `FakeSavedRunRepository`, solo en tests).
 2. **Tiempo sin pausas personales (R4.4)**. `elapsedTimeSeconds` sale de `elapsedAt`, que suma solo tramos abiertos: las pausas manuales y personales no cuentan, y las frenadas sí (stop-detection D3). Por eso el tiempo total ya excluye pausas personales sin cálculo extra, siempre que `save-run` guarde ese valor. Mi suposición de que el recorrido trae «tiempo de pausas personales» en el Boundary Context sobra: conviene quitarla de los requisitos.
 3. **Precisión de ubicación (R5.1/5.4)**. Solo existe una lectura puntual (`readLocationStatus()`), sin flujo que avise cuando cambia el permiso. Para el mapa hay que decidir cuándo se evalúa (al entrar a la pestaña, al volver a primer plano, continuo). **Research Needed.**
 4. **Datos para el detalle**. `SavedRun.regularityPercent` es `Int?` (sin acelerómetro es nulo) y la card/detalle necesitan una representación para «sin dato». Los requisitos no la definen.
