@@ -69,7 +69,7 @@
   - _Depends: 2.1, 2.2_
   - _Requirements: 1.1, 1.2, 2.1, 2.2, 2.3, 2.4, 2.5, 4.1, 4.6, 6.7_
 
-- [ ] 3. Detalle del recorrido guardado (HU-09)
+- [x] 3. Detalle del recorrido guardado (HU-09)
 - [x] 3.1 Estado y ViewModel del detalle
   - Escribir primero los tests unitarios: abrir con un id inexistente no abre nada, abrir muestra los datos del recorrido, cerrar lo deja en nada, las fotos se recortan a 2 y las listas vacías de destacados y fotos quedan vacías.
   - Crear el estado del detalle (título, velocidad promedio, meta, estado, marca Demo, destacados, fotos, traza y descripción accesible del mapa) y el ViewModel que lo arma a partir del recorrido elegido y lo cierra si el recorrido desaparece.
@@ -93,7 +93,7 @@
   - _Boundary: HighlightChips, RunPhotos_
   - _Requirements: 3.3, 3.5_
 
-- [ ] 3.4 Modal de detalle
+- [x] 3.4 Modal de detalle
   - Armar el modal a pantalla completa con barra superior (título y botón «Cerrar» de 48 dp), el mapa de la traza, la velocidad promedio, la meta, el estado, la marca Demo cuando corresponde y, solo si no están vacíos, los destacados y las fotos. Con scroll vertical y sin animaciones propias.
   - Escribir tests de UI del contenido: sin destacados no hay sección, sin fotos no hay sección, marca Demo visible, traza no mostrable con el resto del detalle visible, cierre que avisa y fuente al 200 % operable.
   - Listo cuando los tests de UI del modal pasan y la vista previa muestra un detalle completo y uno sin destacados ni fotos.
