@@ -101,8 +101,8 @@
   - _Depends: 1.2, 3.1, 3.2, 3.3_
   - _Requirements: 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 6.3, 6.7, 6.8_
 
-- [ ] 4. Integración de HU-09 en la app
-- [ ] 4.1 Abrir y cerrar el detalle desde Perfil
+- [x] 4. Integración de HU-09 en la app
+- [x] 4.1 Abrir y cerrar el detalle desde Perfil
   - Crear el ViewModel del detalle en el nivel de la app, mostrar el modal cuando hay un recorrido abierto y conectar el toque sobre una card de Perfil con «abrir» y el cierre con «cerrar».
   - Verificar con un test que tocar una card abre el detalle de ese recorrido y cerrarlo deja a Perfil como estaba.
   - Listo cuando, con un recorrido de prueba guardado, tocar su card abre el detalle correcto y cerrarlo vuelve a Perfil en la misma posición.
