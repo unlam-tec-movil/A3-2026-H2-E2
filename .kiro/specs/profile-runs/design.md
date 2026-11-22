@@ -44,7 +44,7 @@
 ## Architecture
 
 ### Existing Architecture Analysis
-- Perfil ya tiene `ProfileScreen`/`ProfileContent`, `ProfileViewModel` sin dependencias, `ProfileStatRow`, `EmptyState` y `ProfileStatsFormatter` (`8,5`, `HH:MM:SS`).
+- Perfil ya tiene `ProfileScreen`/`ProfileContent`, `ProfileViewModel` sin dependencias, `ProfileStatRow`, `EmptyState` y `ProfileStatsFormatter` (`8,5`, `HH:MM:SS`). *Actualización:* `ProfileStatsFormatter` se eliminó; sus casos pasaron a `RunValueFormatter` (`formatTotalDistanceKm` y `formatDuration`).
 - `SavedRunRepository.runs` ya entrega los recorridos del más reciente al más antiguo. `SavedRun` trae todos los datos de la card y del detalle. El tiempo viene de `elapsedAt`, que no suma las pausas.
 - `MapLayer` arma el `MapState` de MapCompose y dibuja el trazo en vivo, el pin y los botones. El tema ya define `traceSaved` y `traceSavedWidth`.
 - `TrazoApp` es el único que conoce todas las pantallas y ya renderiza diálogos globales (`StartRunDialog`).
@@ -117,9 +117,11 @@ graph TB
 3. **«Ubicación precisa» = `LocationStatus.READY`** leído por `LocationRepository`. Se vuelve a leer al reanudar la pestaña y al terminar un recorrido. `APPROXIMATE_ONLY`, `PERMISSION_DENIED` y `DEVICE_LOCATION_OFF` no dibujan trazas (5.4).
 4. **Totales por función pura** que ignora `isDemo` y suma incompletos. El tiempo es la suma de `elapsedTimeSeconds`, que ya excluye pausas (4.4).
 5. **Regularidad sin dato** (`regularityPercent == null`, teléfono sin acelerómetro): la card y el detalle muestran «–» y la descripción accesible dice «sin datos». Los requisitos no lo definen; queda como decisión de diseño.
-6. **Fotos**: el mapeo toma como máximo las 2 primeras de `photoPaths` (3.5). Si una no carga, se muestra un recuadro neutro.
+6. **Fotos**: el máximo de 2 (3.5) es una regla de dominio, `SavedRun.MAX_PHOTOS`. El detalle y `RunPhotos` no recortan: muestran las fotos que tenga el recorrido. Si una no carga, se muestra un recuadro neutro.
+   *Antes* el `RunDetailViewModel` y `RunPhotos` tomaban las 2 primeras de `photoPaths`.
 7. **Fecha de la card**: formato corto `Mar 28 oct` con `SimpleDateFormat` y `es-AR` (válido en minSdk 24, sin desugaring), primera letra en mayúscula y sin puntos de abreviatura.
 8. **Perfil con `LazyColumn`** (estadísticas, título y cards como ítems) en lugar de un `Column` con scroll, para no componer todas las cards.
+9. **Marcas en un solo lugar**: `SavedRun.badges()` devuelve una lista de `RunBadge` (enum de dominio): `GOAL_REACHED` o `INCOMPLETE` según `goalReached`, y `DEMO` si `isDemo`. La card y el detalle la usan y la mapean a `StatusBadgeKind` en la UI; la card filtra `GOAL_REACHED`. *Antes* cada pantalla armaba sus marcas con reglas distintas.
 
 ## File Structure Plan
 
@@ -142,7 +144,7 @@ app/src/main/java/com/trazo/app/
     ├── RunDetailDialog.kt         # Screen (Dialog) + RunDetailContent stateless
     └── components/
         ├── HighlightChips.kt      # Destacados del recorrido
-        └── RunPhotos.kt           # Hasta 2 fotos
+        └── RunPhotos.kt           # Fila de fotos (las del recorrido; el máximo es SavedRun.MAX_PHOTOS)
 ```
 
 ### Modified Files
@@ -156,7 +158,7 @@ app/src/main/java/com/trazo/app/
 - `ui/navigation/TrazoApp.kt` — crea `RunDetailViewModel`, muestra `RunDetailDialog` y conecta los dos callbacks.
 - `app/src/main/res/values/strings.xml` — textos `profile_run_*` y `run_detail_*`.
 
-> `RunCardUi` (id, título, fecha, km, duración, frenadas, regularidad, marcas y descripción accesible) vive en `ProfileViewModel.kt`. `RunDetailUi` vive en `RunDetailViewModel.kt`. `SavedTraceUi(id, puntos)` vive en `LiveRouteTrackingUiState.kt`.
+> `RunCardUi` (id, título, fecha, km, duración, frenadas, porcentaje de regularidad y marcas) vive en `ProfileViewModel.kt`. `RunDetailUi` vive en `RunDetailViewModel.kt`. `SavedTraceUi(id, puntos)` vive en `LiveRouteTrackingUiState.kt`.
 
 ## System Flows
 
@@ -208,14 +210,14 @@ La condición se calcula en el ViewModel combinando `runs`, `isRunInProgress` y 
 | 3.1 | Abrir el modal desde la card | `RunCard`, `TrazoApp`, `RunDetailViewModel` | `onRunClick(id)` | Toque (variante Perfil) |
 | 3.2 | Mapa, título, velocidad, meta, estado | `RunDetailContent`, `RunTraceMap` | `RunDetailUi` | — |
 | 3.3, 3.4 | Destacados visibles u ocultos | `HighlightChips`, `RunDetailContent` | `RunDetailUi.highlights` | — |
-| 3.5, 3.6 | Hasta 2 fotos u oculto | `RunPhotos`, `RunDetailViewModel` | `RunDetailUi.photoPaths` (máx. 2) | — |
+| 3.5, 3.6 | Hasta 2 fotos u oculto | `RunPhotos`, `SavedRun` | `SavedRun.MAX_PHOTOS`; `RunDetailUi.photoPaths` (las del recorrido, sin recorte) | — |
 | 3.7 | Marca Demo | `StatusBadge` | `StatusBadgeKind.DEMO` | — |
 | 3.8 | Cierre vuelve al mismo lugar | `TrazoApp`, `RunDetailDialog` | `onDismiss` | — |
 | 3.9 | Falla de traza, detalle intacto | `RunTraceMap` | mensaje alternativo | — |
 | 4.1, 4.5 | Totales visibles y actualizados | `ProfileViewModel`, `ProfileStatRow` | `SavedRunTotals` | — |
 | 4.2, 4.3 | Suma incompletos, excluye demo | `SavedRunTotals` | `from(runs)` | — |
 | 4.4 | Tiempo sin pausas personales | `SavedRunTotals` | suma de `elapsedTimeSeconds` | — |
-| 4.6 | Coma decimal | `ProfileStatsFormatter` (existente) | `formatDistanceKm` | — |
+| 4.6 | Coma decimal | `RunValueFormatter` | `formatTotalDistanceKm` | — |
 | 5.1, 5.3–5.6 | Cuándo dibujar | `LiveRouteTrackingViewModel`, `MapLayer` | `savedTraces` | Cuándo se dibujan |
 | 5.2, 5.9 | Toque y recorrido más reciente | `MapLayer`, `SavedRunTraceHit`, `LiveRouteTrackingViewModel` | `onMapTap`, `OpenSavedRun` | Toque sobre una traza |
 | 5.7 | Volver al mapa sin perder trazas | `TrazoApp` (el mapa sigue compuesto) | — | — |
@@ -386,12 +388,12 @@ Solo lectura sobre el modelo existente; no se agregan ni cambian datos.
 | Km, duración | `distanceMeters`, `elapsedTimeSeconds` |
 | Frenadas | `brakeCount` |
 | Regularidad | `regularityPercent` (nulo = «–») |
-| Marcas | `goalReached`, `isDemo` |
+| Marcas | `SavedRun.badges()` (a partir de `goalReached`, `isDemo`) |
 | Velocidad promedio, meta | `averageSpeedKmh`, `goal` |
-| Traza, destacados, fotos | `routePoints`, `highlights`, `photoPaths` (máx. 2) |
+| Traza, destacados, fotos | `routePoints`, `highlights`, `photoPaths` (el máximo es `SavedRun.MAX_PHOTOS`) |
 
 ## Error Handling
-- **Recorrido que desaparece** mientras está abierto: `detail` pasa a `null` y el modal se cierra.
+- **Recorrido que desaparece** mientras está abierto: no se contempla, porque no hay forma de borrar recorridos. `RunDetailViewModel` no observa la lista: guarda el recorrido que pidió con `getById`.
 - **Traza no dibujable** (menos de 2 puntos o falla del mapa): el detalle muestra el texto alternativo y todo lo demás (3.9).
 - **Foto que no carga**: recuadro neutro; no se cierra el detalle.
 - **Sin conexión**: los tiles no cargan pero las trazas se dibujan sobre fondo vacío; no se muestra error nuevo.
@@ -402,8 +404,9 @@ Solo lectura sobre el modelo existente; no se agregan ni cambian datos.
 ### Unit (JVM, fakes manuales)
 - `SavedRunTotalsTest`: lista vacía da ceros (2.3); incompletos suman (4.2); demo no suma, completo o incompleto (4.3); el tiempo es la suma de `elapsedTimeSeconds` (4.4).
 - `SavedRunTraceHitTest`: toque dentro y fuera de tolerancia; traza de 1 punto no coincide; con dos trazas cruzadas devuelve la de mayor `startedAt` (5.9).
+- `SavedRunBadgesTest`: cumplida, incompleta, cumplida y demo, incompleta y demo (1.5, 1.6, 3.7); `SavedRunPhotosTest`: `MAX_PHOTOS` vale 2 (3.5).
 - `ProfileViewModelTest`: orden de más reciente a más antiguo (1.2); un recorrido nuevo queda primero y actualiza los totales (1.7, 2.5, 4.5); marcas Incompleto y Demo, incluidas juntas (1.5, 1.6).
-- `RunDetailViewModelTest`: `open` con id inexistente no abre; fotos recortadas a 2 (3.5); listas vacías ocultan secciones (3.4, 3.6).
+- `RunDetailViewModelTest`: `open` con id inexistente no abre; las fotos pasan tal cual, sin recorte (3.5); listas vacías ocultan secciones (3.4, 3.6).
 - `LiveRouteTrackingViewModelTest` (ampliado): `savedTraces` vacío con recorrido en curso (5.3), con ubicación `APPROXIMATE_ONLY` (5.4), sin recorridos (5.5) y lleno si se cumplen las tres condiciones (5.1); al guardarse un recorrido aparece su traza (5.6); `onMapTapped` emite `OpenSavedRun` con el más reciente (5.2, 5.9).
 - `RunValueFormatterTest`: `5,2 km`, `HH:MM:SS`, `80 %`, regularidad nula, fecha `Mar 28 oct` (6.2).
 

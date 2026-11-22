@@ -7,7 +7,7 @@ _Fecha: 2026-11-21 · Requisitos: `requirements.md` (generados, sin aprobar)_
 **Ya existe**
 - `domain/model/saved/SavedRun.kt`: título, fecha de inicio, meta, meta cumplida, demo, distancia, tiempo, velocidad promedio, traza, frenadas, regularidad (`Int?`), destacados y rutas de fotos. Tiene `brakeCount`.
 - `data/repository/SavedRunRepository` con `runs: Flow<List<SavedRun>>` (más reciente primero) y `save()`. Cuando se escribió este análisis la implementación era `InMemorySavedRunRepository` (`@Singleton` en `SavedRunModule`) y se perdía al cerrar la app. Hoy es `SavedRunRepositoryImpl` (Room); el repositorio en memoria quedó en `app/src/test` como `FakeSavedRunRepository`, solo para tests.
-- Pestaña Perfil (`ui/screens/profile/`): `ProfileScreen`/`ProfileContent`, `ProfileViewModel` (hoy con estado fijo en cero y sin dependencias), `ProfileStatRow`, `EmptyState`, `ProfileStatsFormatter`. «Mis estadísticas» y el estado vacío de «Mis recorridos» ya se ven. `ProfileUiState.hasRecentRuns` no tiene lista de recorridos.
+- Pestaña Perfil (`ui/screens/profile/`): `ProfileScreen`/`ProfileContent`, `ProfileViewModel` (hoy con estado fijo en cero y sin dependencias), `ProfileStatRow`, `EmptyState`, `ProfileStatsFormatter` (después eliminado: su formato pasó a `RunValueFormatter`). «Mis estadísticas» y el estado vacío de «Mis recorridos» ya se ven. `ProfileUiState.hasRecentRuns` no tiene lista de recorridos.
 - Recursos: `img_empty_runs`, strings `profile_*`, `Sizes.traceSavedWidth` y `traceSaved` (Primary500 al 75 %) en el tema, ya previstos para las trazas guardadas.
 - Mapa: `MapLayer` (MapCompose) dibuja un solo trazo en vivo (`route` + `route-outline`) y el pin del corredor. `MapScreen` usa `LiveRouteTrackingViewModel`, que ya expone `hasActiveRun` e `isRunInProgress`.
 - Ubicación: `LocationRepository.readLocationStatus()` devuelve `LocationStatus` (`READY` = permiso preciso + ubicación activa, `APPROXIMATE_ONLY`, etc.).
@@ -25,7 +25,7 @@ _Fecha: 2026-11-21 · Requisitos: `requirements.md` (generados, sin aprobar)_
 | 1 Lista | `SavedRunRepository.runs` ya ordenado; `SavedRun` trae todos los campos de la card | **Missing**: `ProfileViewModel` no lee el repositorio; falta `RunCard`, formateo de fecha/duración/regularidad y `StatusBadge`. **Constraint**: 1.8 (persistir al cerrar la app) no se cumple con la implementación en memoria. |
 | 2 Vacío | Ilustración, texto y totales en cero ya implementados | Solo regresión: el estado vacío debe depender de la lista real, no de `hasRecentRuns` fijo. |
 | 3 Detalle | `SavedRun` con traza, velocidad promedio, meta, destacados, fotos | **Missing**: modal, mapa con la traza completa (MapLayer está acoplado a la vista en vivo), carga de fotos (Coil 2.7 está en el catálogo), reglas de ocultar secciones. **Unknown**: forma del mapa del detalle (¿encuadre automático a la traza?). |
-| 4 Estadísticas | Formato (`ProfileStatsFormatter`) y filas ya listos | **Missing**: calcular totales desde `runs`, excluyendo `isDemo`. Los incompletos suman sin cambios. |
+| 4 Estadísticas | Formato (`ProfileStatsFormatter`, hoy `RunValueFormatter.formatTotalDistanceKm` y `formatDuration`) y filas ya listos | **Missing**: calcular totales desde `runs`, excluyendo `isDemo`. Los incompletos suman sin cambios. |
 | 5 Trazas en Actividad | Trazo en vivo, `isRunInProgress`, `LocationStatus.READY`, `traceSaved` | **Missing**: dibujar N trazas, detectar el toque sobre una traza (MapCompose no tiene click en paths; hay que resolver el toque por distancia a los segmentos o con otra técnica), estado «ubicación precisa» disponible para el mapa. **Unknown**: ver 3 abajo. |
 | 6 Accesibilidad | Patrones del steering (48 dp, `ReduceMotion`, `semantics`) | Aplicar en componentes nuevos; el mapa necesita descripción accesible. |
 
@@ -96,7 +96,7 @@ _Fecha: 2026-11-21 · Requisitos: `requirements.md` (generados, sin aprobar)_
 - Callback de toque de MapCompose 3.0.0 y su sistema de coordenadas (se asume el plano normalizado que ya usa `WebMercator.normalize`).
 - Encuadre de una traza con `scrollTo(x, y, scale)` y cálculo de la escala para un rectángulo dado.
 - Si `LocationStatus.DEVICE_LOCATION_OFF` debería contar como «precisa»: el diseño asume que no.
-- Que `save-run` guarde máximo 2 fotos: el detalle recorta a 2 por seguridad.
+- Que `save-run` guarde máximo 2 fotos: el detalle recortaba a 2 por seguridad. Hoy el máximo es la regla de dominio `SavedRun.MAX_PHOTOS` y el detalle ya no recorta.
 
 ## Riesgos
 - Medio: toque por geometría (tolerancia en dp y zoom) y mapa dentro del diálogo.
