@@ -19,4 +19,6 @@ class InMemorySavedRunRepository
         override suspend fun save(run: SavedRun) {
             saved.update { it + run }
         }
+
+        override suspend fun getById(id: String): SavedRun? = saved.value.firstOrNull { it.id == id }
     }

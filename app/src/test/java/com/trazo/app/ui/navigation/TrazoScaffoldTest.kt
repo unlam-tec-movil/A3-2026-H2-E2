@@ -46,10 +46,17 @@ class TrazoScaffoldTest {
                         Text(ACTIVITY_SCREEN)
                         Button(onClick = { onNavigateToResult(RUN_ID) }) { Text(OPEN_RESULT) }
                     },
-                    profileScreen = { Text(PROFILE_SCREEN) },
+                    profileScreen = { onSettingsClick ->
+                        Text(PROFILE_SCREEN)
+                        Button(onClick = onSettingsClick) { Text(OPEN_SETTINGS) }
+                    },
                     resultScreen = { onLeaveToActivity ->
                         Text(RESULT_SCREEN)
                         Button(onClick = onLeaveToActivity) { Text(LEAVE_RESULT) }
+                    },
+                    settingsScreen = { onBackClick ->
+                        Text(SETTINGS_SCREEN)
+                        Button(onClick = onBackClick) { Text(LEAVE_SETTINGS) }
                     },
                 )
             }
@@ -112,6 +119,25 @@ class TrazoScaffoldTest {
     }
 
     @Test
+    fun settings_hidesBottomBar_andNavigatesBack() {
+        setContent()
+
+        navItem(R.string.nav_profile).performClick()
+        composeTestRule.onNodeWithText(OPEN_SETTINGS).performClick()
+
+        composeTestRule.onNodeWithText(SETTINGS_SCREEN).assertIsDisplayed()
+        navItem(R.string.nav_activity).assertDoesNotExist()
+        navItem(R.string.nav_profile).assertDoesNotExist()
+        assertEquals(SETTINGS_ROUTE, currentRoute())
+
+        composeTestRule.onNodeWithText(LEAVE_SETTINGS).performClick()
+
+        composeTestRule.onNodeWithText(PROFILE_SCREEN).assertIsDisplayed()
+        navItem(R.string.nav_profile).assertIsSelected()
+        assertEquals(TrazoDestination.PROFILE.route, currentRoute())
+    }
+
+    @Test
     fun leavingResult_returnsToActivity_andRemovesResultFromBackStack() {
         setContent()
         composeTestRule.onNodeWithText(OPEN_RESULT).performClick()
@@ -139,8 +165,11 @@ class TrazoScaffoldTest {
         const val ACTIVITY_SCREEN = "pantalla Actividad"
         const val PROFILE_SCREEN = "pantalla Perfil"
         const val RESULT_SCREEN = "pantalla Resultado"
+        const val SETTINGS_SCREEN = "pantalla Configuración"
         const val OPEN_RESULT = "abrir resultado"
         const val LEAVE_RESULT = "salir del resultado"
+        const val OPEN_SETTINGS = "abrir configuración"
+        const val LEAVE_SETTINGS = "volver de configuración"
         const val RUN_ID = "run-1"
     }
 }

@@ -12,6 +12,7 @@ composeBom = "2025.04.01" # BOM que administra versiones compatibles de las bibl
 navigationCompose = "2.8.9" # Navegación entre pantallas utilizando Compose.
 playServicesLocation = "21.3.0" # Servicios de Google para obtener ubicación y actualizaciones GPS.
 camerax = "1.6.2"
+room = "2.8.5" # Base de datos local (Room).
 
 # Dependencias adicionales
 coil = "2.7.0" # Carga y visualización de imágenes en Compose.
@@ -87,6 +88,9 @@ androidx-camera-core = { group = "androidx.camera", name = "camera-core", versio
 androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 [plugins]
 # Configuración y compilación de aplicaciones Android
