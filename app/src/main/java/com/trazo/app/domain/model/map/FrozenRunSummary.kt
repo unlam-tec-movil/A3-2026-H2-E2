@@ -13,10 +13,13 @@ data class FrozenRunSummary(
     val finishedAtMonotonicTimestamp: Long,
     val goalReached: Boolean,
     val isDemoMode: Boolean = false,
-    /** Frenadas del recorrido, incluida la que quedó abierta al finalizar. */
-    val brakes: List<BrakeEvent> = emptyList(),
+    /**
+     * Frenadas del recorrido, incluida la que quedó abierta al finalizar. `null` = «sin dato»: el
+     * dispositivo no tiene acelerómetro y no se pudieron detectar (no es lo mismo que 0 frenadas).
+     */
+    val brakes: List<BrakeEvent>? = emptyList(),
     /** Regularidad del piso, 0..100; `null` si no hubo tramos medidos o no hay sensor. */
     val regularityPercent: Int? = null,
 ) {
-    val brakeCount: Int get() = brakes.size
+    val brakeCount: Int? get() = brakes?.size
 }

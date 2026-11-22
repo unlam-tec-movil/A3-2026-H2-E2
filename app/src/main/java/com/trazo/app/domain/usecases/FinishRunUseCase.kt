@@ -15,6 +15,7 @@ import javax.inject.Inject
  * Una frenada abierta al finalizar se cierra y se guarda recién después (al pasar la sesión a reposo,
  * por `StopMonitor.closedStops`), así que se cuenta desde el monitor. La candidata se lee antes que
  * las frenadas guardadas y se unen por id: si justo se guarda en el medio, no se cuenta dos veces.
+ * Sin acelerómetro, las frenadas y la regularidad quedan «sin dato» (`null`).
  */
 class FinishRunUseCase
     @Inject
@@ -34,15 +35,18 @@ class FinishRunUseCase
                     ?.brake
                     ?.takeIf { it.runId == runId }
             val savedBrakes = brakeRepository.brakes.value.filter { it.runId == runId }
-            val brakes =
-                (savedBrakes + listOfNotNull(openBrake))
-                    .distinctBy { it.id }
-                    .sortedBy { it.detectedAtMillis }
+            val regularity = regularityMonitor.state.value
 
-            val regularityPercent =
-                regularityMonitor.state.value
-                    .takeIf { it.runId == runId }
-                    ?.percentage
+            // Sin acelerómetro no se detectan frenadas: «sin dato» (null), no 0.
+            val brakes =
+                if (regularity.sensorAvailable) {
+                    (savedBrakes + listOfNotNull(openBrake))
+                        .distinctBy { it.id }
+                        .sortedBy { it.detectedAtMillis }
+                } else {
+                    null
+                }
+            val regularityPercent = regularity.takeIf { it.runId == runId }?.percentage
 
             return runSessionRepository.finishSession(brakes, regularityPercent)
         }

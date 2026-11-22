@@ -25,11 +25,17 @@ interface RunSessionRepository {
 
     /** Cierra la sesión y guarda su resumen con las frenadas y la regularidad que recibe. */
     suspend fun finishSession(
-        brakes: List<BrakeEvent> = emptyList(),
+        brakes: List<BrakeEvent>? = emptyList(),
         regularityPercent: Int? = null,
     ): Result<FrozenRunSummary>
 
     fun resetToIdle()
 
     fun getFinishedSummary(id: String): FrozenRunSummary?
+
+    /**
+     * Borra el resumen [id] de memoria. Lo llama `save-run` (HU-07) después de guardar o descartar el
+     * recorrido; el Resultado (HU-06) solo lee. Devuelve si existía.
+     */
+    fun removeFinishedSummary(id: String): Boolean
 }

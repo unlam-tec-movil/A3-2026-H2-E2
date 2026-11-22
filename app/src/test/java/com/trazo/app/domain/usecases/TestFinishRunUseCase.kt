@@ -19,25 +19,35 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 
 /**
- * [FinishRunUseCase] para tests de pantalla: sin frenadas, sin parada abierta y sin sensor, así que
+ * [RegularityMonitor] para tests de pantalla: sin muestras del sensor, así que no cierra tramos.
+ * Con [sensorAvailable] falso simula un dispositivo sin acelerómetro.
+ */
+fun testRegularityMonitor(
+    runs: RunSessionRepository,
+    sensorAvailable: Boolean = true,
+    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
+): RegularityMonitor =
+    RegularityMonitor(
+        motionSource = NoMotionSource,
+        runSessionRepository = runs,
+        availability = MotionSensorAvailability { sensorAvailable },
+        clock = { 0L },
+        scope = scope,
+    )
+
+/**
+ * [FinishRunUseCase] para tests de pantalla: sin frenadas guardadas ni parada abierta, así que
  * finalizar solo delega en [runs]. Para probar el conteo, ver `FinishRunUseCaseTest`.
  */
 fun testFinishRunUseCase(
     runs: RunSessionRepository,
-    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
+    regularityMonitor: RegularityMonitor = testRegularityMonitor(runs),
 ): FinishRunUseCase =
     FinishRunUseCase(
         runSessionRepository = runs,
         brakeRepository = InMemoryBrakeRepository(),
         stopMonitor = IdleStopMonitor,
-        regularityMonitor =
-            RegularityMonitor(
-                motionSource = NoMotionSource,
-                runSessionRepository = runs,
-                availability = MotionSensorAvailability { false },
-                clock = { 0L },
-                scope = scope,
-            ),
+        regularityMonitor = regularityMonitor,
     )
 
 private object NoMotionSource : MotionSource {

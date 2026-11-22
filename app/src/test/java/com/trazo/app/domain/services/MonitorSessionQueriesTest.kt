@@ -64,9 +64,11 @@ class MonitorSessionQueriesTest {
         }
 
         override suspend fun finishSession(
-            brakes: List<BrakeEvent>,
+            brakes: List<BrakeEvent>?,
             regularityPercent: Int?,
         ): Result<FrozenRunSummary> = error("no se usa")
+
+        override fun removeFinishedSummary(id: String): Boolean = error("no se usa")
 
         override fun resetToIdle() = error("no se usa")
 
@@ -232,10 +234,17 @@ class MonitorSessionQueriesTest {
         }
 
     @Test
+    fun `ACTIVE desde ACTIVE es exito sin llamar, asi no se reintenta tras reanudar a mano`() =
+        runTest {
+            repository.session.value = active(RunState.ACTIVE)
+            assertTrue(repository.publishStopState("run-1", RunState.ACTIVE).isSuccess)
+            assertTrue(repository.calls.isEmpty())
+        }
+
+    @Test
     fun `combinaciones no traducibles fallan sin llamar`() =
         runTest {
             repository.session.value = active(RunState.ACTIVE)
-            assertTrue(repository.publishStopState("run-1", RunState.ACTIVE).isFailure)
             assertTrue(repository.publishStopState("run-1", RunState.PERSONAL_PAUSED).isFailure)
             assertEquals(
                 "Cambio de ACTIVE a PAUSED no soportado.",
