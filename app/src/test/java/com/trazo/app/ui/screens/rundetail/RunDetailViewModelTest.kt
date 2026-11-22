@@ -170,7 +170,7 @@ class RunDetailViewModelTest {
 
             viewModel.open("a")
 
-            assertEquals(StatusBadgeKind.GOAL_REACHED, viewModel.detail.value!!.statusBadge)
+            assertEquals(listOf(StatusBadgeKind.GOAL_REACHED), viewModel.detail.value!!.badges)
         }
 
     @Test
@@ -181,7 +181,7 @@ class RunDetailViewModelTest {
 
             viewModel.open("a")
 
-            assertEquals(StatusBadgeKind.INCOMPLETE, viewModel.detail.value!!.statusBadge)
+            assertEquals(listOf(StatusBadgeKind.INCOMPLETE), viewModel.detail.value!!.badges)
         }
 
     @Test
@@ -192,9 +192,9 @@ class RunDetailViewModelTest {
             val viewModel = subscribed()
 
             viewModel.open("real")
-            assertEquals(false, viewModel.detail.value!!.isDemo)
+            assertEquals(listOf(StatusBadgeKind.GOAL_REACHED), viewModel.detail.value!!.badges)
             viewModel.open("demo")
-            assertEquals(true, viewModel.detail.value!!.isDemo)
+            assertEquals(listOf(StatusBadgeKind.GOAL_REACHED, StatusBadgeKind.DEMO), viewModel.detail.value!!.badges)
         }
 
     @Test

@@ -10,6 +10,7 @@ import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.ui.components.common.RunValueFormatter
 import com.trazo.app.ui.components.common.StatusBadgeKind
+import com.trazo.app.ui.components.common.toStatusBadgeKind
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,8 +31,7 @@ data class RunDetailUi(
     val title: String,
     val averageSpeedText: String,
     val goalText: String,
-    val statusBadge: StatusBadgeKind,
-    val isDemo: Boolean,
+    val badges: List<StatusBadgeKind>,
     val highlights: List<String>,
     val photoPaths: List<String>,
     val routePoints: List<RoutePoint>,
@@ -74,8 +74,7 @@ class RunDetailViewModel
                 title = title,
                 averageSpeedText = RunValueFormatter.formatAverageSpeedKmh(averageSpeedKmh),
                 goalText = context.getString(R.string.run_detail_goal_label, context.getString(goal.labelRes())),
-                statusBadge = if (goalReached) StatusBadgeKind.GOAL_REACHED else StatusBadgeKind.INCOMPLETE,
-                isDemo = isDemo,
+                badges = badges().map { it.toStatusBadgeKind() },
                 highlights = highlights,
                 photoPaths = photoPaths,
                 routePoints = routePoints,

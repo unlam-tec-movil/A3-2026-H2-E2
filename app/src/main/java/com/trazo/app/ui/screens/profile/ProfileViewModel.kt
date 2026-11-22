@@ -5,10 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trazo.app.R
 import com.trazo.app.data.repository.SavedRunRepository
+import com.trazo.app.domain.model.saved.RunBadge
 import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.domain.model.saved.SavedRunTotals
 import com.trazo.app.ui.components.common.RunValueFormatter
 import com.trazo.app.ui.components.common.StatusBadgeKind
+import com.trazo.app.ui.components.common.toStatusBadgeKind
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
@@ -84,11 +86,11 @@ class ProfileViewModel
             val distanceText = RunValueFormatter.formatDistanceKm(distanceMeters)
             val durationText = RunValueFormatter.formatDuration(elapsedTimeSeconds)
             val regularityText = RunValueFormatter.formatRegularity(regularityPercent)
+            // La card no muestra «Meta cumplida»: solo lo que queda por mejorar o aclarar.
             val badges =
-                buildList {
-                    if (!goalReached) add(StatusBadgeKind.INCOMPLETE)
-                    if (isDemo) add(StatusBadgeKind.DEMO)
-                }
+                badges()
+                    .filterNot { it == RunBadge.GOAL_REACHED }
+                    .map { it.toStatusBadgeKind() }
             return RunCardUi(
                 id = id,
                 title = title,

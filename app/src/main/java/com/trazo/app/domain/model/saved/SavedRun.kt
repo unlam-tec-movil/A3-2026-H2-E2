@@ -23,6 +23,16 @@ data class SavedRun(
 ) {
     val brakeCount: Int get() = brakes.size
 
+    /**
+     * Marcas del recorrido, en orden: primero [RunBadge.GOAL_REACHED] o [RunBadge.INCOMPLETE] según
+     * [goalReached], y después [RunBadge.DEMO] si [isDemo]. Nunca está vacía.
+     */
+    fun badges(): List<RunBadge> =
+        buildList {
+            add(if (goalReached) RunBadge.GOAL_REACHED else RunBadge.INCOMPLETE)
+            if (isDemo) add(RunBadge.DEMO)
+        }
+
     companion object {
         /** Máximo de fotos que admite un recorrido. */
         const val MAX_PHOTOS = 2

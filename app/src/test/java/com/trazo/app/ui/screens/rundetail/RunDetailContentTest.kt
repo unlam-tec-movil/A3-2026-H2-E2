@@ -48,8 +48,7 @@ class RunDetailContentTest {
 
     private fun detail(
         title: String = "Vuelta al lago",
-        statusBadge: StatusBadgeKind = StatusBadgeKind.GOAL_REACHED,
-        isDemo: Boolean = false,
+        badges: List<StatusBadgeKind> = listOf(StatusBadgeKind.GOAL_REACHED),
         highlights: List<String> = emptyList(),
         photoPaths: List<String> = emptyList(),
         routePoints: List<RoutePoint> = trace,
@@ -58,8 +57,7 @@ class RunDetailContentTest {
         title = title,
         averageSpeedText = "9,5 km/h",
         goalText = "Meta 10 km",
-        statusBadge = statusBadge,
-        isDemo = isDemo,
+        badges = badges,
         highlights = highlights,
         photoPaths = photoPaths,
         routePoints = routePoints,
@@ -80,7 +78,7 @@ class RunDetailContentTest {
 
     @Test
     fun `muestra titulo velocidad promedio meta y estado`() {
-        show(detail(title = "Vuelta al lago", statusBadge = StatusBadgeKind.GOAL_REACHED))
+        show(detail(title = "Vuelta al lago", badges = listOf(StatusBadgeKind.GOAL_REACHED)))
 
         composeTestRule.onNodeWithText("Vuelta al lago").assertIsDisplayed()
         composeTestRule.onNodeWithText(context.getString(R.string.run_detail_average_speed_label)).performScrollTo().assertIsDisplayed()
@@ -91,21 +89,21 @@ class RunDetailContentTest {
 
     @Test
     fun `un recorrido incompleto muestra la marca Incompleto`() {
-        show(detail(statusBadge = StatusBadgeKind.INCOMPLETE))
+        show(detail(badges = listOf(StatusBadgeKind.INCOMPLETE)))
 
         composeTestRule.onNodeWithText(context.getString(R.string.profile_run_badge_incomplete)).performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun `un recorrido demo muestra la marca Demo`() {
-        show(detail(isDemo = true))
+        show(detail(badges = listOf(StatusBadgeKind.GOAL_REACHED, StatusBadgeKind.DEMO)))
 
         composeTestRule.onNodeWithText(context.getString(R.string.profile_run_badge_demo)).performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun `un recorrido real no muestra la marca Demo`() {
-        show(detail(isDemo = false))
+        show(detail(badges = listOf(StatusBadgeKind.GOAL_REACHED)))
 
         composeTestRule.onNodeWithText(context.getString(R.string.profile_run_badge_demo)).assertDoesNotExist()
     }

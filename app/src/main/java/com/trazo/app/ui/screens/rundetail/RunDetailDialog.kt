@@ -116,8 +116,7 @@ fun RunDetailContent(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    StatusBadge(kind = detail.statusBadge)
-                    if (detail.isDemo) StatusBadge(kind = StatusBadgeKind.DEMO)
+                    detail.badges.forEach { StatusBadge(kind = it) }
                 }
 
                 HighlightChips(highlights = detail.highlights)
@@ -209,8 +208,7 @@ private val previewDetail =
         title = "Vuelta al lago",
         averageSpeedText = "9,5 km/h",
         goalText = "Meta 10 km",
-        statusBadge = StatusBadgeKind.GOAL_REACHED,
-        isDemo = false,
+        badges = listOf(StatusBadgeKind.GOAL_REACHED),
         highlights = listOf("Ritmo parejo", "Sin frenadas largas"),
         photoPaths = listOf("/foto-1.jpg", "/foto-2.jpg"),
         routePoints = previewTrace,
@@ -230,8 +228,7 @@ private fun RunDetailContentWithoutHighlightsNorPhotosPreview() {
         RunDetailContent(
             detail =
                 previewDetail.copy(
-                    statusBadge = StatusBadgeKind.INCOMPLETE,
-                    isDemo = true,
+                    badges = listOf(StatusBadgeKind.INCOMPLETE, StatusBadgeKind.DEMO),
                     highlights = emptyList(),
                     photoPaths = emptyList(),
                 ),
