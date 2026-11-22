@@ -166,7 +166,7 @@
   - _Depends: 6.3_
   - _Requirements: 6.1, 6.2_
 
-- [ ] 7.2 Pruebas de accesibilidad y recorrido completo
+- [x] 7.2 Pruebas de accesibilidad y recorrido completo
   - Agregar tests instrumentados de Perfil y del detalle con fuente al 200 % y con descripciones accesibles, y verificar el recorrido completo con un recorrido de prueba: lista, detalle, cierre, totales y, con la ubicación precisa, trazas en Actividad.
   - Probar con «Quitar animaciones» activado que abrir y cerrar el detalle no agrega animaciones propias.
   - Listo cuando `./gradlew :app:connectedDebugAndroidTest` pasa para las pantallas de esta spec.
