@@ -133,7 +133,7 @@
   - _Depends: 5.1, 5.2_
   - _Requirements: 5.1, 5.3, 5.4, 5.6, 5.7_
 
-- [ ] 6. Abrir el detalle tocando una traza (HU-12, recortable)
+- [x] 6. Abrir el detalle tocando una traza (HU-12, recortable)
 - [x] 6.1 (P) Búsqueda de la traza tocada
   - Crear la regla pura que dice si la traza de un recorrido pasa a una distancia dada de un punto y que elige, entre los que coinciden, el recorrido más reciente. Una traza de menos de 2 puntos nunca coincide.
   - Escribir primero los tests unitarios: punto sobre la traza, fuera de la tolerancia, traza de 1 punto, dos trazas cruzadas (gana la más reciente) y lista vacía.
@@ -158,7 +158,7 @@
   - _Depends: 4.1, 5.3, 6.1, 6.2_
   - _Requirements: 5.2, 5.7, 5.9_
 
-- [ ] 7. Validación
+- [x] 7. Validación
 - [x] 7.1 Revisión de calidad del conjunto
   - Correr de a uno `./gradlew :app:ktlintCheck`, `:app:lint`, `:app:testDebugUnitTest` y `:app:assembleDebug`, y corregir lo que aparezca.
   - Revisar que no queden textos fijos en el código, colores ni medidas sueltas, y que esta spec no llame a la escritura del repositorio.
