@@ -125,7 +125,7 @@
   - _Depends: 1.4, 5.1_
   - _Requirements: 5.1, 5.3, 5.5, 5.6_
 
-- [ ] 5.3 Conectar el mapa de Actividad con las trazas y la ubicación
+- [x] 5.3 Conectar el mapa de Actividad con las trazas y la ubicación
   - Pasar las trazas del estado a la capa del mapa y avisar al ViewModel que relea la ubicación cada vez que Actividad vuelve a primer plano.
   - Verificar con un test de la pantalla del mapa que, con trazas en el estado, la capa las recibe, y sin ellas no.
   - Listo cuando en un dispositivo con recorridos guardados y ubicación precisa Actividad muestra las trazas, desaparecen al iniciar un recorrido y vuelven, junto con la nueva, al guardar el recorrido.

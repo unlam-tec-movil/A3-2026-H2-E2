@@ -17,6 +17,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -24,8 +25,11 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.FrozenRunSummary
+import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.ui.components.layout.FinishConfirmDialog
 import com.trazo.app.ui.components.layout.GoalCelebrationOverlay
 import com.trazo.app.ui.components.layout.GpsIndicator
@@ -58,6 +62,9 @@ fun MapScreen(
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
+
+    // Al volver a primer plano se relee la ubicación: de eso depende que se dibujen las trazas guardadas.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onLocationStatusRefreshed() }
 
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
@@ -94,6 +101,8 @@ fun MapScreen(
         }
     }
 
+    val savedTraces = remember(uiState.savedTraces) { uiState.savedTraces.toMapLayerTraces() }
+
     // Sin Scaffold propio: el mapa ocupa también el área de la barra de estado, y el espacio de la
     // barra inferior ya lo reserva el Scaffold de TrazoApp.
     Box(
@@ -105,6 +114,7 @@ fun MapScreen(
             isMapCenteredOnRunner = uiState.isMapCenteredOnRunner,
             onCenterMapClicked = { viewModel.onCenterMapClicked() },
             onMapDragged = { viewModel.onMapDragged() },
+            savedTraces = savedTraces,
             // El «+» va entre «Centrar» y el panel del temporizador.
             belowCenterButton = { startRunFab(Modifier) },
         ) {
@@ -192,3 +202,6 @@ fun MapScreen(
         )
     }
 }
+
+/** Trazas del estado en el formato que recibe [MapLayer]: id del recorrido a sus puntos. */
+internal fun List<SavedTraceUi>.toMapLayerTraces(): Map<String, List<RoutePoint>> = associate { it.id to it.points }
