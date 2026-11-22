@@ -86,7 +86,7 @@
   - _Depends: 1.4_
   - _Requirements: 3.2, 3.9, 6.6_
 
-- [ ] 3.3 (P) Destacados y fotos del detalle
+- [x] 3.3 (P) Destacados y fotos del detalle
   - Crear la lista de destacados (chips de solo lectura) y la fila de hasta 2 fotos cargadas desde su ruta, con recuadro neutro si una foto no carga.
   - Verificar con tests de UI que muestran los datos recibidos y que no ocupan espacio si no tienen contenido.
   - Listo cuando los tests de UI de destacados y de fotos pasan, incluido el caso de una foto que no carga.
