@@ -13,7 +13,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.trazo.app.R
-import com.trazo.app.data.repository.InMemorySavedRunRepository
+import com.trazo.app.data.repository.FakeSavedRunRepository
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.saved.SavedRun
@@ -38,7 +38,7 @@ class RunDetailHostTest {
     val composeTestRule = createComposeRule()
 
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val repository = InMemorySavedRunRepository()
+    private val repository = FakeSavedRunRepository()
     private lateinit var profileViewModel: ProfileViewModel
     private lateinit var detailViewModel: RunDetailViewModel
 

@@ -2,7 +2,7 @@ package com.trazo.app.ui.screens.profile
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.trazo.app.data.repository.InMemorySavedRunRepository
+import com.trazo.app.data.repository.FakeSavedRunRepository
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.domain.model.stops.BrakeEvent
@@ -35,7 +35,7 @@ import kotlin.time.Instant
 @RunWith(RobolectricTestRunner::class)
 class ProfileViewModelTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val repository = InMemorySavedRunRepository()
+    private val repository = FakeSavedRunRepository()
 
     @Before
     fun setUp() {

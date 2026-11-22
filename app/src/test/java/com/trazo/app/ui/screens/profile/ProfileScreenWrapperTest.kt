@@ -8,7 +8,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.trazo.app.R
-import com.trazo.app.data.repository.InMemorySavedRunRepository
+import com.trazo.app.data.repository.FakeSavedRunRepository
 import com.trazo.app.ui.theme.TrazoTheme
 import org.junit.Rule
 import org.junit.Test
@@ -24,7 +24,7 @@ class ProfileScreenWrapperTest {
     @Test
     fun `given the profile view model, when the profile screen is shown, then it renders its state`() {
         // Given
-        val viewModel = ProfileViewModel(InMemorySavedRunRepository(), ApplicationProvider.getApplicationContext())
+        val viewModel = ProfileViewModel(FakeSavedRunRepository(), ApplicationProvider.getApplicationContext())
 
         // When
         composeTestRule.setContent {
