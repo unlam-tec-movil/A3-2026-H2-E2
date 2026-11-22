@@ -9,4 +9,7 @@ interface SavedRunRepository {
     val runs: Flow<List<SavedRun>>
 
     suspend fun save(run: SavedRun)
+
+    /** Devuelve el recorrido con ese [id], o null si no existe. */
+    suspend fun getById(id: String): SavedRun?
 }
