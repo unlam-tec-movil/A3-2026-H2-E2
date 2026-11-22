@@ -2,6 +2,7 @@ package com.trazo.app.ui.screens.rundetail
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.trazo.app.data.repository.FakeSavedRunRepository
 import com.trazo.app.data.repository.SavedRunRepository
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
@@ -10,7 +11,7 @@ import com.trazo.app.ui.components.common.StatusBadgeKind
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -28,16 +29,15 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.time.Instant
 
-/** Repositorio falso que deja quitar recorridos: el real todavía no borra nada. */
-private class MutableSavedRunRepository : SavedRunRepository {
-    val current = MutableStateFlow<List<SavedRun>>(emptyList())
-    override val runs: Flow<List<SavedRun>> = current
+/** Repositorio que solo sabe responder `getById`: la lista completa viene vacía y nunca debería hacer falta. */
+private class GetByIdOnlyRepository(
+    private val run: SavedRun,
+) : SavedRunRepository {
+    override val runs: Flow<List<SavedRun>> = flowOf(emptyList())
 
-    override suspend fun save(run: SavedRun) {
-        current.value = listOf(run) + current.value
-    }
+    override suspend fun save(run: SavedRun) = Unit
 
-    override suspend fun getById(id: String): SavedRun? = current.value.firstOrNull { it.id == id }
+    override suspend fun getById(id: String): SavedRun? = run.takeIf { it.id == id }
 }
 
 /** Detalle del recorrido guardado (requisitos 3.1, 3.2, 3.4 a 3.7 y 6.6). Solo lectura. */
@@ -45,7 +45,7 @@ private class MutableSavedRunRepository : SavedRunRepository {
 @RunWith(RobolectricTestRunner::class)
 class RunDetailViewModelTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val repository = MutableSavedRunRepository()
+    private val repository = FakeSavedRunRepository()
 
     @Before
     fun setUp() {
@@ -150,16 +150,14 @@ class RunDetailViewModelTest {
         }
 
     @Test
-    fun `si el recorrido abierto desaparece el detalle se cierra`() =
+    fun `abrir pide solo ese recorrido con getById y no depende de la lista completa`() =
         runTest {
-            repository.save(run())
-            val viewModel = subscribed()
+            val viewModel = RunDetailViewModel(savedRunRepository = GetByIdOnlyRepository(run(id = "a")), context = context)
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.detail.collect {} }
+
             viewModel.open("a")
-            assertNotNull(viewModel.detail.value)
 
-            repository.current.value = emptyList()
-
-            assertNull(viewModel.detail.value)
+            assertEquals("a", viewModel.detail.value?.id)
         }
 
     @Test
