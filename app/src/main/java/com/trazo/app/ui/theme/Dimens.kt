@@ -20,6 +20,7 @@ object Sizes {
     val buttonHeight = 48.dp
     val traceLiveWidth = 6.dp
     val traceSavedWidth = 4.dp
+    val gpsIndicatorHeight = 28.dp // píldora del indicador de GPS (referencia §6.11)
 }
 
 /** Niveles de elevación de Material 3 (referencia §5.4). */

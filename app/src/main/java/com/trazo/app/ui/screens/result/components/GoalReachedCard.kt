@@ -102,7 +102,7 @@ fun GoalReachedCard(
                 )
                 MetricBox(
                     label = stringResource(R.string.result_regularity),
-                    value = regularityText ?: stringResource(R.string.result_unavailable),
+                    value = regularityText ?: stringResource(R.string.run_value_no_data),
                 )
             }
         }

@@ -12,6 +12,8 @@ import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
+import com.trazo.app.domain.model.regularity.RegularityState
+import com.trazo.app.domain.services.RegularityMonitor
 import com.trazo.app.domain.usecases.FinishRunUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,6 +42,7 @@ class LiveRouteTrackingViewModel
         private val locationRepository: LocationRepository,
         private val finishRun: FinishRunUseCase,
         private val savedRunRepository: SavedRunRepository,
+        private val regularityMonitor: RegularityMonitor,
     ) : ViewModel() {
         private val activeSessionFlow = runSessionRepository.activeSession
 
@@ -151,6 +154,7 @@ class LiveRouteTrackingViewModel
                 finishFailedFlow,
                 isFinishingFlow,
                 savedTracesFlow,
+                regularityMonitor.state,
             ) { args: Array<Any?> ->
                 val session = args[0] as RunSession
                 val isRunInProgress = args[1] as Boolean
@@ -161,6 +165,7 @@ class LiveRouteTrackingViewModel
                 val isCentered = args[6] as Boolean
                 val finishFailed = args[7] as Boolean
                 val isFinishing = args[8] as Boolean
+                val sensorAvailable = (args[10] as RegularityState).sensorAvailable
 
                 @Suppress("UNCHECKED_CAST")
                 val savedTraces = args[9] as List<SavedTraceUi>
@@ -218,6 +223,7 @@ class LiveRouteTrackingViewModel
                             finishFailed = finishFailed,
                             isFinishing = isFinishing,
                             savedTraces = savedTraces,
+                            showMotionSensorMissing = !sensorAvailable,
                         )
                     }
                 }
@@ -293,10 +299,6 @@ class LiveRouteTrackingViewModel
             showShortRunDialogFlow.value = false
             hasShownLocationPermissionLostNotice = false
             runSessionRepository.resetToIdle()
-
-            viewModelScope.launch {
-                _uiEffect.send(LiveRouteTrackingUiEffect.ReturnToIdleMap)
-            }
         }
 
         fun onReturnFromShortRun() {
@@ -333,18 +335,11 @@ class LiveRouteTrackingViewModel
             if (isActive && !hasShownLocationPermissionLostNotice) {
                 hasShownLocationPermissionLostNotice = true
 
-                _uiEffect.trySend(
-                    LiveRouteTrackingUiEffect.ShowLocationPermissionLostMessage(
-                        LOCATION_PERMISSION_LOST_MESSAGE,
-                    ),
-                )
+                _uiEffect.trySend(LiveRouteTrackingUiEffect.ShowLocationPermissionLostMessage)
             }
         }
 
         private companion object {
-            const val LOCATION_PERMISSION_LOST_MESSAGE =
-                "Se perdió el permiso de ubicación. Activalo desde Ajustes para seguir registrando tu recorrido."
-
             val SPANISH_LOCALE: Locale = Locale.forLanguageTag("es-AR")
 
             fun formatElapsedTime(seconds: Long): String {
@@ -384,9 +379,6 @@ sealed interface LiveRouteTrackingUiEffect {
 
     data object OpenStartRunModal : LiveRouteTrackingUiEffect
 
-    data object ReturnToIdleMap : LiveRouteTrackingUiEffect
-
-    data class ShowLocationPermissionLostMessage(
-        val message: String,
-    ) : LiveRouteTrackingUiEffect
+    /** Se perdió el permiso de ubicación con un recorrido en curso; el texto lo pone la pantalla. */
+    data object ShowLocationPermissionLostMessage : LiveRouteTrackingUiEffect
 }

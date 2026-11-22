@@ -10,6 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.GpsQuality
 import com.trazo.app.ui.theme.TrazoTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,5 +47,20 @@ class GpsIndicatorTest {
     fun `given no signal, when the indicator is shown, then announces no signal`() {
         // Given / When / Then
         assertQualityIsAnnounced(GpsQuality.NO_SIGNAL, R.string.map_gps_no_signal)
+    }
+
+    @Test
+    fun `the filled bars change with the signal, so it does not depend only on color`() {
+        assertEquals(3, filledSignalBars(GpsQuality.FULL_SIGNAL))
+        assertEquals(1, filledSignalBars(GpsQuality.WEAK_SIGNAL))
+        assertEquals(0, filledSignalBars(GpsQuality.NO_SIGNAL))
+    }
+
+    @Test
+    fun `the pill shows the short GPS label`() {
+        composeTestRule.setContent { TrazoTheme { GpsIndicator(gpsQuality = GpsQuality.FULL_SIGNAL) } }
+
+        // El texto «GPS» queda dentro de la descripción del estado (semántica unificada).
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.map_gps_full_signal)).assertIsDisplayed()
     }
 }

@@ -17,6 +17,7 @@ import com.trazo.app.ui.components.common.LocationIssueDialog
 import com.trazo.app.ui.components.common.StartRunDialog
 import com.trazo.app.ui.components.common.StartRunFab
 import com.trazo.app.ui.screens.map.MapScreen
+import com.trazo.app.ui.screens.map.components.StopDetectionOverlay
 import com.trazo.app.ui.screens.profile.ProfileScreen
 import com.trazo.app.ui.screens.result.ResultScreen
 import com.trazo.app.ui.screens.rundetail.RunDetailDialog
@@ -89,6 +90,9 @@ fun TrazoApp() {
                 onNavigateToResults = { summary -> onNavigateToResult(summary.id) },
                 startRunFab = startRunFab,
                 gpsWaitingNotice = gpsWaitingNotice,
+                stopDetectionOverlay = { suppressed, overlayModifier ->
+                    StopDetectionOverlay(suppressed = suppressed, modifier = overlayModifier)
+                },
             )
         },
         profileScreen = { onSettingsClick ->
