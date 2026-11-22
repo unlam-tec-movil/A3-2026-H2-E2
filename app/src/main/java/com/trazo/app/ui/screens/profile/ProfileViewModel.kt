@@ -58,7 +58,7 @@ class ProfileViewModel
     @Inject
     constructor(
         savedRunRepository: SavedRunRepository,
-        @ApplicationContext private val context: Context,
+        @param:ApplicationContext private val context: Context,
     ) : ViewModel() {
         val uiState: StateFlow<ProfileUiState> =
             savedRunRepository.runs

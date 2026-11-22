@@ -70,7 +70,7 @@
   - _Requirements: 1.1, 1.2, 2.1, 2.2, 2.3, 2.4, 2.5, 4.1, 4.6, 6.7_
 
 - [ ] 3. Detalle del recorrido guardado (HU-09)
-- [ ] 3.1 Estado y ViewModel del detalle
+- [x] 3.1 Estado y ViewModel del detalle
   - Escribir primero los tests unitarios: abrir con un id inexistente no abre nada, abrir muestra los datos del recorrido, cerrar lo deja en nada, las fotos se recortan a 2 y las listas vacías de destacados y fotos quedan vacías.
   - Crear el estado del detalle (título, velocidad promedio, meta, estado, marca Demo, destacados, fotos, traza y descripción accesible del mapa) y el ViewModel que lo arma a partir del recorrido elegido y lo cierra si el recorrido desaparece.
   - Listo cuando los tests del ViewModel del detalle pasan.
