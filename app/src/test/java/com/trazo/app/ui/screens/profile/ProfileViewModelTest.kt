@@ -86,9 +86,9 @@ class ProfileViewModelTest {
             assertEquals(ProfileUiState(), state)
             assertFalse(state.hasRecentRuns)
             assertTrue(state.runs.isEmpty())
-            assertEquals(0, state.totalRuns)
-            assertEquals(0.0, state.totalDistanceKm, 0.0)
-            assertEquals(0L, state.totalTimeSeconds)
+            assertEquals(0, state.totals.runCount)
+            assertEquals(0.0, state.totals.distanceKm, 0.0)
+            assertEquals(0L, state.totals.timeSeconds)
         }
 
     @Test
@@ -109,15 +109,15 @@ class ProfileViewModelTest {
         runTest {
             repository.save(run("viejo", startedAtSeconds = 100, distanceMeters = 3_000.0, elapsedTimeSeconds = 1_200L))
             val viewModel = subscribed()
-            assertEquals(1, viewModel.uiState.value.totalRuns)
+            assertEquals(1, viewModel.uiState.value.totals.runCount)
 
             repository.save(run("nuevo", startedAtSeconds = 200, distanceMeters = 5_000.0, elapsedTimeSeconds = 1_800L))
 
             val state = viewModel.uiState.value
             assertEquals(listOf("nuevo", "viejo"), state.runs.map { it.id })
-            assertEquals(2, state.totalRuns)
-            assertEquals(8.0, state.totalDistanceKm, 0.0001)
-            assertEquals(3_000L, state.totalTimeSeconds)
+            assertEquals(2, state.totals.runCount)
+            assertEquals(8.0, state.totals.distanceKm, 0.0001)
+            assertEquals(3_000L, state.totals.timeSeconds)
         }
 
     @Test
@@ -221,9 +221,9 @@ class ProfileViewModelTest {
 
             assertTrue(state.hasRecentRuns)
             assertEquals(1, state.runs.size)
-            assertEquals(0, state.totalRuns)
-            assertEquals(0.0, state.totalDistanceKm, 0.0)
-            assertEquals(0L, state.totalTimeSeconds)
+            assertEquals(0, state.totals.runCount)
+            assertEquals(0.0, state.totals.distanceKm, 0.0)
+            assertEquals(0L, state.totals.timeSeconds)
         }
 
     @Test
@@ -233,9 +233,9 @@ class ProfileViewModelTest {
 
             val state = subscribed().uiState.value
 
-            assertEquals(1, state.totalRuns)
-            assertEquals(2.0, state.totalDistanceKm, 0.0001)
-            assertEquals(900L, state.totalTimeSeconds)
+            assertEquals(1, state.totals.runCount)
+            assertEquals(2.0, state.totals.distanceKm, 0.0001)
+            assertEquals(900L, state.totals.timeSeconds)
         }
 
     @Test

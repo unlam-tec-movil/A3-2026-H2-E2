@@ -40,9 +40,7 @@ data class RunCardUi(
  */
 data class ProfileUiState(
     val runs: List<RunCardUi> = emptyList(),
-    val totalRuns: Int = 0,
-    val totalDistanceKm: Double = 0.0,
-    val totalTimeSeconds: Long = 0,
+    val totals: SavedRunTotals = SavedRunTotals(0, 0.0, 0),
 ) {
     val hasRecentRuns: Boolean get() = runs.isNotEmpty()
 }
@@ -67,15 +65,11 @@ class ProfileViewModel
                     initialValue = ProfileUiState(),
                 )
 
-        private fun List<SavedRun>.toUiState(): ProfileUiState {
-            val totals = SavedRunTotals.from(this)
-            return ProfileUiState(
+        private fun List<SavedRun>.toUiState(): ProfileUiState =
+            ProfileUiState(
                 runs = map { it.toCard() },
-                totalRuns = totals.runCount,
-                totalDistanceKm = totals.distanceKm,
-                totalTimeSeconds = totals.timeSeconds,
+                totals = SavedRunTotals.from(this),
             )
-        }
 
         private fun SavedRun.toCard(): RunCardUi =
             RunCardUi(

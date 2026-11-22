@@ -24,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trazo.app.R
+import com.trazo.app.domain.model.saved.SavedRunTotals
 import com.trazo.app.ui.components.common.RunValueFormatter
 import com.trazo.app.ui.components.common.StatusBadgeKind
 import com.trazo.app.ui.screens.profile.components.EmptyState
@@ -128,19 +129,19 @@ private fun ProfileStats(
         Spacer(modifier = Modifier.height(Spacing.sm))
         ProfileStatRow(
             label = stringResource(R.string.profile_stats_runs_label),
-            value = pluralStringResource(R.plurals.profile_stats_runs, state.totalRuns, state.totalRuns),
+            value = pluralStringResource(R.plurals.profile_stats_runs, state.totals.runCount, state.totals.runCount),
         )
         ProfileStatRow(
             label = stringResource(R.string.profile_stats_distance_label),
             value =
                 stringResource(
                     R.string.profile_stats_distance,
-                    RunValueFormatter.formatTotalDistanceKm(state.totalDistanceKm),
+                    RunValueFormatter.formatTotalDistanceKm(state.totals.distanceKm),
                 ),
         )
         ProfileStatRow(
             label = stringResource(R.string.profile_stats_time_label),
-            value = RunValueFormatter.formatDuration(state.totalTimeSeconds),
+            value = RunValueFormatter.formatDuration(state.totals.timeSeconds),
         )
     }
 }
@@ -201,9 +202,7 @@ private fun ProfileContentWithRunsPreview() {
                                 badges = listOf(StatusBadgeKind.INCOMPLETE, StatusBadgeKind.DEMO),
                             ),
                         ),
-                    totalRuns = 1,
-                    totalDistanceKm = 5.2,
-                    totalTimeSeconds = 3_300L,
+                    totals = SavedRunTotals(runCount = 1, distanceKm = 5.2, timeSeconds = 3_300L),
                 ),
             onSettingsClick = {},
             onRunClick = {},

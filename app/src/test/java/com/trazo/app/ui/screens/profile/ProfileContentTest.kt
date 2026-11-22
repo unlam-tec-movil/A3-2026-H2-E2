@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.trazo.app.R
+import com.trazo.app.domain.model.saved.SavedRunTotals
 import com.trazo.app.ui.components.common.StatusBadgeKind
 import com.trazo.app.ui.theme.TrazoTheme
 import org.junit.Assert.assertEquals
@@ -37,6 +38,7 @@ class ProfileContentTest {
     val composeTestRule = createComposeRule()
 
     private var settingsClicks = 0
+    private val oneRun = SavedRunTotals(runCount = 1, distanceKm = 0.0, timeSeconds = 0L)
     private val openedRunIds = mutableListOf<String>()
 
     private fun runCard(
@@ -141,14 +143,14 @@ class ProfileContentTest {
 
     @Test
     fun oneRun_usesSingular() {
-        setContent(ProfileUiState(totalRuns = 1))
+        setContent(ProfileUiState(totals = oneRun))
 
         assertTextShown("1 recorrido")
     }
 
     @Test
     fun withTotals_showsFormattedValues() {
-        setContent(ProfileUiState(totalRuns = 2, totalDistanceKm = 8.5, totalTimeSeconds = 3_300L))
+        setContent(ProfileUiState(totals = SavedRunTotals(runCount = 2, distanceKm = 8.5, timeSeconds = 3_300L)))
 
         assertTextShown("2 recorridos")
         assertTextShown("8,5 km")
@@ -180,9 +182,7 @@ class ProfileContentTest {
         setContent(
             ProfileUiState(
                 runs = listOf(runCard("a"), runCard("b")),
-                totalRuns = 2,
-                totalDistanceKm = 10.4,
-                totalTimeSeconds = 6_600L,
+                totals = SavedRunTotals(runCount = 2, distanceKm = 10.4, timeSeconds = 6_600L),
             ),
         )
 
@@ -205,7 +205,7 @@ class ProfileContentTest {
         }
         assertTextShown(string(R.string.profile_empty_runs))
 
-        state = ProfileUiState(runs = listOf(runCard("a")), totalRuns = 1)
+        state = ProfileUiState(runs = listOf(runCard("a")), totals = oneRun)
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText(string(R.string.profile_empty_runs)).assertDoesNotExist()
@@ -234,7 +234,7 @@ class ProfileContentTest {
 
     @Test
     fun fontScale200_withRuns_cardIsReachable() {
-        setContent(ProfileUiState(runs = listOf(runCard("a")), totalRuns = 1), fontScale = 2f)
+        setContent(ProfileUiState(runs = listOf(runCard("a")), totals = oneRun), fontScale = 2f)
 
         composeTestRule.onNodeWithContentDescription(description("a")).performScrollTo().assertIsDisplayed()
     }
