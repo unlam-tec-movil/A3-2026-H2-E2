@@ -1,7 +1,5 @@
 package com.trazo.app.ui.screens.profile
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.trazo.app.data.repository.FakeSavedRunRepository
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.saved.SavedRun
@@ -18,11 +16,10 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import kotlin.time.Instant
 
 /**
@@ -32,9 +29,7 @@ import kotlin.time.Instant
  * Los casos del botón «+» pasaron a `StartRunViewModelTest` (start-run, requisito 9).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
 class ProfileViewModelTest {
-    private val context: Context = ApplicationProvider.getApplicationContext()
     private val repository = FakeSavedRunRepository()
 
     @Before
@@ -74,7 +69,7 @@ class ProfileViewModelTest {
         photoPaths = emptyList(),
     )
 
-    private fun newViewModel() = ProfileViewModel(savedRunRepository = repository, context = context)
+    private fun newViewModel() = ProfileViewModel(savedRunRepository = repository)
 
     /** Mantiene suscripto el estado (usa `WhileSubscribed`) y devuelve el ViewModel. */
     private fun kotlinx.coroutines.test.TestScope.subscribed(): ProfileViewModel {
@@ -158,7 +153,7 @@ class ProfileViewModelTest {
             assertEquals("5,2 km", card.distanceText)
             assertEquals("00:55:00", card.durationText)
             assertEquals(3, card.brakeCount)
-            assertEquals("80 %", card.regularityText)
+            assertEquals(80, card.regularityPercent)
         }
 
     @Test
@@ -244,7 +239,7 @@ class ProfileViewModelTest {
         }
 
     @Test
-    fun `sin dato de regularidad la card muestra un guion y la descripcion dice sin datos`() =
+    fun `sin dato de regularidad la card trae el porcentaje en null`() =
         runTest {
             repository.save(run("a", regularityPercent = null))
 
@@ -253,46 +248,6 @@ class ProfileViewModelTest {
                     .uiState.value.runs
                     .single()
 
-            assertEquals("–", card.regularityText)
-            assertTrue(card.accessibilityLabel, card.accessibilityLabel.contains("sin datos"))
-        }
-
-    @Test
-    fun `la descripcion accesible reune todos los datos de la card`() =
-        runTest {
-            val saved = run("a", title = "Vuelta al lago", brakeCount = 2, goalReached = false, isDemo = true)
-            repository.save(saved)
-
-            val label =
-                subscribed()
-                    .uiState.value.runs
-                    .single()
-                    .accessibilityLabel
-
-            listOf(
-                "Vuelta al lago",
-                RunValueFormatter.formatShortDate(saved.startedAt),
-                "5,2 km",
-                "00:55:00",
-                "2 frenadas",
-                "80 %",
-                "Incompleto",
-                "Demo",
-            ).forEach { piece -> assertTrue("Falta «$piece» en: $label", label.contains(piece)) }
-        }
-
-    @Test
-    fun `la descripcion accesible no menciona marcas si no las tiene`() =
-        runTest {
-            repository.save(run("a", goalReached = true, isDemo = false, brakeCount = 1))
-
-            val label =
-                subscribed()
-                    .uiState.value.runs
-                    .single()
-                    .accessibilityLabel
-
-            assertTrue(label, label.contains("1 frenada"))
-            assertFalse(label, label.contains("Marcas"))
+            assertNull(card.regularityPercent)
         }
 }

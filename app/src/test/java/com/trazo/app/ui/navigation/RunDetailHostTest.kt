@@ -70,8 +70,8 @@ class RunDetailHostTest {
 
     @Before
     fun setUp() {
-        profileViewModel = ProfileViewModel(repository, context)
-        detailViewModel = RunDetailViewModel(repository, context)
+        profileViewModel = ProfileViewModel(repository)
+        detailViewModel = RunDetailViewModel(repository)
     }
 
     private fun save(vararg runs: SavedRun) = runBlocking { runs.forEach { repository.save(it) } }

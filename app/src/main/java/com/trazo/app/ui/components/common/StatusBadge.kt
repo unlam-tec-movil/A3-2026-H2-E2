@@ -1,5 +1,6 @@
 package com.trazo.app.ui.components.common
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
@@ -88,7 +89,9 @@ private fun BadgeSurface(
     }
 }
 
-private fun StatusBadgeKind.labelRes(): Int =
+/** Texto de la marca: lo usan la píldora y las descripciones accesibles que nombran las marcas. */
+@StringRes
+internal fun StatusBadgeKind.labelRes(): Int =
     when (this) {
         StatusBadgeKind.GOAL_REACHED -> R.string.profile_run_badge_goal_reached
         StatusBadgeKind.INCOMPLETE -> R.string.profile_run_badge_incomplete

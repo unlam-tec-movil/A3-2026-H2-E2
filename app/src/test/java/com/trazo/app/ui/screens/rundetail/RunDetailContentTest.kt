@@ -16,6 +16,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.RoutePoint
+import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.ui.components.common.StatusBadgeKind
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.TrazoTheme
@@ -48,6 +49,7 @@ class RunDetailContentTest {
 
     private fun detail(
         title: String = "Vuelta al lago",
+        goal: RunGoal = RunGoal.TEN_KILOMETERS,
         badges: List<StatusBadgeKind> = listOf(StatusBadgeKind.GOAL_REACHED),
         highlights: List<String> = emptyList(),
         photoPaths: List<String> = emptyList(),
@@ -56,12 +58,13 @@ class RunDetailContentTest {
         id = "a",
         title = title,
         averageSpeedText = "9,5 km/h",
-        goalText = "Meta 10 km",
+        goal = goal,
         badges = badges,
         highlights = highlights,
         photoPaths = photoPaths,
         routePoints = routePoints,
-        mapDescription = "Mapa con la traza del recorrido $title.",
+        distanceText = "10,3 km",
+        durationText = "00:55:00",
     )
 
     private fun show(
@@ -151,7 +154,21 @@ class RunDetailContentTest {
     fun `con traza dibujable el mapa tiene su descripcion accesible`() {
         show(detail(title = "Vuelta al lago"))
 
-        composeTestRule.onNodeWithContentDescription("Mapa con la traza del recorrido Vuelta al lago.").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithContentDescription("Mapa con la traza del recorrido Vuelta al lago. Distancia 10,3 km, duración 00:55:00.")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `el texto de la meta sale de la meta del recorrido`() {
+        show(detail(goal = RunGoal.THREE_KILOMETERS))
+        composeTestRule.onNodeWithText("Meta 3 km").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `el texto de la meta para 5 y 10 km`() {
+        show(detail(goal = RunGoal.FIVE_KILOMETERS))
+        composeTestRule.onNodeWithText("Meta 5 km").performScrollTo().assertIsDisplayed()
     }
 
     @Test

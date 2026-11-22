@@ -1,7 +1,5 @@
 package com.trazo.app.ui.screens.rundetail
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.trazo.app.data.repository.FakeSavedRunRepository
 import com.trazo.app.data.repository.SavedRunRepository
 import com.trazo.app.domain.model.map.RoutePoint
@@ -25,8 +23,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import kotlin.time.Instant
 
 /** Repositorio que solo sabe responder `getById`: la lista completa viene vacía y nunca debería hacer falta. */
@@ -42,9 +38,7 @@ private class GetByIdOnlyRepository(
 
 /** Detalle del recorrido guardado (requisitos 3.1, 3.2, 3.4 a 3.7 y 6.6). Solo lectura. */
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
 class RunDetailViewModelTest {
-    private val context: Context = ApplicationProvider.getApplicationContext()
     private val repository = FakeSavedRunRepository()
 
     @Before
@@ -95,7 +89,7 @@ class RunDetailViewModelTest {
     )
 
     private fun TestScope.subscribed(): RunDetailViewModel {
-        val viewModel = RunDetailViewModel(savedRunRepository = repository, context = context)
+        val viewModel = RunDetailViewModel(savedRunRepository = repository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.detail.collect {} }
         return viewModel
     }
@@ -132,7 +126,7 @@ class RunDetailViewModelTest {
             assertEquals("a", detail!!.id)
             assertEquals("Vuelta al lago", detail.title)
             assertEquals("9,5 km/h", detail.averageSpeedText)
-            assertEquals("Meta 10 km", detail.goalText)
+            assertEquals(RunGoal.TEN_KILOMETERS, detail.goal)
             assertEquals(2, detail.routePoints.size)
         }
 
@@ -152,7 +146,7 @@ class RunDetailViewModelTest {
     @Test
     fun `abrir pide solo ese recorrido con getById y no depende de la lista completa`() =
         runTest {
-            val viewModel = RunDetailViewModel(savedRunRepository = GetByIdOnlyRepository(run(id = "a")), context = context)
+            val viewModel = RunDetailViewModel(savedRunRepository = GetByIdOnlyRepository(run(id = "a")))
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.detail.collect {} }
 
             viewModel.open("a")
@@ -238,16 +232,14 @@ class RunDetailViewModelTest {
         }
 
     @Test
-    fun `la descripcion del mapa resume titulo distancia y duracion`() =
+    fun `trae la distancia y la duracion ya formateadas`() =
         runTest {
             repository.save(run(title = "Vuelta al lago"))
             val viewModel = subscribed()
 
             viewModel.open("a")
 
-            val description = viewModel.detail.value!!.mapDescription
-            listOf("Vuelta al lago", "10,3 km", "00:55:00").forEach {
-                assertTrue("Falta «$it» en: $description", description.contains(it))
-            }
+            assertEquals("10,3 km", viewModel.detail.value!!.distanceText)
+            assertEquals("00:55:00", viewModel.detail.value!!.durationText)
         }
 }

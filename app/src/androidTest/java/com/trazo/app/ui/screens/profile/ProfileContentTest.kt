@@ -50,10 +50,12 @@ class ProfileContentTest {
         distanceText = "5,2 km",
         durationText = "00:55:00",
         brakeCount = 3,
-        regularityText = "80 %",
+        regularityPercent = 80,
         badges = badges,
-        accessibilityLabel = "Descripción de $title",
     )
+
+    /** Frase accesible que arma la card a partir de los datos de [runCard]. */
+    private fun description(id: String) = "Recorrido $id, Mar 28 oct. Distancia 5,2 km. Duración 00:55:00. 3 frenadas. Regularidad 80 %."
 
     private fun string(
         @StringRes id: Int,
@@ -81,7 +83,7 @@ class ProfileContentTest {
     private fun scrollToCard(id: String) {
         composeTestRule
             .onNode(hasScrollAction())
-            .performScrollToNode(hasContentDescription("Descripción de Recorrido $id"))
+            .performScrollToNode(hasContentDescription(description(id)))
     }
 
     private fun assertTextShown(text: String) {
@@ -159,7 +161,7 @@ class ProfileContentTest {
         setContent(ProfileUiState())
 
         assertTextShown(string(R.string.profile_empty_runs))
-        composeTestRule.onNodeWithContentDescription("Descripción de Recorrido a").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(description("a")).assertDoesNotExist()
     }
 
     // 2.4: el estado vacío también se comunica con texto para el lector de pantalla
@@ -186,10 +188,10 @@ class ProfileContentTest {
 
         assertTextShown("2 recorridos")
         assertTextShown("10,4 km")
-        composeTestRule.onNodeWithContentDescription("Descripción de Recorrido a").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(description("a")).assertIsDisplayed()
         composeTestRule.onNodeWithText(string(R.string.profile_empty_runs)).assertDoesNotExist()
         scrollToCard("b")
-        composeTestRule.onNodeWithContentDescription("Descripción de Recorrido b").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(description("b")).assertIsDisplayed()
     }
 
     // 2.5: al llegar el primer recorrido, el estado vacío desaparece y aparece la card
@@ -207,7 +209,7 @@ class ProfileContentTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText(string(R.string.profile_empty_runs)).assertDoesNotExist()
-        composeTestRule.onNodeWithContentDescription("Descripción de Recorrido a").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(description("a")).assertIsDisplayed()
     }
 
     // 3.1 (aviso hacia afuera): tocar una card avisa con su id; no abre nada acá
@@ -216,7 +218,7 @@ class ProfileContentTest {
         setContent(ProfileUiState(runs = listOf(runCard("a"), runCard("b"))))
 
         scrollToCard("b")
-        composeTestRule.onNodeWithContentDescription("Descripción de Recorrido b").performClick()
+        composeTestRule.onNodeWithContentDescription(description("b")).performClick()
 
         assertEquals(listOf("b"), openedRunIds)
     }
@@ -234,7 +236,7 @@ class ProfileContentTest {
     fun fontScale200_withRuns_cardIsReachable() {
         setContent(ProfileUiState(runs = listOf(runCard("a")), totalRuns = 1), fontScale = 2f)
 
-        composeTestRule.onNodeWithContentDescription("Descripción de Recorrido a").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(description("a")).performScrollTo().assertIsDisplayed()
     }
 
     // start-run, requisito 9: el «+» solo vive en Actividad.

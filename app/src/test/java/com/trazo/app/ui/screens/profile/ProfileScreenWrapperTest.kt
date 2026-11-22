@@ -4,7 +4,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.trazo.app.R
@@ -24,7 +23,7 @@ class ProfileScreenWrapperTest {
     @Test
     fun `given the profile view model, when the profile screen is shown, then it renders its state`() {
         // Given
-        val viewModel = ProfileViewModel(FakeSavedRunRepository(), ApplicationProvider.getApplicationContext())
+        val viewModel = ProfileViewModel(FakeSavedRunRepository())
 
         // When
         composeTestRule.setContent {

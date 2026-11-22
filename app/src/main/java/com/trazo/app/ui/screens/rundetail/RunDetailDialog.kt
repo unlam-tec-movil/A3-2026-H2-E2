@@ -1,5 +1,6 @@
 package com.trazo.app.ui.screens.rundetail
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -33,6 +34,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.RoutePoint
+import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.ui.components.common.StatusBadge
 import com.trazo.app.ui.components.common.StatusBadgeKind
 import com.trazo.app.ui.components.layout.RunTraceMap
@@ -95,7 +97,13 @@ fun RunDetailContent(
             ) {
                 RunTraceMap(
                     routePoints = detail.routePoints,
-                    contentDescription = detail.mapDescription,
+                    contentDescription =
+                        stringResource(
+                            R.string.run_detail_map_description,
+                            detail.title,
+                            detail.distanceText,
+                            detail.durationText,
+                        ),
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -105,7 +113,7 @@ fun RunDetailContent(
                 Column {
                     DetailStat(label = stringResource(R.string.run_detail_average_speed_label), value = detail.averageSpeedText)
                     Text(
-                        text = detail.goalText,
+                        text = stringResource(R.string.run_detail_goal_label, stringResource(detail.goal.labelRes())),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.heightIn(min = Sizes.minTouchTarget),
@@ -125,6 +133,14 @@ fun RunDetailContent(
         }
     }
 }
+
+@StringRes
+private fun RunGoal.labelRes(): Int =
+    when (this) {
+        RunGoal.THREE_KILOMETERS -> R.string.map_goal_3km
+        RunGoal.FIVE_KILOMETERS -> R.string.map_goal_5km
+        RunGoal.TEN_KILOMETERS -> R.string.map_goal_10km
+    }
 
 /** Barra superior fija: título (hasta 2 líneas) y el botón «Cerrar» de 48 dp. */
 @Composable
@@ -207,12 +223,13 @@ private val previewDetail =
         id = "a",
         title = "Vuelta al lago",
         averageSpeedText = "9,5 km/h",
-        goalText = "Meta 10 km",
+        goal = RunGoal.TEN_KILOMETERS,
         badges = listOf(StatusBadgeKind.GOAL_REACHED),
         highlights = listOf("Ritmo parejo", "Sin frenadas largas"),
         photoPaths = listOf("/foto-1.jpg", "/foto-2.jpg"),
         routePoints = previewTrace,
-        mapDescription = "Mapa con la traza del recorrido Vuelta al lago.",
+        distanceText = "10,3 km",
+        durationText = "00:55:00",
     )
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 720)

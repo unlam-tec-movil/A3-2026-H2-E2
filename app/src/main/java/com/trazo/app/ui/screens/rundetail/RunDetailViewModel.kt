@@ -1,9 +1,7 @@
 package com.trazo.app.ui.screens.rundetail
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.trazo.app.R
 import com.trazo.app.data.repository.SavedRunRepository
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
@@ -12,7 +10,6 @@ import com.trazo.app.ui.components.common.RunValueFormatter
 import com.trazo.app.ui.components.common.StatusBadgeKind
 import com.trazo.app.ui.components.common.toStatusBadgeKind
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,18 +23,20 @@ import javax.inject.Inject
  * Detalle de un recorrido guardado, ya formateado para el modal.
  *
  * Las secciones de destacados y de fotos se ocultan con listas vacías. [photoPaths] trae las fotos del recorrido.
- * [routePoints] con menos de 2 puntos no se puede dibujar: el mapa muestra un texto alternativo.
+ * [routePoints] con menos de 2 puntos no se puede dibujar: el mapa muestra un texto alternativo. Lleva datos y no
+ * frases: la meta, la distancia y la duración se arman en el Composable con los string resources.
  */
 data class RunDetailUi(
     val id: String,
     val title: String,
     val averageSpeedText: String,
-    val goalText: String,
+    val goal: RunGoal,
     val badges: List<StatusBadgeKind>,
     val highlights: List<String>,
     val photoPaths: List<String>,
     val routePoints: List<RoutePoint>,
-    val mapDescription: String,
+    val distanceText: String,
+    val durationText: String,
 )
 
 /**
@@ -49,7 +48,6 @@ class RunDetailViewModel
     @Inject
     constructor(
         private val savedRunRepository: SavedRunRepository,
-        @param:ApplicationContext private val context: Context,
     ) : ViewModel() {
         private val openRun = MutableStateFlow<SavedRun?>(null)
         private var openJob: Job? = null
@@ -76,26 +74,14 @@ class RunDetailViewModel
                 id = id,
                 title = title,
                 averageSpeedText = RunValueFormatter.formatAverageSpeedKmh(averageSpeedKmh),
-                goalText = context.getString(R.string.run_detail_goal_label, context.getString(goal.labelRes())),
+                goal = goal,
                 badges = badges().map { it.toStatusBadgeKind() },
                 highlights = highlights,
                 photoPaths = photoPaths,
                 routePoints = routePoints,
-                mapDescription =
-                    context.getString(
-                        R.string.run_detail_map_description,
-                        title,
-                        RunValueFormatter.formatDistanceKm(distanceMeters),
-                        RunValueFormatter.formatDuration(elapsedTimeSeconds),
-                    ),
+                distanceText = RunValueFormatter.formatDistanceKm(distanceMeters),
+                durationText = RunValueFormatter.formatDuration(elapsedTimeSeconds),
             )
-
-        private fun RunGoal.labelRes(): Int =
-            when (this) {
-                RunGoal.THREE_KILOMETERS -> R.string.map_goal_3km
-                RunGoal.FIVE_KILOMETERS -> R.string.map_goal_5km
-                RunGoal.TEN_KILOMETERS -> R.string.map_goal_10km
-            }
 
         private companion object {
             const val STOP_TIMEOUT_MILLIS = 5_000L

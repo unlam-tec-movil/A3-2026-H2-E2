@@ -37,18 +37,21 @@ class RunCardTest {
     private fun card(
         title: String = "Vuelta al lago",
         badges: List<StatusBadgeKind> = emptyList(),
-        accessibilityLabel: String = "Vuelta al lago, Mar 28 oct. Distancia 5,2 km.",
+        brakeCount: Int = 7,
+        regularityPercent: Int? = 80,
     ) = RunCardUi(
         id = "run-1",
         title = title,
         dateText = "Mar 28 oct",
         distanceText = "5,2 km",
         durationText = "00:55:00",
-        brakeCount = 7,
-        regularityText = "80 %",
+        brakeCount = brakeCount,
+        regularityPercent = regularityPercent,
         badges = badges,
-        accessibilityLabel = accessibilityLabel,
     )
+
+    /** Frase que la card arma sola con los datos de [card]; el lector de pantalla la lee como un botón. */
+    private val defaultLabel = "Vuelta al lago, Mar 28 oct. Distancia 5,2 km. Duración 00:55:00. 7 frenadas. Regularidad 80 %."
 
     private fun show(
         run: RunCardUi,
@@ -118,19 +121,36 @@ class RunCardTest {
 
     @Test
     fun `toda la card se lee como una sola descripcion accesible completa`() {
-        val label = "Vuelta al lago, Mar 28 oct. Distancia 5,2 km. Marcas: Incompleto."
-        show(card(accessibilityLabel = label))
+        show(card(badges = listOf(StatusBadgeKind.INCOMPLETE, StatusBadgeKind.DEMO)))
 
+        composeTestRule
+            .onNodeWithContentDescription("$defaultLabel Marcas: Incompleto, Demo.")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `sin marcas la descripcion accesible no menciona marcas`() {
+        show(card(brakeCount = 1))
+
+        val label = "Vuelta al lago, Mar 28 oct. Distancia 5,2 km. Duración 00:55:00. 1 frenada. Regularidad 80 %."
+        composeTestRule.onNodeWithContentDescription(label).assertIsDisplayed()
+    }
+
+    @Test
+    fun `sin dato de regularidad la card muestra un guion y la descripcion dice sin datos`() {
+        show(card(regularityPercent = null))
+
+        assertShown("–")
+        val label = "Vuelta al lago, Mar 28 oct. Distancia 5,2 km. Duración 00:55:00. 7 frenadas. Regularidad sin datos."
         composeTestRule.onNodeWithContentDescription(label).assertIsDisplayed()
     }
 
     @Test
     fun `tocar la card avisa y su area tactil es de al menos 48 dp`() {
-        val label = "Vuelta al lago"
-        show(card(accessibilityLabel = label))
+        show(card())
 
         composeTestRule
-            .onNodeWithContentDescription(label)
+            .onNodeWithContentDescription(defaultLabel)
             .assertHasClickAction()
             .assertHeightIsAtLeast(Sizes.minTouchTarget)
             .performClick()
