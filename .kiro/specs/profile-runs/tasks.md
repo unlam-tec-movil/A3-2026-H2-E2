@@ -118,7 +118,7 @@
   - _Boundary: LiveRouteTrackingViewModel, LiveRouteTrackingUiState_
   - _Requirements: 5.1, 5.3, 5.4, 5.5, 5.6_
 
-- [ ] 5.2 Dibujar las trazas guardadas en la capa del mapa
+- [x] 5.2 Dibujar las trazas guardadas en la capa del mapa
   - Hacer que la capa del mapa reciba las trazas a dibujar y las pinte con el color y el ancho de trazo guardado del tema, una por recorrido, agregando las nuevas y quitando las que ya no están, sin tocar el trazo en vivo.
   - Listo cuando, con trazas de prueba, el mapa muestra todas con el estilo de traza guardada y las quita al vaciarse la lista.
   - _Boundary: MapLayer_

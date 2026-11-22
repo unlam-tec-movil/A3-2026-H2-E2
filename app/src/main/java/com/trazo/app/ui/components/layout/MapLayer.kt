@@ -29,9 +29,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.RoutePoint
@@ -50,10 +52,15 @@ import ovh.plrapps.mapcompose.api.removePath
 import ovh.plrapps.mapcompose.api.scrollTo
 import ovh.plrapps.mapcompose.api.updatePath
 import ovh.plrapps.mapcompose.ui.MapUI
+import ovh.plrapps.mapcompose.ui.state.MapState
 
 private const val RUNNER_MARKER_ID = "runner"
 private const val ROUTE_OUTLINE_PATH_ID = "route-outline"
 private const val ROUTE_PATH_ID = "route"
+private const val SAVED_TRACE_PATH_PREFIX = "saved-trace-"
+
+/** Las trazas guardadas van por debajo del trazo en vivo (contorno 0, trazo 1) y del pin del corredor. */
+private const val SAVED_TRACE_Z_INDEX = -1f
 
 /** Zoom al centrar en el corredor. */
 private const val RUNNER_ZOOM = 17
@@ -64,6 +71,12 @@ private val RunnerHaloSize = 40.dp
 private val RunnerPinBorder = 3.dp
 private const val RUNNER_HALO_ALPHA = 0.35f
 
+/**
+ * Mapa de Actividad.
+ *
+ * [savedTraces] son las trazas de los recorridos guardados (id del recorrido y sus puntos); se dibujan con el
+ * estilo de traza guardada, una por recorrido, y no afectan al trazo en vivo de [routePoints].
+ */
 @Composable
 fun MapLayer(
     routePoints: List<RoutePoint>,
@@ -72,6 +85,7 @@ fun MapLayer(
     onCenterMapClicked: () -> Unit,
     onMapDragged: () -> Unit,
     modifier: Modifier = Modifier,
+    savedTraces: Map<String, List<RoutePoint>> = emptyMap(),
     belowCenterButton: @Composable () -> Unit = {},
     bottomContent: @Composable () -> Unit = {},
 ) {
@@ -108,6 +122,13 @@ fun MapLayer(
         } else if (isMapCenteredOnRunner) {
             mapState.scrollTo(point.x, point.y)
         }
+    }
+
+    val savedTraceColor = TrazoTheme.extendedColors.traceSaved
+    val drawnSavedTraces = remember { mutableMapOf<String, List<RoutePoint>>() }
+
+    LaunchedEffect(savedTraces, savedTraceColor) {
+        mapState.syncSavedTraces(savedTraces, savedTraceColor, Sizes.traceSavedWidth, drawnSavedTraces)
     }
 
     val traceColor = TrazoTheme.extendedColors.traceLive
@@ -248,5 +269,56 @@ private fun RunnerPin(description: String) {
                     .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .border(width = RunnerPinBorder, color = MaterialTheme.colorScheme.onPrimary, shape = CircleShape),
         )
+    }
+}
+
+/** Id del path de la traza guardada del recorrido [runId]; no choca con los paths del trazo en vivo. */
+internal fun savedTracePathId(runId: String): String = SAVED_TRACE_PATH_PREFIX + runId
+
+/**
+ * Deja dibujadas en el mapa exactamente las [traces] (id del recorrido a puntos): agrega las nuevas, actualiza
+ * las que cambiaron y quita las que ya no están. Una traza de menos de 2 puntos no se dibuja. [drawn] recuerda
+ * lo dibujado entre llamadas y se actualiza acá.
+ */
+internal fun MapState.syncSavedTraces(
+    traces: Map<String, List<RoutePoint>>,
+    color: Color,
+    width: Dp,
+    drawn: MutableMap<String, List<RoutePoint>>,
+) {
+    (drawn.keys - traces.keys).forEach { id ->
+        removePath(savedTracePathId(id))
+        drawn.remove(id)
+    }
+
+    traces.forEach { (id, points) ->
+        if (drawn[id] == points) return@forEach
+
+        val pathData =
+            makePathDataBuilder()
+                .addPoints(
+                    points.map { point ->
+                        val normalized = WebMercator.normalize(point.latitude, point.longitude)
+                        normalized.x to normalized.y
+                    },
+                ).build()
+        val pathId = savedTracePathId(id)
+
+        when {
+            pathData == null -> {
+                removePath(pathId)
+                drawn.remove(id)
+            }
+
+            hasPath(pathId) -> {
+                updatePath(pathId, pathData = pathData)
+                drawn[id] = points
+            }
+
+            else -> {
+                addPath(id = pathId, pathData = pathData, width = width, color = color, zIndex = SAVED_TRACE_Z_INDEX)
+                drawn[id] = points
+            }
+        }
     }
 }
