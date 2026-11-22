@@ -141,7 +141,7 @@
   - _Boundary: SavedRunTraceHit_
   - _Requirements: 5.2, 5.9_
 
-- [ ] 6.2 (P) Toque sobre el mapa con tolerancia en metros
+- [x] 6.2 (P) Toque sobre el mapa con tolerancia en metros
   - Agregar a la utilidad de proyección la conversión inversa a latitud y longitud y el cálculo de metros por pixel al zoom actual.
   - Hacer que la capa del mapa avise cada toque con latitud, longitud y una tolerancia equivalente a 24 dp.
   - Listo cuando un test de proyección confirma que convertir y volver da el mismo punto y que un toque en el mapa informa coordenadas y tolerancia.
