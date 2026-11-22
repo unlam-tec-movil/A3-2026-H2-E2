@@ -6,6 +6,13 @@ import android.net.Uri
 import android.provider.Settings
 import com.trazo.app.domain.model.LocationStatus
 
+/** Arma el Intent que abre los ajustes de la aplicación en el sistema Android. */
+fun appDetailsSettingsIntent(context: Context): Intent =
+    Intent(
+        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+        Uri.fromParts("package", context.packageName, null),
+    )
+
 /** Arma el Intent que abre la Configuración que corresponde a cada problema. */
 fun locationSettingsIntent(
     context: Context,
@@ -14,8 +21,5 @@ fun locationSettingsIntent(
     if (status == LocationStatus.DEVICE_LOCATION_OFF) {
         Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
     } else {
-        Intent(
-            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-            Uri.fromParts("package", context.packageName, null),
-        )
+        appDetailsSettingsIntent(context)
     }
