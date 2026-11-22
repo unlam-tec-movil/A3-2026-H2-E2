@@ -55,4 +55,46 @@ object WebMercator {
 
     /** Escala de MapCompose equivalente a un zoom de tiles: 1.0 en [MAX_ZOOM]. */
     fun scaleForZoom(zoom: Int): Double = 2.0.pow(zoom - MAX_ZOOM)
+
+    /** Centro (normalizado) y escala de MapCompose con los que una traza entra completa en el mapa. */
+    data class Framing(
+        val centerX: Double,
+        val centerY: Double,
+        val scale: Double,
+    )
+
+    /**
+     * Encuadre del rectángulo que contiene a [points] en un mapa de [viewportWidthPx] × [viewportHeightPx],
+     * dejando [paddingPx] libres en cada borde. La escala la manda el eje más apretado y se limita a los
+     * zooms que se muestran ([MIN_VISIBLE_ZOOM] a [MAX_VISIBLE_ZOOM]): un punto solo (o casi) no acerca de más
+     * y una traza enorme no aleja de más. Devuelve `null` si no hay puntos.
+     */
+    fun frameTrace(
+        points: List<NormalizedPoint>,
+        viewportWidthPx: Int,
+        viewportHeightPx: Int,
+        paddingPx: Int,
+    ): Framing? {
+        if (points.isEmpty()) return null
+
+        val minX = points.minOf { it.x }
+        val maxX = points.maxOf { it.x }
+        val minY = points.minOf { it.y }
+        val maxY = points.maxOf { it.y }
+
+        val availableWidth = (viewportWidthPx - 2 * paddingPx).coerceAtLeast(1)
+        val availableHeight = (viewportHeightPx - 2 * paddingPx).coerceAtLeast(1)
+        val spanWidth = (maxX - minX) * FULL_SIZE
+        val spanHeight = (maxY - minY) * FULL_SIZE
+
+        // Un eje sin extensión no limita la escala.
+        val fitWidth = if (spanWidth > 0.0) availableWidth / spanWidth else Double.POSITIVE_INFINITY
+        val fitHeight = if (spanHeight > 0.0) availableHeight / spanHeight else Double.POSITIVE_INFINITY
+
+        return Framing(
+            centerX = (minX + maxX) / 2,
+            centerY = (minY + maxY) / 2,
+            scale = minOf(fitWidth, fitHeight).coerceIn(scaleForZoom(MIN_VISIBLE_ZOOM), scaleForZoom(MAX_VISIBLE_ZOOM)),
+        )
+    }
 }

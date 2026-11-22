@@ -19,6 +19,8 @@ import com.trazo.app.ui.components.common.StartRunFab
 import com.trazo.app.ui.screens.map.MapScreen
 import com.trazo.app.ui.screens.profile.ProfileScreen
 import com.trazo.app.ui.screens.result.ResultScreen
+import com.trazo.app.ui.screens.rundetail.RunDetailDialog
+import com.trazo.app.ui.screens.rundetail.RunDetailViewModel
 import com.trazo.app.ui.screens.settings.SettingsScreen
 import com.trazo.app.ui.screens.startrun.StartRunEffect
 import com.trazo.app.ui.screens.startrun.StartRunViewModel
@@ -29,6 +31,8 @@ import kotlin.math.roundToInt
 fun TrazoApp() {
     val navController = rememberNavController()
     val startRunViewModel: StartRunViewModel = hiltViewModel()
+    // Único dueño del modal de detalle: Perfil (y después Actividad) solo piden abrirlo con un id.
+    val runDetailViewModel: RunDetailViewModel = hiltViewModel()
     val startRunState by startRunViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val permissionLauncher =
@@ -87,7 +91,10 @@ fun TrazoApp() {
             )
         },
         profileScreen = { onSettingsClick ->
-            ProfileScreen(onSettingsClick = onSettingsClick)
+            ProfileScreen(
+                onSettingsClick = onSettingsClick,
+                onRunClick = runDetailViewModel::open,
+            )
         },
         resultScreen = { onLeaveToActivity ->
             ResultScreen(
@@ -101,6 +108,8 @@ fun TrazoApp() {
             SettingsScreen(onBackClick = onBackClick)
         },
     )
+
+    RunDetailHost(viewModel = runDetailViewModel)
 
     if (startRunState.isDialogVisible) {
         StartRunDialog(
@@ -121,4 +130,14 @@ fun TrazoApp() {
             onDismiss = startRunViewModel::onLocationIssueDismiss,
         )
     }
+}
+
+/**
+ * Muestra el modal de detalle mientras [viewModel] tenga un recorrido abierto. Cerrarlo llama a `close()`; la
+ * pantalla de abajo no se recompone distinto, así que conserva su posición (requisito 3.8).
+ */
+@Composable
+internal fun RunDetailHost(viewModel: RunDetailViewModel) {
+    val detail by viewModel.detail.collectAsStateWithLifecycle()
+    detail?.let { RunDetailDialog(detail = it, onDismiss = viewModel::close) }
 }
