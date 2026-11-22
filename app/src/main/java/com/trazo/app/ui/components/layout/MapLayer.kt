@@ -19,7 +19,6 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,7 +63,6 @@ private val RunnerPinSize = 18.dp
 private val RunnerHaloSize = 40.dp
 private val RunnerPinBorder = 3.dp
 private const val RUNNER_HALO_ALPHA = 0.35f
-private const val ATTRIBUTION_BACKGROUND_ALPHA = 0.8f
 
 @Composable
 fun MapLayer(
@@ -174,18 +172,7 @@ fun MapLayer(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom,
             ) {
-                Text(
-                    text = stringResource(R.string.map_attribution),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier =
-                        Modifier
-                            .weight(1f, fill = false)
-                            .background(
-                                color = MaterialTheme.colorScheme.surface.copy(alpha = ATTRIBUTION_BACKGROUND_ALPHA),
-                                shape = MaterialTheme.shapes.extraSmall,
-                            ).padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
-                )
+                MapAttribution(modifier = Modifier.weight(1f, fill = false))
 
                 Spacer(modifier = Modifier.weight(1f))
 

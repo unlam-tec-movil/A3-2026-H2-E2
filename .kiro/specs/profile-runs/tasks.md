@@ -78,7 +78,7 @@
   - _Depends: 1.1, 1.3_
   - _Requirements: 3.1, 3.2, 3.4, 3.5, 3.6, 3.7, 6.6_
 
-- [ ] 3.2 (P) Mapa de solo lectura con la traza encuadrada
+- [x] 3.2 (P) Mapa de solo lectura con la traza encuadrada
   - Crear el mapa del detalle sobre el armado común: dibuja la traza completa, la encuadra con su rectángulo (agregando a la utilidad de proyección el cálculo de encuadre), sin pin, sin botones y sin seguir al corredor, con atribución del proveedor de tiles.
   - Si la traza tiene menos de 2 puntos, mostrar el texto alternativo en lugar del mapa. Darle al mapa una descripción accesible con el resumen del recorrido.
   - Listo cuando una traza de prueba se ve completa dentro del recuadro, una de menos de 2 puntos muestra el texto alternativo y el test de UI de ambos casos pasa.
