@@ -34,6 +34,38 @@ class RunValueFormatterTest {
     }
 
     @Test
+    fun `duracion con mas de diez horas`() {
+        assertEquals("01:01:01", RunValueFormatter.formatDuration(3_661))
+        assertEquals("12:34:56", RunValueFormatter.formatDuration(45_296))
+    }
+
+    @Test
+    fun `duracion con mas de 99 horas conserva todos los digitos de la hora`() {
+        assertEquals("100:00:00", RunValueFormatter.formatDuration(360_000))
+    }
+
+    @Test
+    fun `total de kilometros cero no lleva decimales`() {
+        assertEquals("0", RunValueFormatter.formatTotalDistanceKm(0.0))
+    }
+
+    @Test
+    fun `total de kilometros entero no lleva decimales`() {
+        assertEquals("8", RunValueFormatter.formatTotalDistanceKm(8.0))
+    }
+
+    @Test
+    fun `total de kilometros con fraccion lleva un decimal con coma`() {
+        assertEquals("8,5", RunValueFormatter.formatTotalDistanceKm(8.5))
+    }
+
+    @Test
+    fun `total de kilometros se redondea a un decimal y quita el cero sobrante`() {
+        assertEquals("8,3", RunValueFormatter.formatTotalDistanceKm(8.27))
+        assertEquals("9", RunValueFormatter.formatTotalDistanceKm(8.96))
+    }
+
+    @Test
     fun `velocidad promedio con coma y unidad`() {
         assertEquals("9,5 km/h", RunValueFormatter.formatAverageSpeedKmh(9.5))
         assertEquals("10,0 km/h", RunValueFormatter.formatAverageSpeedKmh(10.0))

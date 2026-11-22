@@ -17,6 +17,12 @@ object RunValueFormatter {
     /** `5200.0` -> `5,2 km`. Siempre con un decimal. */
     fun formatDistanceKm(distanceMeters: Double): String = String.format(locale, "%.1f km", distanceMeters / METERS_PER_KILOMETER)
 
+    /**
+     * Total de kilómetros para «Mis estadísticas», sin unidad (la pone el string resource): sin decimal si es
+     * entero (`8.0` -> `8`) y con uno y coma si no (`8.5` -> `8,5`).
+     */
+    fun formatTotalDistanceKm(distanceKm: Double): String = String.format(locale, "%.1f", distanceKm).trimZeros()
+
     /** `3300` -> `00:55:00`. */
     fun formatDuration(totalSeconds: Long): String {
         val hours = totalSeconds / SECONDS_PER_HOUR
@@ -30,6 +36,9 @@ object RunValueFormatter {
 
     /** `80` -> `80 %`; sin dato (`null`) -> `–`. */
     fun formatRegularity(regularityPercent: Int?): String = regularityPercent?.let { String.format(locale, "%d %%", it) } ?: NO_DATA
+
+    /** Quita el decimal si es cero (`8,0` -> `8`) y lo deja si no (`8,5`). Usa el separador decimal de `es-AR`. */
+    private fun String.trimZeros(): String = removeSuffix(String.format(locale, "%.1f", 0.0).substring(1))
 
     /** `Mar 28 oct`: día y mes abreviados, primera letra en mayúscula y sin puntos de abreviatura. */
     fun formatShortDate(

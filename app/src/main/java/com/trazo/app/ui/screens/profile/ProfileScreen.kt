@@ -24,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trazo.app.R
+import com.trazo.app.ui.components.common.RunValueFormatter
 import com.trazo.app.ui.components.common.StatusBadgeKind
 import com.trazo.app.ui.screens.profile.components.EmptyState
 import com.trazo.app.ui.screens.profile.components.ProfileStatRow
@@ -134,12 +135,12 @@ private fun ProfileStats(
             value =
                 stringResource(
                     R.string.profile_stats_distance,
-                    ProfileStatsFormatter.formatDistanceKm(state.totalDistanceKm),
+                    RunValueFormatter.formatTotalDistanceKm(state.totalDistanceKm),
                 ),
         )
         ProfileStatRow(
             label = stringResource(R.string.profile_stats_time_label),
-            value = ProfileStatsFormatter.formatTotalTime(state.totalTimeSeconds),
+            value = RunValueFormatter.formatDuration(state.totalTimeSeconds),
         )
     }
 }
