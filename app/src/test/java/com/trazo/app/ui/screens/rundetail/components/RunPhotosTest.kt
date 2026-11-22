@@ -70,12 +70,12 @@ class RunPhotosTest {
     }
 
     @Test
-    fun `nunca muestra mas de dos fotos`() {
+    fun `si llegan mas de dos fotos muestra todas las que tiene el recorrido sin romper la fila`() {
         show(listOf(photo("1.png"), photo("2.png"), photo("3.png")))
 
-        composeTestRule.onNodeWithContentDescription(description(1, 2)).assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription(description(2, 2)).assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription(description(3, 3)).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(description(1, 3)).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(description(2, 3)).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(description(3, 3)).assertIsDisplayed()
     }
 
     @Test

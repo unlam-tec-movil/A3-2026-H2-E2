@@ -23,19 +23,17 @@ import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme
 import java.io.File
 
-private const val MAX_PHOTOS = 2
-
 /**
- * Sección «Fotos» del detalle: hasta 2 fotos, cargadas desde su ruta de archivo. Si una no carga (o mientras
- * carga) queda un recuadro neutro y la otra se ve igual. Con la lista vacía no compone nada: ni título ni espacio.
+ * Sección «Fotos» del detalle: las fotos del recorrido, cargadas desde su ruta de archivo y repartidas en una
+ * fila con el mismo ancho. Si una no carga (o mientras carga) queda un recuadro neutro y las otras se ven igual.
+ * Con la lista vacía no compone nada: ni título ni espacio.
  */
 @Composable
 fun RunPhotos(
     photoPaths: List<String>,
     modifier: Modifier = Modifier,
 ) {
-    val photos = photoPaths.take(MAX_PHOTOS)
-    if (photos.isEmpty()) return
+    if (photoPaths.isEmpty()) return
 
     val neutral = ColorPainter(MaterialTheme.colorScheme.surfaceContainer)
 
@@ -53,10 +51,10 @@ fun RunPhotos(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            photos.forEachIndexed { index, path ->
+            photoPaths.forEachIndexed { index, path ->
                 AsyncImage(
                     model = File(path),
-                    contentDescription = stringResource(R.string.run_detail_photo_description, index + 1, photos.size),
+                    contentDescription = stringResource(R.string.run_detail_photo_description, index + 1, photoPaths.size),
                     contentScale = ContentScale.Crop,
                     placeholder = neutral,
                     error = neutral,

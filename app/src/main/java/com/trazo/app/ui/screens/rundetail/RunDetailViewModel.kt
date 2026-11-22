@@ -19,12 +19,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
-private const val MAX_PHOTOS = 2
-
 /**
  * Detalle de un recorrido guardado, ya formateado para el modal.
  *
- * Las secciones de destacados y de fotos se ocultan con listas vacías. [photoPaths] trae como máximo 2.
+ * Las secciones de destacados y de fotos se ocultan con listas vacías. [photoPaths] trae las fotos del recorrido.
  * [routePoints] con menos de 2 puntos no se puede dibujar: el mapa muestra un texto alternativo.
  */
 data class RunDetailUi(
@@ -79,7 +77,7 @@ class RunDetailViewModel
                 statusBadge = if (goalReached) StatusBadgeKind.GOAL_REACHED else StatusBadgeKind.INCOMPLETE,
                 isDemo = isDemo,
                 highlights = highlights,
-                photoPaths = photoPaths.take(MAX_PHOTOS),
+                photoPaths = photoPaths,
                 routePoints = routePoints,
                 mapDescription =
                     context.getString(

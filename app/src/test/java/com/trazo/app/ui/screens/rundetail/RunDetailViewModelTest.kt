@@ -198,14 +198,14 @@ class RunDetailViewModelTest {
         }
 
     @Test
-    fun `las fotos se recortan a 2`() =
+    fun `las fotos pasan tal cual sin recortar`() =
         runTest {
             repository.save(run(photoPaths = listOf("/f/1.jpg", "/f/2.jpg", "/f/3.jpg")))
             val viewModel = subscribed()
 
             viewModel.open("a")
 
-            assertEquals(listOf("/f/1.jpg", "/f/2.jpg"), viewModel.detail.value!!.photoPaths)
+            assertEquals(listOf("/f/1.jpg", "/f/2.jpg", "/f/3.jpg"), viewModel.detail.value!!.photoPaths)
         }
 
     @Test

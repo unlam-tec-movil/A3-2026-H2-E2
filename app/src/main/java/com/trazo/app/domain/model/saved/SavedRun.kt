@@ -22,4 +22,9 @@ data class SavedRun(
     val photoPaths: List<String>,
 ) {
     val brakeCount: Int get() = brakes.size
+
+    companion object {
+        /** Máximo de fotos que admite un recorrido. */
+        const val MAX_PHOTOS = 2
+    }
 }
