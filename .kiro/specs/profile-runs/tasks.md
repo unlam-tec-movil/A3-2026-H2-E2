@@ -50,7 +50,7 @@
   - _Depends: 1.1, 1.3, 1.5_
   - _Requirements: 1.1, 1.2, 1.3, 1.5, 1.6, 1.7, 1.8, 2.5, 4.1, 4.5_
 
-- [ ] 2.2 (P) Card de recorrido
+- [x] 2.2 (P) Card de recorrido
   - Crear la card con título en una sola línea y puntos suspensivos si no entra, fecha, kilómetros, duración, frenadas, regularidad y las marcas que correspondan.
   - Unir su contenido en una sola descripción accesible con todos los datos y las marcas, y dar a toda la card un área táctil de al menos 48 dp que avise al tocarla.
   - Escribir tests de UI: título largo en una línea, marcas con texto, descripción accesible completa, toque que dispara el aviso y fuente al 200 % legible.
