@@ -4,7 +4,7 @@
 >
 > **Fuera de esta spec:** el criterio 1.8 (conservar recorridos al cerrar la app) depende de que `save-run` reemplace el almacenamiento en memoria por Room. Esta spec solo lee, por lo que no tiene tareas de persistencia.
 
-- [ ] 1. Base: textos y piezas compartidas
+- [x] 1. Base: textos y piezas compartidas
 - [x] 1.1 Agregar los textos de la funcionalidad
   - Agregar a los recursos de texto, en español rioplatense con voseo, las marcas «Incompleto», «Demo» y «Meta cumplida», los rótulos de la card y del detalle (velocidad promedio, meta, destacados, fotos), «Cerrar», el texto alternativo cuando la traza no se puede mostrar y las plantillas de las descripciones accesibles de la card y del mapa del detalle, con las claves de pantalla que define el steering.
   - Incluir el texto de regularidad sin datos y su versión accesible («sin datos»).
