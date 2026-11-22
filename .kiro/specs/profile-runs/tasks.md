@@ -41,7 +41,7 @@
   - _Requirements: 2.3, 4.1, 4.2, 4.3, 4.4_
 
 - [ ] 2. Mis recorridos y Mis estadísticas en Perfil (HU-09, HU-16)
-- [ ] 2.1 Estado y ViewModel de Perfil con los recorridos guardados
+- [x] 2.1 Estado y ViewModel de Perfil con los recorridos guardados
   - Escribir primero los tests unitarios con un repositorio falso: lista vacía, recorridos del más reciente al más antiguo, recorrido nuevo que queda primero, totales actualizados al agregar, y marcas Incompleto y Demo, incluidas juntas.
   - Hacer que el ViewModel observe los recorridos guardados (solo lectura), arme las cards con su descripción accesible y los totales, y que «hay recorridos» se derive de la lista.
   - Dejar anotado en el código y en los tests que la persistencia al cerrar la app depende de `save-run`: el ViewModel muestra lo que el repositorio emita.
