@@ -71,8 +71,8 @@
 
 - [x] 3. Detalle del recorrido guardado (HU-09)
 - [x] 3.1 Estado y ViewModel del detalle
-  - Escribir primero los tests unitarios: abrir con un id inexistente no abre nada, abrir muestra los datos del recorrido, cerrar lo deja en nada, las fotos se recortan a 2 y las listas vacías de destacados y fotos quedan vacías.
-  - Crear el estado del detalle (título, velocidad promedio, meta, estado, marca Demo, destacados, fotos, traza y descripción accesible del mapa) y el ViewModel que lo arma a partir del recorrido elegido y lo cierra si el recorrido desaparece.
+  - Escribir primero los tests unitarios: abrir con un id inexistente no abre nada, abrir muestra los datos del recorrido, cerrar lo deja en nada, las fotos se muestran tal como las trae el recorrido (el máximo es `SavedRun.MAX_PHOTOS`, sin recorte en el ViewModel) y las listas vacías de destacados y fotos quedan vacías.
+  - Crear el estado del detalle (título, velocidad promedio, meta, estado, marca Demo, destacados, fotos, traza y descripción accesible del mapa) y el ViewModel que lo arma a partir del recorrido elegido con `getById`; no contempla que el recorrido desaparezca.
   - Listo cuando los tests del ViewModel del detalle pasan.
   - _Boundary: RunDetailViewModel_
   - _Depends: 1.1, 1.3_
@@ -87,7 +87,7 @@
   - _Requirements: 3.2, 3.9, 6.6_
 
 - [x] 3.3 (P) Destacados y fotos del detalle
-  - Crear la lista de destacados (chips de solo lectura) y la fila de hasta 2 fotos cargadas desde su ruta, con recuadro neutro si una foto no carga.
+  - Crear la lista de destacados (chips de solo lectura) y la fila de las fotos del recorrido (hasta `SavedRun.MAX_PHOTOS`) cargadas desde su ruta, con recuadro neutro si una foto no carga.
   - Verificar con tests de UI que muestran los datos recibidos y que no ocupan espacio si no tienen contenido.
   - Listo cuando los tests de UI de destacados y de fotos pasan, incluido el caso de una foto que no carga.
   - _Boundary: HighlightChips, RunPhotos_
