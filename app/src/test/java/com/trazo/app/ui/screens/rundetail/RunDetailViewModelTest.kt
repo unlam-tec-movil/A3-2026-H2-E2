@@ -36,6 +36,8 @@ private class MutableSavedRunRepository : SavedRunRepository {
     override suspend fun save(run: SavedRun) {
         current.value = listOf(run) + current.value
     }
+
+    override suspend fun getById(id: String): SavedRun? = current.value.firstOrNull { it.id == id }
 }
 
 /** Detalle del recorrido guardado (requisitos 3.1, 3.2, 3.4 a 3.7 y 6.6). Solo lectura. */
