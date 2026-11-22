@@ -5,6 +5,12 @@ import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunState
 
+/** Traza de un recorrido guardado que el mapa dibuja: el [id] del recorrido y sus [points]. */
+data class SavedTraceUi(
+    val id: String,
+    val points: List<RoutePoint>,
+)
+
 data class LiveRouteTrackingUiState(
     val hasActiveRun: Boolean = false,
     val isRunInProgress: Boolean = false,
@@ -30,6 +36,11 @@ data class LiveRouteTrackingUiState(
     val finishFailed: Boolean = false,
     /** Hay un intento de finalizar en curso: los botones del diálogo quedan deshabilitados. */
     val isFinishing: Boolean = false,
+    /**
+     * Trazas de los recorridos guardados, del más reciente al más antiguo. Solo hay trazas sin recorrido en
+     * curso y con ubicación precisa; no se mezclan con [routePoints], que es la traza en vivo.
+     */
+    val savedTraces: List<SavedTraceUi> = emptyList(),
 ) {
     val isRunning: Boolean
         get() = runState == RunState.ACTIVE

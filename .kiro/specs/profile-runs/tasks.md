@@ -71,8 +71,8 @@
 
 - [x] 3. Detalle del recorrido guardado (HU-09)
 - [x] 3.1 Estado y ViewModel del detalle
-  - Escribir primero los tests unitarios: abrir con un id inexistente no abre nada, abrir muestra los datos del recorrido, cerrar lo deja en nada, las fotos se recortan a 2 y las listas vacías de destacados y fotos quedan vacías.
-  - Crear el estado del detalle (título, velocidad promedio, meta, estado, marca Demo, destacados, fotos, traza y descripción accesible del mapa) y el ViewModel que lo arma a partir del recorrido elegido y lo cierra si el recorrido desaparece.
+  - Escribir primero los tests unitarios: abrir con un id inexistente no abre nada, abrir muestra los datos del recorrido, cerrar lo deja en nada, las fotos se muestran tal como las trae el recorrido (el máximo es `SavedRun.MAX_PHOTOS`, sin recorte en el ViewModel) y las listas vacías de destacados y fotos quedan vacías.
+  - Crear el estado del detalle (título, velocidad promedio, meta, estado, marca Demo, destacados, fotos, traza y descripción accesible del mapa) y el ViewModel que lo arma a partir del recorrido elegido con `getById`; no contempla que el recorrido desaparezca.
   - Listo cuando los tests del ViewModel del detalle pasan.
   - _Boundary: RunDetailViewModel_
   - _Depends: 1.1, 1.3_
@@ -87,7 +87,7 @@
   - _Requirements: 3.2, 3.9, 6.6_
 
 - [x] 3.3 (P) Destacados y fotos del detalle
-  - Crear la lista de destacados (chips de solo lectura) y la fila de hasta 2 fotos cargadas desde su ruta, con recuadro neutro si una foto no carga.
+  - Crear la lista de destacados (chips de solo lectura) y la fila de las fotos del recorrido (hasta `SavedRun.MAX_PHOTOS`) cargadas desde su ruta, con recuadro neutro si una foto no carga.
   - Verificar con tests de UI que muestran los datos recibidos y que no ocupan espacio si no tienen contenido.
   - Listo cuando los tests de UI de destacados y de fotos pasan, incluido el caso de una foto que no carga.
   - _Boundary: HighlightChips, RunPhotos_
@@ -110,22 +110,22 @@
   - _Depends: 2.3, 3.4_
   - _Requirements: 3.1, 3.8, 5.8_
 
-- [ ] 5. Trazas guardadas en el mapa de Actividad (HU-12, dibujo)
-- [ ] 5.1 Estado de las trazas guardadas en el ViewModel del mapa
+- [x] 5. Trazas guardadas en el mapa de Actividad (HU-12, dibujo)
+- [x] 5.1 Estado de las trazas guardadas en el ViewModel del mapa
   - Escribir primero los tests unitarios con repositorios falsos: sin trazas con recorrido en curso, sin trazas con ubicación aproximada, sin trazas si no hay recorridos, con trazas cuando se cumplen las tres condiciones, y que al guardarse un recorrido aparece su traza.
   - Hacer que el ViewModel combine los recorridos guardados, el estado «hay recorrido en curso» y la lectura de ubicación (precisa solo con permiso preciso y ubicación activada) y exponga las trazas a dibujar, releyendo la ubicación cuando se le avise.
   - Listo cuando los tests del ViewModel del mapa pasan, los existentes siguen pasando y las trazas a dibujar quedan vacías salvo cuando se cumplen las tres condiciones.
   - _Boundary: LiveRouteTrackingViewModel, LiveRouteTrackingUiState_
   - _Requirements: 5.1, 5.3, 5.4, 5.5, 5.6_
 
-- [ ] 5.2 Dibujar las trazas guardadas en la capa del mapa
+- [x] 5.2 Dibujar las trazas guardadas en la capa del mapa
   - Hacer que la capa del mapa reciba las trazas a dibujar y las pinte con el color y el ancho de trazo guardado del tema, una por recorrido, agregando las nuevas y quitando las que ya no están, sin tocar el trazo en vivo.
   - Listo cuando, con trazas de prueba, el mapa muestra todas con el estilo de traza guardada y las quita al vaciarse la lista.
   - _Boundary: MapLayer_
   - _Depends: 1.4, 5.1_
   - _Requirements: 5.1, 5.3, 5.5, 5.6_
 
-- [ ] 5.3 Conectar el mapa de Actividad con las trazas y la ubicación
+- [x] 5.3 Conectar el mapa de Actividad con las trazas y la ubicación
   - Pasar las trazas del estado a la capa del mapa y avisar al ViewModel que relea la ubicación cada vez que Actividad vuelve a primer plano.
   - Verificar con un test de la pantalla del mapa que, con trazas en el estado, la capa las recibe, y sin ellas no.
   - Listo cuando en un dispositivo con recorridos guardados y ubicación precisa Actividad muestra las trazas, desaparecen al iniciar un recorrido y vuelven, junto con la nueva, al guardar el recorrido.
