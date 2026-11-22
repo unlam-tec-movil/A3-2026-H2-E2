@@ -5,13 +5,13 @@
 > **Fuera de esta spec:** el criterio 1.8 (conservar recorridos al cerrar la app) depende de que `save-run` reemplace el almacenamiento en memoria por Room. Esta spec solo lee, por lo que no tiene tareas de persistencia.
 
 - [ ] 1. Base: textos y piezas compartidas
-- [ ] 1.1 Agregar los textos de la funcionalidad
+- [x] 1.1 Agregar los textos de la funcionalidad
   - Agregar a los recursos de texto, en español rioplatense con voseo, las marcas «Incompleto», «Demo» y «Meta cumplida», los rótulos de la card y del detalle (velocidad promedio, meta, destacados, fotos), «Cerrar», el texto alternativo cuando la traza no se puede mostrar y las plantillas de las descripciones accesibles de la card y del mapa del detalle, con las claves de pantalla que define el steering.
   - Incluir el texto de regularidad sin datos y su versión accesible («sin datos»).
   - Listo cuando `./gradlew :app:assembleDebug` compila y todos los textos existen como recursos, sin cadenas fijas en el código.
   - _Requirements: 6.1_
 
-- [ ] 1.2 (P) Marca de estado del recorrido
+- [x] 1.2 (P) Marca de estado del recorrido
   - Crear la píldora con texto para «Incompleto», «Demo» y «Meta cumplida», con los colores del sistema de diseño y 24 dp de alto, sin depender del color para comunicar el estado.
   - Escribir una preview por variante y un test de UI que verifique el texto visible de cada una.
   - Listo cuando el test de UI de las tres marcas pasa y cada marca muestra su texto.
@@ -19,21 +19,21 @@
   - _Depends: 1.1_
   - _Requirements: 1.5, 1.6, 3.7, 6.4_
 
-- [ ] 1.3 (P) Formato de valores del recorrido
+- [x] 1.3 (P) Formato de valores del recorrido
   - Crear el formateador puro en `es-AR` para kilómetros (`5,2 km`), duración (`HH:MM:SS`), velocidad promedio, regularidad (`80 %`, y «–» si no hay dato) y fecha corta (`Mar 28 oct`, con la primera letra en mayúscula y sin puntos de abreviatura).
   - Escribir primero los tests unitarios con los casos de valores enteros, con decimales, cero, regularidad nula y una fecha fija.
   - Listo cuando los tests del formateador pasan con `./gradlew :app:testDebugUnitTest`.
   - _Boundary: RunValueFormatter_
   - _Requirements: 1.3, 6.2_
 
-- [ ] 1.4 (P) Armado común del mapa
+- [x] 1.4 (P) Armado común del mapa
   - Extraer de la capa del mapa de Actividad la creación del estado del mapa (tiles, zoom inicial y límites, cierre al salir) a una pieza reutilizable que no incluya el pin, los botones ni el trazo en vivo.
   - Hacer que el mapa de Actividad use esa pieza sin cambiar su comportamiento ni su aspecto.
   - Listo cuando los tests existentes del mapa siguen pasando y Actividad se ve y se comporta igual (mismos tiles, atribución, zoom y centrado).
   - _Boundary: TrazoMapState, MapLayer_
   - _Requirements: 3.2, 5.1_
 
-- [ ] 1.5 (P) Totales de recorridos guardados
+- [x] 1.5 (P) Totales de recorridos guardados
   - Crear el cálculo puro de totales (cantidad, kilómetros y tiempo) sobre la lista de recorridos guardados: suma los completos y los incompletos, deja afuera los demo y suma el tiempo registrado de cada recorrido, que ya excluye las pausas personales.
   - Escribir primero los tests unitarios: lista vacía (ceros), solo incompletos, mezcla con demo completos e incompletos, y orden de la lista sin efecto.
   - Listo cuando los tests de totales pasan y una lista vacía o solo con demo devuelve cantidad, distancia y tiempo en cero.

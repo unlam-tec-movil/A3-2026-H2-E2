@@ -21,13 +21,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,30 +41,23 @@ import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme
 import kotlinx.coroutines.launch
-import ovh.plrapps.mapcompose.api.addLayer
 import ovh.plrapps.mapcompose.api.addMarker
 import ovh.plrapps.mapcompose.api.addPath
 import ovh.plrapps.mapcompose.api.hasMarker
 import ovh.plrapps.mapcompose.api.hasPath
 import ovh.plrapps.mapcompose.api.makePathDataBuilder
 import ovh.plrapps.mapcompose.api.moveMarker
-import ovh.plrapps.mapcompose.api.onTouchDown
 import ovh.plrapps.mapcompose.api.removePath
 import ovh.plrapps.mapcompose.api.scrollTo
 import ovh.plrapps.mapcompose.api.updatePath
 import ovh.plrapps.mapcompose.ui.MapUI
-import ovh.plrapps.mapcompose.ui.layout.Forced
-import ovh.plrapps.mapcompose.ui.state.MapState
 
 private const val RUNNER_MARKER_ID = "runner"
 private const val ROUTE_OUTLINE_PATH_ID = "route-outline"
 private const val ROUTE_PATH_ID = "route"
 
-/** Zoom al centrar en el corredor y zoom inicial (Buenos Aires) antes del primer fix. */
+/** Zoom al centrar en el corredor. */
 private const val RUNNER_ZOOM = 17
-private const val INITIAL_ZOOM = 12
-private const val INITIAL_LATITUDE = -34.6037
-private const val INITIAL_LONGITUDE = -58.3816
 
 /** Pin de posición (referencia §6.12): Primary950, borde blanco de 3 dp y halo al 35 %. */
 private val RunnerPinSize = 18.dp
@@ -87,33 +78,10 @@ fun MapLayer(
     bottomContent: @Composable () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
-    val currentOnMapDragged by rememberUpdatedState(onMapDragged)
     val runnerDescription = stringResource(R.string.map_your_location)
 
-    val mapState =
-        remember {
-            val initial = WebMercator.normalize(INITIAL_LATITUDE, INITIAL_LONGITUDE)
-            MapState(
-                levelCount = WebMercator.LEVEL_COUNT,
-                fullWidth = WebMercator.FULL_SIZE,
-                fullHeight = WebMercator.FULL_SIZE,
-                tileSize = WebMercator.TILE_SIZE,
-            ) {
-                scroll(initial.x, initial.y)
-                scale(WebMercator.scaleForZoom(INITIAL_ZOOM))
-                // Límites de zoom: nunca se piden tiles que CARTO no sirve.
-                maxScale(WebMercator.scaleForZoom(WebMercator.MAX_VISIBLE_ZOOM))
-                minimumScaleMode(Forced(WebMercator.scaleForZoom(WebMercator.MIN_VISIBLE_ZOOM)))
-            }.apply {
-                addLayer(CartoTileStreamProvider)
-                // Cualquier toque del corredor sobre el mapa deja de seguir su posición.
-                onTouchDown { currentOnMapDragged() }
-            }
-        }
-
-    DisposableEffect(mapState) {
-        onDispose { mapState.shutdown() }
-    }
+    // Cualquier toque del corredor sobre el mapa deja de seguir su posición.
+    val mapState = rememberTrazoMapState(onTouchDown = onMapDragged)
 
     var hasCenteredInitially by remember { mutableStateOf(false) }
 

@@ -16,6 +16,34 @@
         <item quantity="other">%d recorridos</item>
     </plurals>
     <string name="profile_stats_distance">%1$s km</string>
+
+    <!-- profile-runs: Mis recorridos, detalle del recorrido guardado y marcas de estado -->
+    <string name="profile_run_badge_incomplete">Incompleto</string>
+    <string name="profile_run_badge_demo">Demo</string>
+    <string name="profile_run_badge_goal_reached">Meta cumplida</string>
+    <string name="profile_run_distance_label">Distancia</string>
+    <string name="profile_run_time_label">Tiempo</string>
+    <string name="profile_run_brakes_label">Frenadas</string>
+    <string name="profile_run_regularity_label">Regularidad</string>
+    <string name="profile_run_regularity_none_description">sin datos</string>
+    <plurals name="profile_run_brakes_description">
+        <item quantity="one">%d frenada</item>
+        <item quantity="other">%d frenadas</item>
+    </plurals>
+    <!-- 1: título, 2: fecha, 3: distancia, 4: duración, 5: frenadas, 6: regularidad -->
+    <string name="profile_run_card_description">%1$s, %2$s. Distancia %3$s. Duración %4$s. %5$s. Regularidad %6$s.</string>
+    <!-- 1: marcas separadas por coma -->
+    <string name="profile_run_card_badges_description">Marcas: %1$s.</string>
+    <string name="run_detail_average_speed_label">Velocidad promedio</string>
+    <string name="run_detail_goal_label">Meta %1$s</string>
+    <string name="run_detail_highlights_title">Destacados</string>
+    <string name="run_detail_photos_title">Fotos</string>
+    <!-- 1: número de la foto, 2: cantidad de fotos -->
+    <string name="run_detail_photo_description">Foto %1$d de %2$d del recorrido</string>
+    <string name="run_detail_close">Cerrar</string>
+    <string name="run_detail_map_unavailable">No pudimos mostrar la traza de este recorrido</string>
+    <!-- 1: título, 2: distancia, 3: duración -->
+    <string name="run_detail_map_description">Mapa con la traza del recorrido %1$s. Distancia %2$s, duración %3$s.</string>
     <string name="start_run_fab_option">Iniciar un recorrido</string>
     <string name="start_run_fab_description">Nuevo recorrido</string>
 
