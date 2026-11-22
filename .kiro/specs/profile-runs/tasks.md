@@ -149,7 +149,7 @@
   - _Depends: 5.2_
   - _Requirements: 5.2_
 
-- [ ] 6.3 Resolver el toque y abrir el detalle
+- [x] 6.3 Resolver el toque y abrir el detalle
   - Escribir primero los tests unitarios del ViewModel del mapa: toque sobre una traza emite el aviso de abrir ese recorrido, toque lejos de toda traza no emite nada, toque sin trazas dibujadas no emite nada y, con varias coincidencias, se abre el más reciente.
   - Hacer que el ViewModel resuelva el toque con la regla del recorrido más reciente, emita el aviso, y que Actividad y la app lo conecten con el modal de detalle ya integrado.
   - Verificar que al cerrar el detalle se vuelve al mapa con las trazas intactas.
