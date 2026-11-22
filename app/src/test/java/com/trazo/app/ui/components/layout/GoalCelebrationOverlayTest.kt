@@ -22,10 +22,12 @@ class GoalCelebrationOverlayTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private var dismissals = 0
+    private var finishes = 0
 
     private fun showOverlay(
         showCelebration: Boolean,
         goal: RunGoal?,
+        withFinish: Boolean = false,
     ) {
         composeTestRule.setContent {
             TrazoTheme {
@@ -33,6 +35,7 @@ class GoalCelebrationOverlayTest {
                     showCelebration = showCelebration,
                     goal = goal,
                     onDismiss = { dismissals++ },
+                    onFinish = if (withFinish) ({ finishes++ }) else null,
                 )
             }
         }
@@ -68,5 +71,28 @@ class GoalCelebrationOverlayTest {
 
         // Then
         assertEquals(1, dismissals)
+    }
+
+    @Test
+    fun `given the finish action, when tapping Finalizar, then notifies the finish`() {
+        // Given
+        showOverlay(showCelebration = true, goal = RunGoal.THREE_KILOMETERS, withFinish = true)
+
+        // When
+        composeTestRule.onNodeWithText(context.getString(R.string.map_finish)).performClick()
+
+        // Then
+        assertEquals(1, finishes)
+        assertEquals(0, dismissals)
+    }
+
+    @Test
+    fun `given no finish action, when it is composed, then only the keep running button is shown`() {
+        // Given / When
+        showOverlay(showCelebration = true, goal = null)
+
+        // Then
+        composeTestRule.onNodeWithText(context.getString(R.string.map_finish)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.map_celebration_button)).assertIsDisplayed()
     }
 }

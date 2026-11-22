@@ -3,6 +3,7 @@ package com.trazo.app
 import android.app.Application
 import android.net.http.HttpResponseCache
 import com.trazo.app.di.ApplicationScope
+import com.trazo.app.domain.services.RegularityMonitor
 import com.trazo.app.domain.usecases.RecordStopsUseCase
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +16,13 @@ import javax.inject.Inject
 class TrazoApplication : Application() {
     @Inject
     lateinit var recordStops: RecordStopsUseCase
+
+    /**
+     * Inyectarlo es lo que lo arranca: Hilt crea el singleton recién cuando alguien lo pide, y su
+     * `init` se suscribe a la sesión. Tiene que estar vivo antes del primer recorrido para medir.
+     */
+    @Inject
+    lateinit var regularityMonitor: RegularityMonitor
 
     @Inject
     @field:ApplicationScope

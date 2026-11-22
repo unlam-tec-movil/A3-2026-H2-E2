@@ -1,5 +1,6 @@
 package com.trazo.app.domain.model.map
 
+import com.trazo.app.domain.model.stops.BrakeEvent
 import kotlin.time.Instant
 
 sealed interface RunSession {
@@ -121,8 +122,15 @@ sealed interface RunSession {
         /** Calidad de señal informada por el GPS. Si no [isTracking], no cambia nada. */
         fun withGpsQuality(quality: GpsQuality): ActiveSession = if (isTracking) copy(gpsQuality = quality) else this
 
-        /** Resumen final del recorrido, con las métricas cerradas en [nowMillis]. */
-        fun toFrozenSummary(nowMillis: Long): FrozenRunSummary =
+        /**
+         * Resumen final del recorrido, con las métricas cerradas en [nowMillis]. Las frenadas y la
+         * regularidad no las conoce la sesión: llegan ya calculadas.
+         */
+        fun toFrozenSummary(
+            nowMillis: Long,
+            brakes: List<BrakeEvent> = emptyList(),
+            regularityPercent: Int? = null,
+        ): FrozenRunSummary =
             FrozenRunSummary(
                 id = id,
                 goal = goal,
@@ -133,6 +141,8 @@ sealed interface RunSession {
                 finishedAtMonotonicTimestamp = nowMillis,
                 goalReached = goalReached,
                 isDemoMode = isDemoMode,
+                brakes = brakes,
+                regularityPercent = regularityPercent,
             )
 
         /** Métricas con el tiempo y la velocidad promedio de [nowMillis]; la distancia no cambia. */

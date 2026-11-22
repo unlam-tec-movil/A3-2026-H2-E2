@@ -51,6 +51,7 @@ class TrazoScaffoldTest {
                         Text(RESULT_SCREEN)
                         Button(onClick = onLeaveToActivity) { Text(LEAVE_RESULT) }
                     },
+                    settingsScreen = { Text(SETTINGS_SCREEN) },
                 )
             }
         }
@@ -139,6 +140,7 @@ class TrazoScaffoldTest {
         const val ACTIVITY_SCREEN = "pantalla Actividad"
         const val PROFILE_SCREEN = "pantalla Perfil"
         const val RESULT_SCREEN = "pantalla Resultado"
+        const val SETTINGS_SCREEN = "pantalla Configuración"
         const val OPEN_RESULT = "abrir resultado"
         const val LEAVE_RESULT = "salir del resultado"
         const val RUN_ID = "run-1"

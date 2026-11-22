@@ -15,6 +15,7 @@ import com.trazo.app.data.repository.FakeRunSessionRepository
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
+import com.trazo.app.domain.usecases.testFinishRunUseCase
 import com.trazo.app.ui.theme.TrazoTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -38,6 +39,7 @@ class MapScreenTest {
         LiveRouteTrackingViewModel(
             runSessionRepository = repository,
             locationRepository = silentLocationRepository,
+            finishRun = testFinishRunUseCase(repository),
         )
 
     private fun activeSession() =

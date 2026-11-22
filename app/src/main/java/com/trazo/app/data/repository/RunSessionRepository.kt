@@ -3,6 +3,7 @@ package com.trazo.app.data.repository
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RunSession
+import com.trazo.app.domain.model.stops.BrakeEvent
 import kotlinx.coroutines.flow.StateFlow
 
 interface RunSessionRepository {
@@ -22,7 +23,11 @@ interface RunSessionRepository {
 
     suspend fun resumeSession(): Result<Unit>
 
-    suspend fun finishSession(): Result<FrozenRunSummary>
+    /** Cierra la sesión y guarda su resumen con las frenadas y la regularidad que recibe. */
+    suspend fun finishSession(
+        brakes: List<BrakeEvent> = emptyList(),
+        regularityPercent: Int? = null,
+    ): Result<FrozenRunSummary>
 
     fun resetToIdle()
 

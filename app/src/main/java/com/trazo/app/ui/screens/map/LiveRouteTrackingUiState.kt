@@ -26,6 +26,10 @@ data class LiveRouteTrackingUiState(
     val showGoalCelebration: Boolean = false,
     val areControlActionsAllowed: Boolean = false,
     val rawDistanceMeters: Double = 0.0,
+    /** Falló el último intento de finalizar: el diálogo muestra el error y «Reintentar». */
+    val finishFailed: Boolean = false,
+    /** Hay un intento de finalizar en curso: los botones del diálogo quedan deshabilitados. */
+    val isFinishing: Boolean = false,
 ) {
     val isRunning: Boolean
         get() = runState == RunState.ACTIVE

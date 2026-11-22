@@ -1,31 +1,34 @@
 package com.trazo.app.ui.components.layout
 
-import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.ui.theme.Spacing
+import com.trazo.app.ui.theme.rememberReduceMotion
 
 @Composable
 fun GoalCelebrationOverlay(
@@ -33,6 +36,7 @@ fun GoalCelebrationOverlay(
     goal: RunGoal?,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    onFinish: (() -> Unit)? = null,
 ) {
     if (!showCelebration) return
 
@@ -81,31 +85,36 @@ fun GoalCelebrationOverlay(
                     modifier = Modifier.padding(top = Spacing.sm),
                 )
 
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.padding(top = Spacing.xl),
-                ) {
-                    Text(text = stringResource(R.string.map_celebration_button))
+                if (onFinish != null) {
+                    Column(
+                        modifier = Modifier.padding(top = Spacing.xl),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        Button(onClick = onFinish) {
+                            Text(text = stringResource(R.string.map_finish))
+                        }
+
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary),
+                        ) {
+                            Text(text = stringResource(R.string.map_celebration_button))
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.padding(top = Spacing.xl),
+                    ) {
+                        Text(text = stringResource(R.string.map_celebration_button))
+                    }
                 }
             }
-        }
-    }
-}
-
-// PROVISORIO: rememberReduceMotion() es provisorio hasta que Persona 4 publique el suyo.
-@Composable
-fun rememberReduceMotion(): Boolean {
-    val context = LocalContext.current
-    val resolver = context.contentResolver
-    return remember(resolver) {
-        try {
-            Settings.Global.getFloat(
-                resolver,
-                Settings.Global.ANIMATOR_DURATION_SCALE,
-                1.0f,
-            ) == 0.0f
-        } catch (_: Exception) {
-            false
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.trazo.app.domain.model.map
 
+import com.trazo.app.domain.model.stops.BrakeEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -245,6 +246,20 @@ class RunSessionRulesTest {
         assertEquals(1_000L, summary.startedAtMonotonicTimestamp)
         assertEquals(61_000L, summary.finishedAtMonotonicTimestamp)
         assertFalse(summary.goalReached)
+        assertEquals(0, summary.brakeCount)
+        assertNull(summary.regularityPercent)
+    }
+
+    @Test
+    fun `el resumen final lleva las frenadas y la regularidad que recibe`() {
+        val brakes =
+            listOf("b1", "b2").map { BrakeEvent(id = it, runId = "r1", location = null, detectedAtMillis = 0L) }
+
+        val summary = started.toFrozenSummary(nowMillis = 61_000L, brakes = brakes, regularityPercent = 80)
+
+        assertEquals(brakes, summary.brakes)
+        assertEquals(2, summary.brakeCount)
+        assertEquals(80, summary.regularityPercent)
     }
 
     @Test

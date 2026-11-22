@@ -8,6 +8,7 @@ import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.regularity.ActiveRunSnapshot
+import com.trazo.app.domain.model.stops.BrakeEvent
 import com.trazo.app.domain.model.stops.StopLocation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,7 +63,10 @@ class MonitorSessionQueriesTest {
             return Result.success(Unit)
         }
 
-        override suspend fun finishSession(): Result<FrozenRunSummary> = error("no se usa")
+        override suspend fun finishSession(
+            brakes: List<BrakeEvent>,
+            regularityPercent: Int?,
+        ): Result<FrozenRunSummary> = error("no se usa")
 
         override fun resetToIdle() = error("no se usa")
 

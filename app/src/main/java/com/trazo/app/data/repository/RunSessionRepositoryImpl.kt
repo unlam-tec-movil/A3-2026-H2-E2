@@ -8,6 +8,7 @@ import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.isAccurate
+import com.trazo.app.domain.model.stops.BrakeEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -71,9 +72,12 @@ class RunSessionRepositoryImpl
 
         override suspend fun resumeSession(): Result<Unit> = transition { it.resume(clock.nowMillis()) }
 
-        override suspend fun finishSession(): Result<FrozenRunSummary> =
+        override suspend fun finishSession(
+            brakes: List<BrakeEvent>,
+            regularityPercent: Int?,
+        ): Result<FrozenRunSummary> =
             locked {
-                val summary = requireActiveSession().toFrozenSummary(clock.nowMillis())
+                val summary = requireActiveSession().toFrozenSummary(clock.nowMillis(), brakes, regularityPercent)
                 stopJobs()
                 finishedSummaries[summary.id] = summary
                 _activeSession.value = RunSession.Idle
