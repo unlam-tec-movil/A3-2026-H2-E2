@@ -159,7 +159,7 @@
   - _Requirements: 5.2, 5.7, 5.9_
 
 - [ ] 7. Validación
-- [ ] 7.1 Revisión de calidad del conjunto
+- [x] 7.1 Revisión de calidad del conjunto
   - Correr de a uno `./gradlew :app:ktlintCheck`, `:app:lint`, `:app:testDebugUnitTest` y `:app:assembleDebug`, y corregir lo que aparezca.
   - Revisar que no queden textos fijos en el código, colores ni medidas sueltas, y que esta spec no llame a la escritura del repositorio.
   - Listo cuando los cuatro comandos terminan sin errores.
