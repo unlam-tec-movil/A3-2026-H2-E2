@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.layout
+package com.trazo.app.ui.screens.rundetail.components
 
 import android.content.Context
 import androidx.compose.foundation.layout.Box

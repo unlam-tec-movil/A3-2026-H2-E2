@@ -37,9 +37,9 @@ import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.ui.components.common.StatusBadge
 import com.trazo.app.ui.components.common.StatusBadgeKind
-import com.trazo.app.ui.components.layout.RunTraceMap
 import com.trazo.app.ui.screens.rundetail.components.HighlightChips
 import com.trazo.app.ui.screens.rundetail.components.RunPhotos
+import com.trazo.app.ui.screens.rundetail.components.RunTraceMap
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme
