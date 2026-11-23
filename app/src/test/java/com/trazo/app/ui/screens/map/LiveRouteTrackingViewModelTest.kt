@@ -247,4 +247,86 @@ class LiveRouteTrackingViewModelTest {
             assertEquals(RunState.PAUSED, viewModel.uiState.value.runState)
             assertTrue(viewModel.uiState.value.canResume)
         }
+
+    private fun runWithGoal(
+        id: String = "session-1",
+        distanceMeters: Double,
+        goalReached: Boolean,
+    ) = RunSession.ActiveSession(
+        id = id,
+        goal = RunGoal.THREE_KILOMETERS,
+        state = RunState.ACTIVE,
+        metrics = RunMetrics(distanceMeters = distanceMeters),
+        goalReached = goalReached,
+        startMonotonicTimestamp = 1000L,
+        startedAt = Clock.System.now(),
+    )
+
+    // El aviso de meta cumplida aparece una sola vez por recorrido: seguir sumando metros no lo reabre.
+    @Test
+    fun goalCelebration_afterDismissing_doesNotShowAgainInTheSameRun() =
+        runTest {
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiState.collect {}
+            }
+            fakeRepository.setSession(runWithGoal(distanceMeters = 3050.0, goalReached = true))
+            testScheduler.advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.showGoalCelebration)
+
+            viewModel.onCelebrationDismissed()
+            fakeRepository.setSession(runWithGoal(distanceMeters = 3400.0, goalReached = true))
+            testScheduler.advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.showGoalCelebration)
+            assertTrue(viewModel.uiState.value.goalReached)
+        }
+
+    // Al volver a Idle (recorrido terminado o descartado) el aviso se rearma para el recorrido siguiente.
+    @Test
+    fun goalCelebration_afterReturningToIdle_showsAgainInTheNextRun() =
+        runTest {
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiState.collect {}
+            }
+            fakeRepository.setSession(runWithGoal(distanceMeters = 3050.0, goalReached = true))
+            testScheduler.advanceUntilIdle()
+            viewModel.onCelebrationDismissed()
+
+            fakeRepository.resetToIdle()
+            testScheduler.advanceUntilIdle()
+            assertFalse(viewModel.uiState.value.showGoalCelebration)
+
+            fakeRepository.setSession(runWithGoal(id = "session-2", distanceMeters = 100.0, goalReached = false))
+            testScheduler.advanceUntilIdle()
+            assertFalse(viewModel.uiState.value.showGoalCelebration)
+
+            fakeRepository.setSession(runWithGoal(id = "session-2", distanceMeters = 3010.0, goalReached = true))
+            testScheduler.advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.showGoalCelebration)
+        }
+
+    // «Cancelar» en el diálogo de finalizar cierra el diálogo y deja el recorrido como estaba.
+    @Test
+    fun onCancelFinish_closesTheDialog_andKeepsTheRunAsItWas() =
+        runTest {
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiState.collect {}
+            }
+            val session = runWithGoal(distanceMeters = 1200.0, goalReached = false)
+            fakeRepository.setSession(session)
+            testScheduler.advanceUntilIdle()
+            viewModel.onFinishRequested()
+            testScheduler.advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.showFinishConfirmDialog)
+
+            viewModel.onCancelFinish()
+            testScheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertFalse(state.showFinishConfirmDialog)
+            assertFalse(state.suppressed)
+            assertEquals(RunState.ACTIVE, state.runState)
+            assertTrue(state.canFinish)
+            assertEquals(session, fakeRepository.activeSession.value)
+        }
 }
