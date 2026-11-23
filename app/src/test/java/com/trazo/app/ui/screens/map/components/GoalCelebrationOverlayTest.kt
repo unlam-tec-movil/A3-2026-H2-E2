@@ -1,6 +1,11 @@
 package com.trazo.app.ui.screens.map.components
 
 import android.content.Context
+import android.provider.Settings
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -96,5 +101,54 @@ class GoalCelebrationOverlayTest {
         // Then
         assertEquals(1, dismissals)
         assertEquals(0, finishes)
+    }
+
+    /** Muestra la celebración, la oculta y avanza 100 ms: con fadeOut todavía se está yendo. */
+    private fun hideAndAdvanceShortly() {
+        var visible by mutableStateOf(true)
+        composeTestRule.setContent {
+            TrazoTheme {
+                GoalCelebrationOverlay(
+                    showCelebration = visible,
+                    goal = RunGoal.FIVE_KILOMETERS,
+                    onDismiss = {},
+                    onFinish = {},
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.mainClock.autoAdvance = false
+
+        visible = false
+        // Con el reloj en pausa, el cambio se avisa a mano para que llegue a la composición.
+        Snapshot.sendApplyNotifications()
+        composeTestRule.mainClock.advanceTimeBy(100L)
+    }
+
+    @Test
+    fun `given reduce motion is on, when the celebration hides, then it disappears without fading`() {
+        // Given
+        Settings.Global.putFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
+
+        // When
+        hideAndAdvanceShortly()
+
+        // Then
+        composeTestRule.onNodeWithText(context.getString(R.string.map_celebration_title)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `given reduce motion is off, when the celebration hides, then it fades out`() {
+        // Given
+        Settings.Global.putFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+
+        // When
+        hideAndAdvanceShortly()
+
+        // Then: sigue en pantalla mientras se desvanece y después desaparece.
+        val title = composeTestRule.onNodeWithText(context.getString(R.string.map_celebration_title))
+        title.assertExists()
+        composeTestRule.mainClock.advanceTimeBy(2_000L)
+        title.assertDoesNotExist()
     }
 }
