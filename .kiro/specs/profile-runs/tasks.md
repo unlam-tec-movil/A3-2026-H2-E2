@@ -133,15 +133,15 @@
   - _Depends: 5.1, 5.2_
   - _Requirements: 5.1, 5.3, 5.4, 5.6, 5.7_
 
-- [ ] 6. Abrir el detalle tocando una traza (HU-12, recortable)
-- [ ] 6.1 (P) Búsqueda de la traza tocada
+- [x] 6. Abrir el detalle tocando una traza (HU-12, recortable)
+- [x] 6.1 (P) Búsqueda de la traza tocada
   - Crear la regla pura que dice si la traza de un recorrido pasa a una distancia dada de un punto y que elige, entre los que coinciden, el recorrido más reciente. Una traza de menos de 2 puntos nunca coincide.
   - Escribir primero los tests unitarios: punto sobre la traza, fuera de la tolerancia, traza de 1 punto, dos trazas cruzadas (gana la más reciente) y lista vacía.
   - Listo cuando los tests de la regla pasan.
   - _Boundary: SavedRunTraceHit_
   - _Requirements: 5.2, 5.9_
 
-- [ ] 6.2 (P) Toque sobre el mapa con tolerancia en metros
+- [x] 6.2 (P) Toque sobre el mapa con tolerancia en metros
   - Agregar a la utilidad de proyección la conversión inversa a latitud y longitud y el cálculo de metros por pixel al zoom actual.
   - Hacer que la capa del mapa avise cada toque con latitud, longitud y una tolerancia equivalente a 24 dp.
   - Listo cuando un test de proyección confirma que convertir y volver da el mismo punto y que un toque en el mapa informa coordenadas y tolerancia.
@@ -149,7 +149,7 @@
   - _Depends: 5.2_
   - _Requirements: 5.2_
 
-- [ ] 6.3 Resolver el toque y abrir el detalle
+- [x] 6.3 Resolver el toque y abrir el detalle
   - Escribir primero los tests unitarios del ViewModel del mapa: toque sobre una traza emite el aviso de abrir ese recorrido, toque lejos de toda traza no emite nada, toque sin trazas dibujadas no emite nada y, con varias coincidencias, se abre el más reciente.
   - Hacer que el ViewModel resuelva el toque con la regla del recorrido más reciente, emita el aviso, y que Actividad y la app lo conecten con el modal de detalle ya integrado.
   - Verificar que al cerrar el detalle se vuelve al mapa con las trazas intactas.
@@ -158,15 +158,15 @@
   - _Depends: 4.1, 5.3, 6.1, 6.2_
   - _Requirements: 5.2, 5.7, 5.9_
 
-- [ ] 7. Validación
-- [ ] 7.1 Revisión de calidad del conjunto
+- [x] 7. Validación
+- [x] 7.1 Revisión de calidad del conjunto
   - Correr de a uno `./gradlew :app:ktlintCheck`, `:app:lint`, `:app:testDebugUnitTest` y `:app:assembleDebug`, y corregir lo que aparezca.
   - Revisar que no queden textos fijos en el código, colores ni medidas sueltas, y que esta spec no llame a la escritura del repositorio.
   - Listo cuando los cuatro comandos terminan sin errores.
   - _Depends: 6.3_
   - _Requirements: 6.1, 6.2_
 
-- [ ] 7.2 Pruebas de accesibilidad y recorrido completo
+- [x] 7.2 Pruebas de accesibilidad y recorrido completo
   - Agregar tests instrumentados de Perfil y del detalle con fuente al 200 % y con descripciones accesibles, y verificar el recorrido completo con un recorrido de prueba: lista, detalle, cierre, totales y, con la ubicación precisa, trazas en Actividad.
   - Probar con «Quitar animaciones» activado que abrir y cerrar el detalle no agrega animaciones propias.
   - Listo cuando `./gradlew :app:connectedDebugAndroidTest` pasa para las pantallas de esta spec.

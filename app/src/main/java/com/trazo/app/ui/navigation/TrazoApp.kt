@@ -88,6 +88,7 @@ fun TrazoApp() {
             MapScreen(
                 onStartRunClick = startRunViewModel::onOptionClick,
                 onNavigateToResults = { summary -> onNavigateToResult(summary.id) },
+                onSavedRunClick = runDetailViewModel::open,
                 startRunFab = startRunFab,
                 gpsWaitingNotice = gpsWaitingNotice,
                 stopDetectionOverlay = { suppressed, overlayModifier ->

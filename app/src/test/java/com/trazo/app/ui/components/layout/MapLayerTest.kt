@@ -106,6 +106,34 @@ class MapLayerTest {
     }
 
     @Test
+    fun `given a tap on the map, when resolved, then reports the coordinates and a 24 dp tolerance in meters`() {
+        // Given
+        val tapped = WebMercator.normalize(-34.6037, -58.3816)
+        val scale = WebMercator.scaleForZoom(15)
+
+        // When
+        val tap = resolveMapTap(tapped.x, tapped.y, scale, density = 2f)
+
+        // Then
+        assertEquals(-34.6037, tap.latitude, 1e-7)
+        assertEquals(-58.3816, tap.longitude, 1e-7)
+        assertEquals(48.0 * WebMercator.metersPerPixel(-34.6037, scale), tap.toleranceMeters, 1e-9)
+    }
+
+    @Test
+    fun `given a closer zoom, when a tap is resolved, then the tolerance in meters is smaller`() {
+        // Given
+        val point = WebMercator.normalize(-34.6037, -58.3816)
+
+        // When
+        val far = resolveMapTap(point.x, point.y, WebMercator.scaleForZoom(12), density = 2f)
+        val near = resolveMapTap(point.x, point.y, WebMercator.scaleForZoom(16), density = 2f)
+
+        // Then
+        assertEquals(far.toleranceMeters / 16, near.toleranceMeters, 1e-9)
+    }
+
+    @Test
     fun `given a runner that is not followed, when the location changes, then the map is still displayed`() {
         // Given / When
         showMap(currentLocation = point(-34.6037, -58.3816), centered = false)

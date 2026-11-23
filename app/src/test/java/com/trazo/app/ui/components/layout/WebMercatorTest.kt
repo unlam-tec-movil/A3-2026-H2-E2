@@ -130,6 +130,51 @@ class WebMercatorTest {
         assertTrue(framing.scale > 0.0)
     }
 
+    // --- Toque sobre el mapa (requisito 5.2) ---
+
+    @Test
+    fun denormalize_roundTripsNormalize() {
+        listOf(-34.6037 to -58.3816, 0.0 to 0.0, 40.4168 to -3.7038, -54.8 to 68.3).forEach { (lat, lon) ->
+            val point = WebMercator.normalize(lat, lon)
+            val back = WebMercator.denormalize(point.x, point.y)
+
+            assertEquals("lat $lat", lat, back.latitude, 1e-7)
+            assertEquals("lon $lon", lon, back.longitude, 1e-7)
+        }
+    }
+
+    @Test
+    fun denormalize_centerIsTheOrigin() {
+        val origin = WebMercator.denormalize(0.5, 0.5)
+
+        assertEquals(0.0, origin.latitude, delta)
+        assertEquals(0.0, origin.longitude, delta)
+    }
+
+    @Test
+    fun metersPerPixel_atTheEquatorAtMaxZoom() {
+        // Circunferencia terrestre / ancho del mundo en px al nivel 16 con tiles de 512 px.
+        val expected = 2 * Math.PI * 6_378_137.0 / WebMercator.FULL_SIZE
+
+        assertEquals(expected, WebMercator.metersPerPixel(0.0, 1.0), 1e-9)
+    }
+
+    @Test
+    fun metersPerPixel_halvesWhenScaleDoubles() {
+        val base = WebMercator.metersPerPixel(-34.6, 1.0)
+
+        assertEquals(base / 2, WebMercator.metersPerPixel(-34.6, 2.0), 1e-12)
+    }
+
+    @Test
+    fun metersPerPixel_shrinksWithLatitude() {
+        assertEquals(
+            WebMercator.metersPerPixel(0.0, 1.0) * kotlin.math.cos(Math.toRadians(60.0)),
+            WebMercator.metersPerPixel(60.0, 1.0),
+            1e-9,
+        )
+    }
+
     @Test
     fun fullSize_matchesTileGrid() {
         assertEquals(WebMercator.TILE_SIZE.toLong() shl WebMercator.MAX_ZOOM, WebMercator.FULL_SIZE.toLong())

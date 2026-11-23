@@ -25,11 +25,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -48,7 +50,9 @@ import ovh.plrapps.mapcompose.api.hasMarker
 import ovh.plrapps.mapcompose.api.hasPath
 import ovh.plrapps.mapcompose.api.makePathDataBuilder
 import ovh.plrapps.mapcompose.api.moveMarker
+import ovh.plrapps.mapcompose.api.onTap
 import ovh.plrapps.mapcompose.api.removePath
+import ovh.plrapps.mapcompose.api.scale
 import ovh.plrapps.mapcompose.api.scrollTo
 import ovh.plrapps.mapcompose.api.updatePath
 import ovh.plrapps.mapcompose.ui.MapUI
@@ -86,6 +90,7 @@ fun MapLayer(
     onMapDragged: () -> Unit,
     modifier: Modifier = Modifier,
     savedTraces: Map<String, List<RoutePoint>> = emptyMap(),
+    onMapTap: (latitude: Double, longitude: Double, toleranceMeters: Double) -> Unit = { _, _, _ -> },
     belowCenterButton: @Composable () -> Unit = {},
     bottomContent: @Composable () -> Unit = {},
 ) {
@@ -94,6 +99,16 @@ fun MapLayer(
 
     // Cualquier toque del corredor sobre el mapa deja de seguir su posición.
     val mapState = rememberTrazoMapState(onTouchDown = onMapDragged)
+
+    // Cada toque se informa con latitud, longitud y una tolerancia equivalente a 24 dp al zoom actual.
+    val currentOnMapTap by rememberUpdatedState(onMapTap)
+    val density = LocalDensity.current.density
+    LaunchedEffect(mapState) {
+        mapState.onTap { x, y ->
+            val tap = resolveMapTap(x, y, mapState.scale, density)
+            currentOnMapTap(tap.latitude, tap.longitude, tap.toleranceMeters)
+        }
+    }
 
     var hasCenteredInitially by remember { mutableStateOf(false) }
 
@@ -270,6 +285,31 @@ private fun RunnerPin(description: String) {
                     .border(width = RunnerPinBorder, color = MaterialTheme.colorScheme.onPrimary, shape = CircleShape),
         )
     }
+}
+
+/** Tolerancia de un toque sobre una traza, en dp (cubre el dedo sin pedir precisión). */
+internal const val MAP_TAP_TOLERANCE_DP = 24f
+
+/** Toque en el mapa ya convertido: punto geográfico y tolerancia en metros. */
+internal data class MapTap(
+    val latitude: Double,
+    val longitude: Double,
+    val toleranceMeters: Double,
+)
+
+/**
+ * Convierte un toque en coordenadas normalizadas ([x], [y]) en latitud, longitud y la tolerancia en metros
+ * equivalente a [MAP_TAP_TOLERANCE_DP] con la [scale] actual del mapa y la [density] de la pantalla.
+ */
+internal fun resolveMapTap(
+    x: Double,
+    y: Double,
+    scale: Double,
+    density: Float,
+): MapTap {
+    val point = WebMercator.denormalize(x, y)
+    val toleranceMeters = MAP_TAP_TOLERANCE_DP * density * WebMercator.metersPerPixel(point.latitude, scale)
+    return MapTap(point.latitude, point.longitude, toleranceMeters)
 }
 
 /** Id del path de la traza guardada del recorrido [runId]; no choca con los paths del trazo en vivo. */
