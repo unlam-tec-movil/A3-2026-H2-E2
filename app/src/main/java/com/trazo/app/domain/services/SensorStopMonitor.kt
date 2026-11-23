@@ -176,6 +176,8 @@ internal suspend fun RunSessionRepository.publishStopState(
     if (session.id != runId) return rejected("El recorrido cambió.")
 
     return when (session.state to state) {
+        // El corredor ya reanudó a mano desde una pausa personal: no hay nada que publicar.
+        RunState.ACTIVE to RunState.ACTIVE -> Result.success(Unit)
         RunState.ACTIVE to RunState.STOPPED -> markStopped()
         RunState.STOPPED to RunState.ACTIVE,
         RunState.PERSONAL_PAUSED to RunState.ACTIVE,

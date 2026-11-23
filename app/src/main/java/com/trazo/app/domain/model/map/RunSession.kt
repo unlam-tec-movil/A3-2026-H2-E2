@@ -120,7 +120,16 @@ sealed interface RunSession {
         }
 
         /** Calidad de señal informada por el GPS. Si no [isTracking], no cambia nada. */
-        fun withGpsQuality(quality: GpsQuality): ActiveSession = if (isTracking) copy(gpsQuality = quality) else this
+        fun withGpsQuality(
+            quality: GpsQuality,
+            nowMillis: Long,
+        ): ActiveSession =
+            when {
+                !isTracking -> this
+                // Puntos imprecisos no renuevan la señal: mientras siga perdida, no se pasa a «débil».
+                isSignalLostAt(nowMillis) -> copy(gpsQuality = GpsQuality.NO_SIGNAL)
+                else -> copy(gpsQuality = quality)
+            }
 
         /**
          * Resumen final del recorrido, con las métricas cerradas en [nowMillis]. Las frenadas y la
@@ -128,7 +137,7 @@ sealed interface RunSession {
          */
         fun toFrozenSummary(
             nowMillis: Long,
-            brakes: List<BrakeEvent> = emptyList(),
+            brakes: List<BrakeEvent>? = emptyList(),
             regularityPercent: Int? = null,
         ): FrozenRunSummary =
             FrozenRunSummary(

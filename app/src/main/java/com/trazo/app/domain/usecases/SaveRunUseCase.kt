@@ -47,7 +47,8 @@ class SaveRunUseCase
                     elapsedTimeSeconds = summary.metrics.elapsedTimeSeconds,
                     averageSpeedKmh = summary.metrics.averageSpeedKmh,
                     routePoints = summary.routePoints,
-                    brakes = summary.brakes,
+                    // SavedRun todavía no distingue «sin dato» (null, sin acelerómetro) de 0 frenadas.
+                    brakes = summary.brakes.orEmpty(),
                     regularityPercent = summary.regularityPercent,
                     highlights = highlights,
                     photoPaths = photoPaths,

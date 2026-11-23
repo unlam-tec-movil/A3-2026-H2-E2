@@ -1,10 +1,15 @@
 package com.trazo.app.ui.components.layout
 
 import kotlin.math.PI
+import kotlin.math.atan
 import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.pow
+import kotlin.math.sinh
 import kotlin.math.tan
+
+/** Radio ecuatorial de la esfera de Web Mercator, en metros. */
+private const val EARTH_RADIUS_METERS = 6_378_137.0
 
 /**
  * Proyección Web Mercator (la de los tiles de CARTO/OSM) a las coordenadas normalizadas
@@ -52,6 +57,27 @@ object WebMercator {
 
         return NormalizedPoint(x = x.coerceIn(0.0, 1.0), y = y.coerceIn(0.0, 1.0))
     }
+
+    data class GeoPoint(
+        val latitude: Double,
+        val longitude: Double,
+    )
+
+    /** Conversión inversa de [normalize]: de coordenadas normalizadas de MapCompose a latitud y longitud. */
+    fun denormalize(
+        x: Double,
+        y: Double,
+    ): GeoPoint {
+        val longitude = x * 360.0 - 180.0
+        val latitude = Math.toDegrees(atan(sinh(PI * (1.0 - 2.0 * y))))
+        return GeoPoint(latitude = latitude, longitude = longitude)
+    }
+
+    /** Metros que cubre un pixel a [latitude] con la [scale] de MapCompose (1.0 en [MAX_ZOOM]). */
+    fun metersPerPixel(
+        latitude: Double,
+        scale: Double,
+    ): Double = 2 * PI * EARTH_RADIUS_METERS * cos(Math.toRadians(latitude)) / (FULL_SIZE * scale)
 
     /** Escala de MapCompose equivalente a un zoom de tiles: 1.0 en [MAX_ZOOM]. */
     fun scaleForZoom(zoom: Int): Double = 2.0.pow(zoom - MAX_ZOOM)

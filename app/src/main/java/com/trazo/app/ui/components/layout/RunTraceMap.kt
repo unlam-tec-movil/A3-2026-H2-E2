@@ -37,6 +37,9 @@ import ovh.plrapps.mapcompose.ui.MapUI
 private const val TRACE_OUTLINE_PATH_ID = "trace-outline"
 private const val TRACE_PATH_ID = "trace"
 
+/** Ancho extra del contorno respecto del trazo. */
+private val TraceOutlineExtraWidth = 2.dp
+
 /**
  * Mapa de solo lectura del detalle de un recorrido guardado: dibuja la traza completa, encuadrada con su
  * rectángulo. No tiene pin, botones ni sigue al corredor; solo muestra la atribución del proveedor de tiles.
@@ -79,7 +82,7 @@ fun RunTraceMap(
         mapState.addPath(
             id = TRACE_OUTLINE_PATH_ID,
             pathData = pathData,
-            width = Sizes.traceLiveWidth + 2.dp,
+            width = Sizes.traceLiveWidth + TraceOutlineExtraWidth,
             color = traceOutlineColor,
             zIndex = 0f,
         )

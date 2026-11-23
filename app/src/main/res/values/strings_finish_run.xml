@@ -7,7 +7,6 @@
     <string name="result_distance">Distancia</string>
     <string name="result_time">Tiempo</string>
     <string name="result_regularity">Regularidad</string>
-    <string name="result_unavailable">No disponible</string>
     <string name="result_continue">Continuar</string>
     <string name="result_goal_check_description">Meta cumplida</string>
 </resources>

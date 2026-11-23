@@ -75,6 +75,17 @@ class SaveRunUseCaseTest {
             assertEquals(SaveRunResult.RunNotFound, result)
         }
 
+    @Test
+    fun `sin acelerometro las frenadas sin dato se guardan como lista vacia`() =
+        runTest {
+            runSessions.putFinishedSummary(summary().copy(brakes = null))
+
+            val result = useCase("r1", "Mi carrera", emptyList(), emptyList())
+
+            assertEquals(SaveRunResult.Saved, result)
+            assertEquals(emptyList<BrakeEvent>(), savedRuns.getById("r1")?.brakes)
+        }
+
     private fun summary() =
         FrozenRunSummary(
             id = "r1",

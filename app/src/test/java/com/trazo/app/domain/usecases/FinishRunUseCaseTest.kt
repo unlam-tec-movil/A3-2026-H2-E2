@@ -71,7 +71,7 @@ class FinishRunUseCaseTest {
         atMillis: Long = 0L,
     ) = BrakeEvent(id = id, runId = runId, location = null, detectedAtMillis = atMillis)
 
-    private fun ids(summary: FrozenRunSummary) = summary.brakes.map { it.id }
+    private fun ids(summary: FrozenRunSummary) = summary.brakes.orEmpty().map { it.id }
 
     private fun braking(brake: BrakeEvent) =
         StopDetectionState(StopPhase.Braking(sinceMillis = 0L, brake = brake, query = QueryStatus.PENDING))
@@ -165,6 +165,19 @@ class FinishRunUseCaseTest {
             runSteadily(25_000)
 
             assertNull(finish().getOrThrow().regularityPercent)
+        }
+
+    @Test
+    fun `sin acelerometro las frenadas quedan sin dato y no en cero`() =
+        runTest {
+            val finish = useCase(sensorAvailable = false)
+            runs.setActive(RUN_ID)
+            brakes.save(brake("b1"))
+
+            val summary = finish().getOrThrow()
+
+            assertNull(summary.brakes)
+            assertNull(summary.brakeCount)
         }
 
     @Test

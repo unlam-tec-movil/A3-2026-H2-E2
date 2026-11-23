@@ -26,7 +26,6 @@ import com.trazo.app.ui.theme.TrazoTheme
 fun StopDetectionOverlay(
     suppressed: Boolean,
     modifier: Modifier = Modifier,
-    // TODO(4.3): requiere @HiltViewModel en StopDetectionViewModel y el binding del repositorio.
     viewModel: StopDetectionViewModel = hiltViewModel(),
 ) {
     LaunchedEffect(suppressed) { viewModel.onSuppressedChanged(suppressed) }

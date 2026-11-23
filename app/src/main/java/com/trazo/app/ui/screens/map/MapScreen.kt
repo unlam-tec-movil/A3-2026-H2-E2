@@ -5,11 +5,15 @@ import android.view.WindowManager
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,6 +40,7 @@ import com.trazo.app.ui.components.layout.GpsIndicator
 import com.trazo.app.ui.components.layout.MapLayer
 import com.trazo.app.ui.components.layout.RunControls
 import com.trazo.app.ui.components.layout.RunPanel
+import com.trazo.app.ui.screens.map.components.MotionSensorMissingNotice
 import com.trazo.app.ui.theme.Spacing
 
 @Composable
@@ -43,16 +48,21 @@ fun MapScreen(
     onStartRunClick: () -> Unit,
     onNavigateToResults: (FrozenRunSummary) -> Unit,
     modifier: Modifier = Modifier,
+    onSavedRunClick: (String) -> Unit = {},
     shortRunNotice: (@Composable (onDiscard: () -> Unit, onReturn: () -> Unit) -> Unit)? = null,
     // Piezas de start-run armadas por TrazoApp: el botón «+» y el aviso «Esperando señal GPS».
     startRunFab: @Composable (Modifier) -> Unit = {},
     gpsWaitingNotice: @Composable (Modifier) -> Unit = {},
+    // Pieza de stop-detection armada por TrazoApp: alerta de frenada y consulta. Con `suppressed` no se ve.
+    stopDetectionOverlay: @Composable (suppressed: Boolean, Modifier) -> Unit = { _, _ -> },
     viewModel: LiveRouteTrackingViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
 
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val permissionLostMessage = stringResource(R.string.map_location_permission_lost)
 
     DisposableEffect(activity, uiState.hasActiveRun) {
         if (activity != null && uiState.hasActiveRun) {
@@ -77,12 +87,12 @@ fun MapScreen(
                     onStartRunClick()
                 }
 
-                is LiveRouteTrackingUiEffect.ReturnToIdleMap -> {
-                    // Retorno a estado de mapa sin carrera
+                is LiveRouteTrackingUiEffect.OpenSavedRun -> {
+                    onSavedRunClick(effect.runId)
                 }
 
                 is LiveRouteTrackingUiEffect.ShowLocationPermissionLostMessage -> {
-                    // Aviso de pérdida de permisos de ubicación
+                    snackbarHostState.showSnackbar(permissionLostMessage, duration = SnackbarDuration.Long)
                 }
             }
         }
@@ -115,10 +125,17 @@ fun MapScreen(
             onCenterMapClicked = { viewModel.onCenterMapClicked() },
             onMapDragged = { viewModel.onMapDragged() },
             savedTraces = savedTraces,
+            onMapTap = viewModel::onMapTapped,
             // El «+» va entre «Centrar» y el panel del temporizador.
             belowCenterButton = { startRunFab(Modifier) },
         ) {
             gpsWaitingNotice(Modifier.padding(bottom = Spacing.md))
+            stopDetectionOverlay(
+                uiState.suppressed,
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = Spacing.md),
+            )
             RunPanel(uiState = uiState) {
                 RunControls(
                     uiState = uiState,
@@ -140,8 +157,20 @@ fun MapScreen(
                 GpsIndicator(
                     gpsQuality = uiState.gpsQuality,
                 )
+                if (uiState.showMotionSensorMissing) {
+                    MotionSensorMissingNotice(modifier = Modifier.padding(top = Spacing.sm))
+                }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(Spacing.lg),
+        )
 
         FinishConfirmDialog(
             showFinishConfirmDialog = uiState.showFinishConfirmDialog,

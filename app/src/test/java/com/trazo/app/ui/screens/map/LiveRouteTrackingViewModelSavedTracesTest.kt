@@ -7,7 +7,6 @@ import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.saved.SavedRun
-import com.trazo.app.domain.usecases.testFinishRunUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -43,12 +42,7 @@ class LiveRouteTrackingViewModelSavedTracesTest {
 
     private fun TestScope.subscribedViewModel(): LiveRouteTrackingViewModel {
         val viewModel =
-            LiveRouteTrackingViewModel(
-                runSessionRepository = sessionRepository,
-                locationRepository = locationRepository,
-                finishRun = testFinishRunUseCase(sessionRepository),
-                savedRunRepository = savedRunRepository,
-            )
+            testLiveRouteTrackingViewModel(sessionRepository, locationRepository, savedRunRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -186,6 +180,92 @@ class LiveRouteTrackingViewModelSavedTracesTest {
             savedRunRepository.save(run("nuevo", startedAtSeconds = 1_700_200_000L))
 
             assertEquals(listOf("nuevo", "a"), viewModel.traceIds())
+        }
+
+    // --- Toque sobre una traza (requisitos 5.2 y 5.9) ---
+
+    /** Recorrido de este test con una traza propia: tramo horizontal sobre [latitude], de lon -58,40 a -58,39. */
+    private fun horizontalRun(
+        id: String,
+        startedAtSeconds: Long,
+        latitude: Double,
+    ) = run(id, startedAtSeconds).copy(
+        routePoints =
+            listOf(
+                RoutePoint(latitude, -58.40, 5f, 2f, 0L),
+                RoutePoint(latitude, -58.39, 5f, 2f, 1L),
+            ),
+    )
+
+    private fun TestScope.collectEffects(viewModel: LiveRouteTrackingViewModel): List<LiveRouteTrackingUiEffect> {
+        val effects = mutableListOf<LiveRouteTrackingUiEffect>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiEffect.collect { effects += it } }
+        return effects
+    }
+
+    @Test
+    fun `tocar sobre una traza abre ese recorrido`() =
+        runTest {
+            savedRunRepository.save(horizontalRun("a", 1_700_000_000L, latitude = -34.60))
+            savedRunRepository.save(horizontalRun("b", 1_700_100_000L, latitude = -34.62))
+            val viewModel = subscribedViewModel()
+            val effects = collectEffects(viewModel)
+
+            viewModel.onMapTapped(latitude = -34.60, longitude = -58.395, toleranceMeters = 24.0)
+
+            assertEquals(listOf<LiveRouteTrackingUiEffect>(LiveRouteTrackingUiEffect.OpenSavedRun("a")), effects)
+        }
+
+    @Test
+    fun `tocar lejos de toda traza no emite nada`() =
+        runTest {
+            savedRunRepository.save(horizontalRun("a", 1_700_000_000L, latitude = -34.60))
+            val viewModel = subscribedViewModel()
+            val effects = collectEffects(viewModel)
+
+            viewModel.onMapTapped(latitude = -34.70, longitude = -58.395, toleranceMeters = 24.0)
+
+            assertTrue(effects.isEmpty())
+        }
+
+    @Test
+    fun `tocar sin trazas dibujadas no emite nada`() =
+        runTest {
+            savedRunRepository.save(horizontalRun("a", 1_700_000_000L, latitude = -34.60))
+            locationStatus = LocationStatus.APPROXIMATE_ONLY
+            val viewModel = subscribedViewModel()
+            val effects = collectEffects(viewModel)
+
+            viewModel.onMapTapped(latitude = -34.60, longitude = -58.395, toleranceMeters = 24.0)
+
+            assertTrue(effects.isEmpty())
+        }
+
+    @Test
+    fun `tocar con un recorrido en curso no emite nada`() =
+        runTest {
+            savedRunRepository.save(horizontalRun("a", 1_700_000_000L, latitude = -34.60))
+            sessionRepository.setActive(id = "en-curso")
+            val viewModel = subscribedViewModel()
+            val effects = collectEffects(viewModel)
+
+            viewModel.onMapTapped(latitude = -34.60, longitude = -58.395, toleranceMeters = 24.0)
+
+            assertTrue(effects.isEmpty())
+        }
+
+    @Test
+    fun `con varias coincidencias se abre el recorrido mas reciente`() =
+        runTest {
+            savedRunRepository.save(horizontalRun("viejo", 1_700_000_000L, latitude = -34.60))
+            savedRunRepository.save(horizontalRun("nuevo", 1_700_200_000L, latitude = -34.60))
+            savedRunRepository.save(horizontalRun("medio", 1_700_100_000L, latitude = -34.60))
+            val viewModel = subscribedViewModel()
+            val effects = collectEffects(viewModel)
+
+            viewModel.onMapTapped(latitude = -34.60, longitude = -58.395, toleranceMeters = 24.0)
+
+            assertEquals(listOf<LiveRouteTrackingUiEffect>(LiveRouteTrackingUiEffect.OpenSavedRun("nuevo")), effects)
         }
 
     @Test

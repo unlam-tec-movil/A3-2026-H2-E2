@@ -69,6 +69,6 @@ class ResultContentTest {
     fun missingRegularity_showsUnavailable() {
         setContent(goalState.copy(regularityText = null))
 
-        composeTestRule.onNodeWithText(string(R.string.result_unavailable)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(string(R.string.run_value_no_data)).assertIsDisplayed()
     }
 }

@@ -113,7 +113,7 @@ class FakeRunSessionRepository : RunSessionRepository {
     var failNextFinish = false
 
     override suspend fun finishSession(
-        brakes: List<BrakeEvent>,
+        brakes: List<BrakeEvent>?,
         regularityPercent: Int?,
     ): Result<FrozenRunSummary> {
         if (failNextFinish) {
@@ -154,6 +154,8 @@ class FakeRunSessionRepository : RunSessionRepository {
         summaryLookups += id
         return summaries[id]
     }
+
+    override fun removeFinishedSummary(id: String): Boolean = summaries.remove(id) != null
 
     private companion object {
         /** Reloj fijo de las transiciones: el fake no mide tiempo. */

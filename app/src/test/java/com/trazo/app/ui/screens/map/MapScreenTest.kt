@@ -24,7 +24,6 @@ import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.saved.SavedRun
-import com.trazo.app.domain.usecases.testFinishRunUseCase
 import com.trazo.app.ui.theme.TrazoTheme
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -48,13 +47,8 @@ class MapScreenTest {
     private var locationStatus = LocationStatus.READY
     private val silentLocationRepository = FakeLocationRepository(locationStatus = { locationStatus })
 
-    private fun createViewModel() =
-        LiveRouteTrackingViewModel(
-            runSessionRepository = repository,
-            locationRepository = silentLocationRepository,
-            finishRun = testFinishRunUseCase(repository),
-            savedRunRepository = savedRunRepository,
-        )
+    private fun createViewModel(sensorAvailable: Boolean = true) =
+        testLiveRouteTrackingViewModel(repository, silentLocationRepository, savedRunRepository, sensorAvailable)
 
     private fun activeSession() =
         RunSession.ActiveSession(
@@ -65,6 +59,8 @@ class MapScreenTest {
             startedAt = Clock.System.now(),
         )
 
+    private var overlaySuppressed: Boolean? = null
+
     private fun showScreen(viewModel: LiveRouteTrackingViewModel = createViewModel()) {
         composeTestRule.setContent {
             TrazoTheme {
@@ -73,6 +69,10 @@ class MapScreenTest {
                     onNavigateToResults = {},
                     startRunFab = { Text("start-run-fab") },
                     gpsWaitingNotice = { Text("gps-waiting") },
+                    stopDetectionOverlay = { suppressed, _ ->
+                        overlaySuppressed = suppressed
+                        Text("stop-detection-overlay")
+                    },
                     viewModel = viewModel,
                 )
             }
@@ -165,6 +165,44 @@ class MapScreenTest {
 
         // Then
         assertEquals(RunSession.Idle, repository.activeSession.value)
+    }
+
+    @Test
+    fun `given the map screen, when it is shown, then mounts the stop detection overlay unsuppressed`() {
+        // Given / When
+        showScreen()
+
+        // Then
+        composeTestRule.onNodeWithText("stop-detection-overlay").assertIsDisplayed()
+        assertEquals(false, overlaySuppressed)
+    }
+
+    @Test
+    fun `given a short run, when the short run dialog opens, then the stop detection overlay is suppressed`() {
+        // Given
+        repository.setSession(activeSession())
+        val viewModel = createViewModel()
+        showScreen(viewModel)
+
+        // When
+        viewModel.onFinishRequested()
+        composeTestRule.waitForIdle()
+
+        // Then
+        assertEquals(true, overlaySuppressed)
+    }
+
+    @Test
+    fun `given a device without accelerometer and an active run, when the map is shown, then shows the missing sensor notice`() {
+        // Given
+        repository.setSession(activeSession())
+        val viewModel = createViewModel(sensorAvailable = false)
+
+        // When
+        showScreen(viewModel)
+
+        // Then
+        composeTestRule.onNodeWithText(context.getString(R.string.map_motion_sensor_missing_title)).assertIsDisplayed()
     }
 
     private fun savedRun(

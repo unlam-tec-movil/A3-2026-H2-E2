@@ -12,6 +12,8 @@ import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
+import com.trazo.app.domain.model.saved.mostRecentNear
+import com.trazo.app.domain.services.RegularityMonitor
 import com.trazo.app.domain.usecases.FinishRunUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,6 +42,7 @@ class LiveRouteTrackingViewModel
         private val locationRepository: LocationRepository,
         private val finishRun: FinishRunUseCase,
         private val savedRunRepository: SavedRunRepository,
+        private val regularityMonitor: RegularityMonitor,
     ) : ViewModel() {
         private val activeSessionFlow = runSessionRepository.activeSession
 
@@ -54,19 +57,18 @@ class LiveRouteTrackingViewModel
 
         private val locationStatusFlow = MutableStateFlow(locationRepository.readLocationStatus())
 
-        /** Trazas a dibujar: hay recorridos guardados, ningún recorrido en curso y ubicación precisa. */
-        private val savedTracesFlow =
+        /** Recorridos cuyas trazas se dibujan: hay guardados, ningún recorrido en curso y ubicación precisa. */
+        private val displayedRunsFlow =
             combine(
                 savedRunRepository.runs,
                 isRunInProgressFlow,
                 locationStatusFlow,
             ) { runs, isRunInProgress, locationStatus ->
-                if (isRunInProgress || locationStatus != LocationStatus.READY) {
-                    emptyList()
-                } else {
-                    runs.map { SavedTraceUi(id = it.id, points = it.routePoints) }
-                }
-            }
+                if (isRunInProgress || locationStatus != LocationStatus.READY) emptyList() else runs
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+        private val savedTracesFlow =
+            displayedRunsFlow.map { runs -> runs.map { SavedTraceUi(id = it.id, points = it.routePoints) } }
 
         private val _uiEffect = Channel<LiveRouteTrackingUiEffect>(Channel.BUFFERED)
 
@@ -139,32 +141,34 @@ class LiveRouteTrackingViewModel
                 }
             }
 
+        /** Estado de los diálogos y avisos de finalizar, agrupado para que el `combine` de [uiState] quede tipado. */
+        private val finishDialogsFlow =
+            combine(
+                showFinishConfirmDialogFlow,
+                showShortRunDialogFlow,
+                showGoalCelebrationFlow,
+                finishFailedFlow,
+                isFinishingFlow,
+                ::FinishDialogs,
+            )
+
+        /** Lo que el mapa muestra además del recorrido: centrado, trazas guardadas y aviso sin sensor. */
+        private val mapExtrasFlow =
+            combine(
+                isMapCenteredOnRunnerFlow,
+                savedTracesFlow,
+                regularityMonitor.state.map { it.sensorAvailable },
+                ::MapExtras,
+            )
+
         val uiState =
             combine(
                 activeSessionFlow,
                 isRunInProgressFlow,
                 currentLocationFlow,
-                showFinishConfirmDialogFlow,
-                showShortRunDialogFlow,
-                showGoalCelebrationFlow,
-                isMapCenteredOnRunnerFlow,
-                finishFailedFlow,
-                isFinishingFlow,
-                savedTracesFlow,
-            ) { args: Array<Any?> ->
-                val session = args[0] as RunSession
-                val isRunInProgress = args[1] as Boolean
-                val currentLocation = args[2] as? RoutePoint
-                val showFinish = args[3] as Boolean
-                val showShort = args[4] as Boolean
-                val showCelebration = args[5] as Boolean
-                val isCentered = args[6] as Boolean
-                val finishFailed = args[7] as Boolean
-                val isFinishing = args[8] as Boolean
-
-                @Suppress("UNCHECKED_CAST")
-                val savedTraces = args[9] as List<SavedTraceUi>
-
+                finishDialogsFlow,
+                mapExtrasFlow,
+            ) { session, isRunInProgress, currentLocation, dialogs, extras ->
                 when (session) {
                     is RunSession.Idle -> {
                         LiveRouteTrackingUiState(
@@ -178,17 +182,17 @@ class LiveRouteTrackingViewModel
                             formattedAverageSpeed = "0",
                             routePoints = emptyList(),
                             runnerPosition = currentLocation,
-                            isMapCenteredOnRunner = isCentered,
+                            isMapCenteredOnRunner = extras.isCentered,
                             gpsQuality = GpsQuality.NO_SIGNAL,
                             goalReached = false,
-                            showFinishConfirmDialog = showFinish,
-                            showShortRunDialog = showShort,
+                            showFinishConfirmDialog = dialogs.showFinishConfirm,
+                            showShortRunDialog = dialogs.showShortRun,
                             showGoalCelebration = false,
                             areControlActionsAllowed = false,
                             rawDistanceMeters = 0.0,
-                            finishFailed = finishFailed,
-                            isFinishing = isFinishing,
-                            savedTraces = savedTraces,
+                            finishFailed = dialogs.finishFailed,
+                            isFinishing = dialogs.isFinishing,
+                            savedTraces = extras.savedTraces,
                         )
                     }
 
@@ -207,17 +211,18 @@ class LiveRouteTrackingViewModel
                             formattedAverageSpeed = formatSpeed(session.metrics.averageSpeedKmh),
                             routePoints = session.routePoints,
                             runnerPosition = runnerPos,
-                            isMapCenteredOnRunner = isCentered,
+                            isMapCenteredOnRunner = extras.isCentered,
                             gpsQuality = session.gpsQuality,
                             goalReached = session.goalReached,
-                            showFinishConfirmDialog = showFinish,
-                            showShortRunDialog = showShort,
-                            showGoalCelebration = showCelebration,
+                            showFinishConfirmDialog = dialogs.showFinishConfirm,
+                            showShortRunDialog = dialogs.showShortRun,
+                            showGoalCelebration = dialogs.showCelebration,
                             areControlActionsAllowed = true,
                             rawDistanceMeters = session.metrics.distanceMeters,
-                            finishFailed = finishFailed,
-                            isFinishing = isFinishing,
-                            savedTraces = savedTraces,
+                            finishFailed = dialogs.finishFailed,
+                            isFinishing = dialogs.isFinishing,
+                            savedTraces = extras.savedTraces,
+                            showMotionSensorMissing = !extras.sensorAvailable,
                         )
                     }
                 }
@@ -293,10 +298,6 @@ class LiveRouteTrackingViewModel
             showShortRunDialogFlow.value = false
             hasShownLocationPermissionLostNotice = false
             runSessionRepository.resetToIdle()
-
-            viewModelScope.launch {
-                _uiEffect.send(LiveRouteTrackingUiEffect.ReturnToIdleMap)
-            }
         }
 
         fun onReturnFromShortRun() {
@@ -312,6 +313,19 @@ class LiveRouteTrackingViewModel
         /** Vuelve a leer la ubicación (permiso y estado del dispositivo): decide si se dibujan las trazas. */
         fun onLocationStatusRefreshed() {
             locationStatusFlow.value = locationRepository.readLocationStatus()
+        }
+
+        /**
+         * Toque sobre el mapa. Si pasa cerca de alguna traza dibujada, avisa que se abra ese recorrido (el más
+         * reciente si coinciden varios); si no hay trazas dibujadas o el toque queda lejos, no hace nada.
+         */
+        fun onMapTapped(
+            latitude: Double,
+            longitude: Double,
+            toleranceMeters: Double,
+        ) {
+            val run = displayedRunsFlow.value.mostRecentNear(latitude, longitude, toleranceMeters) ?: return
+            _uiEffect.trySend(LiveRouteTrackingUiEffect.OpenSavedRun(run.id))
         }
 
         fun onCenterMapClicked() {
@@ -333,18 +347,11 @@ class LiveRouteTrackingViewModel
             if (isActive && !hasShownLocationPermissionLostNotice) {
                 hasShownLocationPermissionLostNotice = true
 
-                _uiEffect.trySend(
-                    LiveRouteTrackingUiEffect.ShowLocationPermissionLostMessage(
-                        LOCATION_PERMISSION_LOST_MESSAGE,
-                    ),
-                )
+                _uiEffect.trySend(LiveRouteTrackingUiEffect.ShowLocationPermissionLostMessage)
             }
         }
 
         private companion object {
-            const val LOCATION_PERMISSION_LOST_MESSAGE =
-                "Se perdió el permiso de ubicación. Activalo desde Ajustes para seguir registrando tu recorrido."
-
             val SPANISH_LOCALE: Locale = Locale.forLanguageTag("es-AR")
 
             fun formatElapsedTime(seconds: Long): String {
@@ -384,9 +391,25 @@ sealed interface LiveRouteTrackingUiEffect {
 
     data object OpenStartRunModal : LiveRouteTrackingUiEffect
 
-    data object ReturnToIdleMap : LiveRouteTrackingUiEffect
-
-    data class ShowLocationPermissionLostMessage(
-        val message: String,
+    /** Se tocó la traza de un recorrido guardado: abrir su detalle. */
+    data class OpenSavedRun(
+        val runId: String,
     ) : LiveRouteTrackingUiEffect
+
+    /** Se perdió el permiso de ubicación con un recorrido en curso; el texto lo pone la pantalla. */
+    data object ShowLocationPermissionLostMessage : LiveRouteTrackingUiEffect
 }
+
+private data class FinishDialogs(
+    val showFinishConfirm: Boolean,
+    val showShortRun: Boolean,
+    val showCelebration: Boolean,
+    val finishFailed: Boolean,
+    val isFinishing: Boolean,
+)
+
+private data class MapExtras(
+    val isCentered: Boolean,
+    val savedTraces: List<SavedTraceUi>,
+    val sensorAvailable: Boolean,
+)

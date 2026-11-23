@@ -41,6 +41,8 @@ data class LiveRouteTrackingUiState(
      * curso y con ubicación precisa; no se mezclan con [routePoints], que es la traza en vivo.
      */
     val savedTraces: List<SavedTraceUi> = emptyList(),
+    /** Hay un recorrido en curso y el dispositivo no tiene acelerómetro: no se miden frenadas ni regularidad. */
+    val showMotionSensorMissing: Boolean = false,
 ) {
     val isRunning: Boolean
         get() = runState == RunState.ACTIVE
