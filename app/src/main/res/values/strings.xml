@@ -59,6 +59,9 @@
     <string name="map_pause">Pausar</string>
     <string name="map_resume">Reanudar</string>
     <string name="map_finish">Finalizar</string>
+    <string name="run_value_no_data">sin dato</string>
+    <string name="map_location_permission_lost">Se perdió el permiso de ubicación. Activalo desde Ajustes para seguir registrando tu recorrido.</string>
+    <string name="map_gps_short">GPS</string>
     <string name="map_gps_no_signal">Sin señal GPS</string>
     <string name="map_gps_weak_signal">Señal GPS débil</string>
     <string name="map_gps_full_signal">Buena señal GPS</string>

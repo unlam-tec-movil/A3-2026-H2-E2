@@ -2,12 +2,10 @@ package com.trazo.app.ui.screens.map
 
 import com.trazo.app.data.repository.FakeLocationRepository
 import com.trazo.app.data.repository.FakeRunSessionRepository
-import com.trazo.app.data.repository.FakeSavedRunRepository
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.usecases.testFinishRunUseCase
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,13 +49,8 @@ class LiveRouteTrackingViewModelFlowsTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel() =
-        LiveRouteTrackingViewModel(
-            runSessionRepository = repository,
-            locationRepository = locationRepository,
-            finishRun = testFinishRunUseCase(repository),
-            savedRunRepository = FakeSavedRunRepository(),
-        )
+    private fun createViewModel(sensorAvailable: Boolean = true) =
+        testLiveRouteTrackingViewModel(repository, locationRepository, sensorAvailable = sensorAvailable)
 
     private fun session(state: RunState) =
         RunSession.ActiveSession(
@@ -249,5 +242,46 @@ class LiveRouteTrackingViewModelFlowsTest {
 
             // Then
             assertEquals(LiveRouteTrackingUiEffect.OpenStartRunModal, effect)
+        }
+
+    @Test
+    fun `given a device without accelerometer, when a run is active, then shows the missing sensor notice`() =
+        runTest {
+            // Given
+            repository.setSession(session(RunState.ACTIVE))
+            val viewModel = createViewModel(sensorAvailable = false)
+
+            // When
+            keepStateHot(viewModel)
+
+            // Then
+            assertTrue(viewModel.uiState.value.showMotionSensorMissing)
+        }
+
+    @Test
+    fun `given a device without accelerometer, when there is no run, then the notice is hidden`() =
+        runTest {
+            // Given
+            val viewModel = createViewModel(sensorAvailable = false)
+
+            // When
+            keepStateHot(viewModel)
+
+            // Then
+            assertFalse(viewModel.uiState.value.showMotionSensorMissing)
+        }
+
+    @Test
+    fun `given a device with accelerometer, when a run is active, then the notice is hidden`() =
+        runTest {
+            // Given
+            repository.setSession(session(RunState.ACTIVE))
+            val viewModel = createViewModel()
+
+            // When
+            keepStateHot(viewModel)
+
+            // Then
+            assertFalse(viewModel.uiState.value.showMotionSensorMissing)
         }
 }

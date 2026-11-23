@@ -71,14 +71,14 @@ class RunSessionRulesTest {
         assertEquals(1_000L, stopped.resumedAtMonotonicTimestamp)
         assertEquals(5L, stopped.metrics.elapsedTimeSeconds)
         assertEquals(10L, stopped.tick(nowMillis = 11_000L, signalLost = false).metrics.elapsedTimeSeconds)
-        assertEquals(GpsQuality.FULL_SIGNAL, stopped.withGpsQuality(GpsQuality.FULL_SIGNAL).gpsQuality)
+        assertEquals(GpsQuality.FULL_SIGNAL, stopped.withGpsQuality(GpsQuality.FULL_SIGNAL, nowMillis = 2_000L).gpsQuality)
         val withPoint = stopped.addPoint(point(-34.6, atMillis = 7_000L), nowMillis = 7_000L)
         assertEquals(1, withPoint.routePoints.size)
     }
 
     @Test
     fun `volver a moverse desde una frenada no reinicia el tramo ni la senal`() {
-        val withPoint = started.withGpsQuality(GpsQuality.FULL_SIGNAL).addPoint(point(-34.6, atMillis = 2_000L), 2_000L)
+        val withPoint = started.withGpsQuality(GpsQuality.FULL_SIGNAL, nowMillis = 1_000L).addPoint(point(-34.6, atMillis = 2_000L), 2_000L)
 
         val moving = withPoint.markStopped(nowMillis = 4_000L).markMoving(nowMillis = 9_000L)
 
@@ -198,7 +198,7 @@ class RunSessionRulesTest {
         listOf(started.pause(2_000L), started.pausePersonally(2_000L)).forEach { paused ->
             assertSame(paused, paused.addPoint(point(-34.6, atMillis = 3_000L), nowMillis = 3_000L))
             assertSame(paused, paused.tick(nowMillis = 30_000L, signalLost = true))
-            assertSame(paused, paused.withGpsQuality(GpsQuality.FULL_SIGNAL))
+            assertSame(paused, paused.withGpsQuality(GpsQuality.FULL_SIGNAL, nowMillis = 2_000L))
         }
     }
 
@@ -217,7 +217,7 @@ class RunSessionRulesTest {
 
     @Test
     fun `el tick actualiza el tiempo y marca sin senal solo si se perdio`() {
-        val ticked = started.withGpsQuality(GpsQuality.FULL_SIGNAL).tick(nowMillis = 6_000L, signalLost = false)
+        val ticked = started.withGpsQuality(GpsQuality.FULL_SIGNAL, nowMillis = 1_000L).tick(nowMillis = 6_000L, signalLost = false)
         val lost = ticked.tick(nowMillis = 21_000L, signalLost = true)
 
         assertEquals(5L, ticked.metrics.elapsedTimeSeconds)
@@ -266,5 +266,21 @@ class RunSessionRulesTest {
     fun `la velocidad promedio es cero sin tiempo transcurrido`() {
         assertEquals(0.0, RunSession.ActiveSession.averageSpeedKmh(1_000.0, 0L), 0.0)
         assertEquals(12.0, RunSession.ActiveSession.averageSpeedKmh(1_000.0, 300_000L), 1e-9)
+    }
+
+    @Test
+    fun `con la senal perdida un punto impreciso no la pasa a debil`() {
+        // Arranca en 1 s sin puntos: a los 16 s ya pasaron los 15 s sin señal.
+        val lost = started.tick(nowMillis = 16_000L, signalLost = started.isSignalLostAt(16_000L))
+        assertEquals(GpsQuality.NO_SIGNAL, lost.gpsQuality)
+
+        assertEquals(GpsQuality.NO_SIGNAL, lost.withGpsQuality(GpsQuality.WEAK_SIGNAL, nowMillis = 17_000L).gpsQuality)
+    }
+
+    @Test
+    fun `con un punto valido reciente la calidad informada se aplica`() {
+        val withPoint = started.addPoint(point(-34.6, atMillis = 20_000L), nowMillis = 20_000L)
+
+        assertEquals(GpsQuality.WEAK_SIGNAL, withPoint.withGpsQuality(GpsQuality.WEAK_SIGNAL, nowMillis = 21_000L).gpsQuality)
     }
 }

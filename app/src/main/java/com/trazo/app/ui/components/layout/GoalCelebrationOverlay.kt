@@ -38,8 +38,6 @@ fun GoalCelebrationOverlay(
     modifier: Modifier = Modifier,
     onFinish: (() -> Unit)? = null,
 ) {
-    if (!showCelebration) return
-
     val reduceMotion = rememberReduceMotion()
 
     AnimatedVisibility(

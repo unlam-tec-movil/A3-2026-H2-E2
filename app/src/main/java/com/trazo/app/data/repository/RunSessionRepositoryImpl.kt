@@ -73,7 +73,7 @@ class RunSessionRepositoryImpl
         override suspend fun resumeSession(): Result<Unit> = transition { it.resume(clock.nowMillis()) }
 
         override suspend fun finishSession(
-            brakes: List<BrakeEvent>,
+            brakes: List<BrakeEvent>?,
             regularityPercent: Int?,
         ): Result<FrozenRunSummary> =
             locked {
@@ -92,6 +92,8 @@ class RunSessionRepositoryImpl
         }
 
         override fun getFinishedSummary(id: String): FrozenRunSummary? = finishedSummaries[id]
+
+        override fun removeFinishedSummary(id: String): Boolean = finishedSummaries.remove(id) != null
 
         /**
          * Aplica una transición de la sesión activa. Si el estado nuevo no registra (pausas), corta el GPS
@@ -136,7 +138,7 @@ class RunSessionRepositoryImpl
             signalJob?.cancel()
             signalJob =
                 collectIgnoringErrors(locationClient.getSignalQualityUpdates()) { quality ->
-                    updateActive { it.withGpsQuality(quality) }
+                    updateActive { it.withGpsQuality(quality, clock.nowMillis()) }
                 }
 
             timerJob?.cancel()

@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -420,5 +421,23 @@ class RunSessionRepositoryImplTest {
             assertNotNull(sessionAfter)
             assertEquals(RunState.ACTIVE, sessionAfter?.state)
             assertTrue(repository.isRunInProgress.value)
+        }
+
+    @Test
+    fun removeFinishedSummary_deletesTheSummaryOnlyOnce() =
+        runBlocking {
+            repository.attachActiveSession(
+                InitializedRunSession(
+                    id = "test-session",
+                    goal = RunGoal.THREE_KILOMETERS,
+                    startMonotonicTimestamp = SystemClock.elapsedRealtime(),
+                    startedAt = Clock.System.now(),
+                ),
+            )
+            repository.finishSession()
+
+            assertTrue(repository.removeFinishedSummary("test-session"))
+            assertNull(repository.getFinishedSummary("test-session"))
+            assertFalse(repository.removeFinishedSummary("test-session"))
         }
 }
