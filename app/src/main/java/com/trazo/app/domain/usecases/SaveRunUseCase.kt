@@ -57,6 +57,6 @@ class SaveRunUseCase
         }
 
         private companion object {
-            val TITLE_LENGTH = 3..50
+            val TITLE_LENGTH = SavedRun.TITLE_MIN_LENGTH..SavedRun.TITLE_MAX_LENGTH
         }
     }

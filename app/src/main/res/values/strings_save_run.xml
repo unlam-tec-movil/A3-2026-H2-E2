@@ -9,4 +9,6 @@
     <string name="save_run_highlight_safe">Seguro</string>
     <string name="save_run_highlight_lit">Iluminado</string>
     <string name="save_run_highlight_shade">Con sombra</string>
+    <string name="save_run_title_helper">Obligatorio</string>
+    <string name="save_run_title_counter">%1$d/%2$d</string>
 </resources>

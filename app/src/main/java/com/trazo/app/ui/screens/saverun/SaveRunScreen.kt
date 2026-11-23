@@ -3,6 +3,7 @@ package com.trazo.app.ui.screens.saverun
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -23,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trazo.app.R
+import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 
@@ -82,7 +84,23 @@ fun SaveRunContent(
             label = { Text(stringResource(R.string.save_run_title_label)) },
             isError = state.titleError,
             supportingText = {
-                if (state.titleError) Text(stringResource(R.string.save_run_title_error))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        stringResource(
+                            if (state.titleError) R.string.save_run_title_error else R.string.save_run_title_helper,
+                        ),
+                    )
+                    Text(
+                        stringResource(
+                            R.string.save_run_title_counter,
+                            state.title.length,
+                            SavedRun.TITLE_MAX_LENGTH,
+                        ),
+                    )
+                }
             },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
