@@ -43,6 +43,7 @@ fun MapScreen(
     onStartRunClick: () -> Unit,
     onNavigateToResults: (FrozenRunSummary) -> Unit,
     modifier: Modifier = Modifier,
+    onSavedRunClick: (String) -> Unit = {},
     shortRunNotice: (@Composable (onDiscard: () -> Unit, onReturn: () -> Unit) -> Unit)? = null,
     // Piezas de start-run armadas por TrazoApp: el botón «+» y el aviso «Esperando señal GPS».
     startRunFab: @Composable (Modifier) -> Unit = {},
@@ -75,6 +76,10 @@ fun MapScreen(
 
                 is LiveRouteTrackingUiEffect.OpenStartRunModal -> {
                     onStartRunClick()
+                }
+
+                is LiveRouteTrackingUiEffect.OpenSavedRun -> {
+                    onSavedRunClick(effect.runId)
                 }
 
                 is LiveRouteTrackingUiEffect.ReturnToIdleMap -> {
@@ -115,6 +120,7 @@ fun MapScreen(
             onCenterMapClicked = { viewModel.onCenterMapClicked() },
             onMapDragged = { viewModel.onMapDragged() },
             savedTraces = savedTraces,
+            onMapTap = viewModel::onMapTapped,
             // El «+» va entre «Centrar» y el panel del temporizador.
             belowCenterButton = { startRunFab(Modifier) },
         ) {

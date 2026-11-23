@@ -12,6 +12,7 @@ import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
+import com.trazo.app.domain.model.saved.mostRecentNear
 import com.trazo.app.domain.usecases.FinishRunUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -54,19 +55,18 @@ class LiveRouteTrackingViewModel
 
         private val locationStatusFlow = MutableStateFlow(locationRepository.readLocationStatus())
 
-        /** Trazas a dibujar: hay recorridos guardados, ningún recorrido en curso y ubicación precisa. */
-        private val savedTracesFlow =
+        /** Recorridos cuyas trazas se dibujan: hay guardados, ningún recorrido en curso y ubicación precisa. */
+        private val displayedRunsFlow =
             combine(
                 savedRunRepository.runs,
                 isRunInProgressFlow,
                 locationStatusFlow,
             ) { runs, isRunInProgress, locationStatus ->
-                if (isRunInProgress || locationStatus != LocationStatus.READY) {
-                    emptyList()
-                } else {
-                    runs.map { SavedTraceUi(id = it.id, points = it.routePoints) }
-                }
-            }
+                if (isRunInProgress || locationStatus != LocationStatus.READY) emptyList() else runs
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+        private val savedTracesFlow =
+            displayedRunsFlow.map { runs -> runs.map { SavedTraceUi(id = it.id, points = it.routePoints) } }
 
         private val _uiEffect = Channel<LiveRouteTrackingUiEffect>(Channel.BUFFERED)
 
@@ -314,6 +314,19 @@ class LiveRouteTrackingViewModel
             locationStatusFlow.value = locationRepository.readLocationStatus()
         }
 
+        /**
+         * Toque sobre el mapa. Si pasa cerca de alguna traza dibujada, avisa que se abra ese recorrido (el más
+         * reciente si coinciden varios); si no hay trazas dibujadas o el toque queda lejos, no hace nada.
+         */
+        fun onMapTapped(
+            latitude: Double,
+            longitude: Double,
+            toleranceMeters: Double,
+        ) {
+            val run = displayedRunsFlow.value.mostRecentNear(latitude, longitude, toleranceMeters) ?: return
+            _uiEffect.trySend(LiveRouteTrackingUiEffect.OpenSavedRun(run.id))
+        }
+
         fun onCenterMapClicked() {
             isMapCenteredOnRunnerFlow.value = true
         }
@@ -385,6 +398,11 @@ sealed interface LiveRouteTrackingUiEffect {
     data object OpenStartRunModal : LiveRouteTrackingUiEffect
 
     data object ReturnToIdleMap : LiveRouteTrackingUiEffect
+
+    /** Se tocó la traza de un recorrido guardado: abrir su detalle. */
+    data class OpenSavedRun(
+        val runId: String,
+    ) : LiveRouteTrackingUiEffect
 
     data class ShowLocationPermissionLostMessage(
         val message: String,
