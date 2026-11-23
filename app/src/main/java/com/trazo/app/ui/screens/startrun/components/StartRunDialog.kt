@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.common
+package com.trazo.app.ui.screens.startrun.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.RunGoal
+import com.trazo.app.ui.components.common.PrimaryButton
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme

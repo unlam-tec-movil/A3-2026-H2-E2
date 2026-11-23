@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.layout
+package com.trazo.app.ui.screens.map.components
 
 import androidx.annotation.StringRes
 import androidx.compose.ui.test.assertHeightIsEqualTo

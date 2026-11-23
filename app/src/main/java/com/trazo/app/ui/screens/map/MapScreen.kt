@@ -34,13 +34,13 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.RoutePoint
-import com.trazo.app.ui.components.layout.FinishConfirmDialog
-import com.trazo.app.ui.components.layout.GoalCelebrationOverlay
-import com.trazo.app.ui.components.layout.GpsIndicator
-import com.trazo.app.ui.components.layout.MapLayer
-import com.trazo.app.ui.components.layout.RunControls
-import com.trazo.app.ui.components.layout.RunPanel
+import com.trazo.app.ui.screens.map.components.FinishConfirmDialog
+import com.trazo.app.ui.screens.map.components.GoalCelebrationOverlay
+import com.trazo.app.ui.screens.map.components.GpsIndicator
+import com.trazo.app.ui.screens.map.components.MapLayer
 import com.trazo.app.ui.screens.map.components.MotionSensorMissingNotice
+import com.trazo.app.ui.screens.map.components.RunControls
+import com.trazo.app.ui.screens.map.components.RunPanel
 import com.trazo.app.ui.theme.Spacing
 
 @Composable

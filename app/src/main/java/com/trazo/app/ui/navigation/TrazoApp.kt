@@ -13,9 +13,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.trazo.app.R
-import com.trazo.app.ui.components.common.LocationIssueDialog
-import com.trazo.app.ui.components.common.StartRunDialog
-import com.trazo.app.ui.components.common.StartRunFab
 import com.trazo.app.ui.screens.map.MapScreen
 import com.trazo.app.ui.screens.map.components.StopDetectionOverlay
 import com.trazo.app.ui.screens.profile.ProfileScreen
@@ -27,6 +24,9 @@ import com.trazo.app.ui.screens.settings.SettingsScreen
 import com.trazo.app.ui.screens.startrun.StartRunEffect
 import com.trazo.app.ui.screens.startrun.StartRunViewModel
 import com.trazo.app.ui.screens.startrun.components.GpsWaitingNotice
+import com.trazo.app.ui.screens.startrun.components.LocationIssueDialog
+import com.trazo.app.ui.screens.startrun.components.StartRunDialog
+import com.trazo.app.ui.screens.startrun.components.StartRunFab
 import kotlin.math.roundToInt
 
 @Composable
