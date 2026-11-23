@@ -51,6 +51,7 @@ class TrazoScaffoldTest {
                         Text(RESULT_SCREEN)
                         Button(onClick = onLeaveToActivity) { Text(LEAVE_RESULT) }
                     },
+                    saveRunScreen = {},
                     settingsScreen = { Text(SETTINGS_SCREEN) },
                 )
             }
