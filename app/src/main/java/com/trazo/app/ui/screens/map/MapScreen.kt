@@ -1,7 +1,7 @@
 package com.trazo.app.ui.screens.map
 
-import android.app.Activity
 import android.view.WindowManager
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,7 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
@@ -249,7 +248,7 @@ private fun ShortRunDialog(
 /** Con un recorrido en curso, la pantalla no se apaga sola. */
 @Composable
 private fun KeepScreenOn(enabled: Boolean) {
-    val activity = LocalContext.current as? Activity
+    val activity = LocalActivity.current
     DisposableEffect(activity, enabled) {
         if (activity != null && enabled) {
             activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -263,7 +262,7 @@ private fun KeepScreenOn(enabled: Boolean) {
 /** Íconos oscuros en la barra de estado mientras se ve el mapa claro; al salir se restauran. */
 @Composable
 private fun DarkStatusBarIcons() {
-    val activity = LocalContext.current as? Activity
+    val activity = LocalActivity.current
     val view = LocalView.current
     DisposableEffect(activity, view) {
         val controller = activity?.let { WindowCompat.getInsetsController(it.window, view) }

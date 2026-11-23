@@ -11,8 +11,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import jakarta.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import javax.inject.Singleton
 
 /**
  * Monitores de dominio (`domain/services`). Viven fuera de `data/di` porque `data` solo importa

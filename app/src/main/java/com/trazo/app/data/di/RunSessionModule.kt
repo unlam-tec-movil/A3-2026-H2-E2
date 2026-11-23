@@ -10,7 +10,7 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import jakarta.inject.Singleton
+import javax.inject.Singleton
 
 /**
  * Sesión del recorrido, el GPS que la alimenta y el repositorio de ubicación que usan la UI y los

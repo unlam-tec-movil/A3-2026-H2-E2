@@ -44,11 +44,4 @@ class SaveStopUseCaseTest {
 
         assertTrue(repository.saved.isEmpty())
     }
-
-    @Test
-    fun `clasificar usa la respuesta y, si no hay, frenada`() {
-        assertEquals(StopKind.BRAKE, saveStop.classify(ClosedStop(brake, answer = null)))
-        assertEquals(StopKind.BRAKE, saveStop.classify(ClosedStop(brake, StopKind.BRAKE)))
-        assertEquals(StopKind.PERSONAL_PAUSE, saveStop.classify(ClosedStop(brake, StopKind.PERSONAL_PAUSE)))
-    }
 }

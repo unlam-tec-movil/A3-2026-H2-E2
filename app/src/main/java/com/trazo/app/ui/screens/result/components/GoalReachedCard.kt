@@ -41,7 +41,7 @@ import com.trazo.app.ui.theme.tabular
 
 /**
  * Tarjeta del resultado: «¡Meta cumplida!» con check animado una vez, o «Recorrido finalizado» con la
- * marca «Incompleto». Muestra distancia, tiempo y regularidad («No disponible» sin dato).
+ * marca «Incompleto». Muestra distancia, tiempo y regularidad («sin dato» si no se pudo medir).
  */
 @Composable
 fun GoalReachedCard(

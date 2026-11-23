@@ -6,7 +6,6 @@ import com.trazo.app.data.sensors.MotionSensorAvailability
 import com.trazo.app.data.sensors.MotionSource
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.model.regularity.ActiveRunSnapshot
 import com.trazo.app.domain.model.regularity.RegularityConfig
 import com.trazo.app.domain.model.regularity.RegularityState
 import com.trazo.app.domain.model.regularity.SegmentClass
@@ -38,15 +37,13 @@ class RegularityMonitor(
     private val _state = MutableStateFlow(RegularityState(sensorAvailable = availability.isAvailable()))
     val state: StateFlow<RegularityState> = _state.asStateFlow()
 
-    private var lastRunId: String? = null
-
     init {
         scope.launch {
             runSessionRepository.activeRunSnapshot.distinctUntilChanged().collectLatest { snapshot ->
                 meter.reset()
                 if (snapshot == null) return@collectLatest
-                if (snapshot.runId != lastRunId) {
-                    lastRunId = snapshot.runId
+                // Recorrido nuevo: empieza de cero. Si solo cambió el estado (pausa, frenada), conserva lo medido.
+                if (snapshot.runId != _state.value.runId) {
                     _state.update { RegularityState(runId = snapshot.runId, sensorAvailable = it.sensorAvailable) }
                 }
                 if (snapshot.state == RunState.ACTIVE) measure()
@@ -67,6 +64,12 @@ class RegularityMonitor(
         }
     }
 }
+
+/** Recorrido en curso: su id y su estado. Solo lo usa el monitor para saber cuándo medir. */
+internal data class ActiveRunSnapshot(
+    val runId: String,
+    val state: RunState,
+)
 
 /** Recorrido en curso con su id y estado; `null` si la sesión está inactiva. Solo lee. */
 internal val RunSessionRepository.activeRunSnapshot: Flow<ActiveRunSnapshot?>

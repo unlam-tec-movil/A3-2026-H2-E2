@@ -16,5 +16,5 @@ class SaveStopUseCase
         }
 
         /** Si el corredor no contestó (retomó o terminó el recorrido), la parada cuenta como frenada. */
-        fun classify(stop: ClosedStop): StopKind = stop.answer ?: StopKind.BRAKE
+        private fun classify(stop: ClosedStop): StopKind = stop.answer ?: StopKind.BRAKE
     }

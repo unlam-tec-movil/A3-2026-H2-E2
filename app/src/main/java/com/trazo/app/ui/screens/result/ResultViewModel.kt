@@ -6,13 +6,13 @@ import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.ui.components.common.RunValueFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
-import jakarta.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import javax.inject.Inject
 
 data class ResultUiState(
     val isLoaded: Boolean = false,
