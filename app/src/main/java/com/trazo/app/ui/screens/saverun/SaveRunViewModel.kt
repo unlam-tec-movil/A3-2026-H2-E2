@@ -3,6 +3,7 @@ package com.trazo.app.ui.screens.saverun
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.domain.usecases.SaveRunResult
 import com.trazo.app.domain.usecases.SaveRunUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,7 +50,7 @@ class SaveRunViewModel
         val effect: Flow<SaveRunEffect> = _effect.receiveAsFlow()
 
         fun onTitleChange(title: String) {
-            _uiState.update { it.copy(title = title, titleError = false) }
+            _uiState.update { it.copy(title = title.take(SavedRun.TITLE_MAX_LENGTH), titleError = false) }
         }
 
         /** Marca o desmarca un destacado. */

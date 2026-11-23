@@ -36,5 +36,9 @@ data class SavedRun(
     companion object {
         /** Máximo de fotos que admite un recorrido. */
         const val MAX_PHOTOS = 2
+
+        /** Largo mínimo y máximo del título de un recorrido. */
+        const val TITLE_MIN_LENGTH = 3
+        const val TITLE_MAX_LENGTH = 50
     }
 }

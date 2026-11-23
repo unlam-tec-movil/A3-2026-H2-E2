@@ -6,6 +6,7 @@ import com.trazo.app.data.repository.FakeSavedRunRepository
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunMetrics
+import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.domain.usecases.SaveRunUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -95,6 +96,15 @@ class SaveRunViewModelTest {
 
             assertEquals(SaveRunEffect.Close, viewModel.effect.first())
         }
+
+    @Test
+    fun `el titulo no puede pasar del maximo de caracteres`() {
+        val viewModel = viewModel()
+
+        viewModel.onTitleChange("a".repeat(SavedRun.TITLE_MAX_LENGTH + 10))
+
+        assertEquals(SavedRun.TITLE_MAX_LENGTH, viewModel.uiState.value.title.length)
+    }
 
     private fun viewModel(runId: String = "r1") =
         SaveRunViewModel(
