@@ -34,7 +34,7 @@ private val IndicatorSize = 24.dp
 private const val STATIC_PROGRESS = 0.75f
 
 /**
- * Aviso que se ve en el Mapa mientras Trazo espera una ubicación precisa para comenzar.
+ * Aviso que se ve en Actividad mientras Trazo espera una ubicación precisa para comenzar.
  * Con «Quitar animaciones» el indicador queda quieto.
  */
 @Composable

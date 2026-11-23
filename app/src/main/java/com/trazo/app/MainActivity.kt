@@ -14,7 +14,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Íconos claros en la barra de estado: Inicio la cubre con su barra superior oscura.
+        // Íconos claros en la barra de estado por defecto; Actividad los pasa a oscuros sobre el mapa claro.
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         setContent {
             TrazoTheme {

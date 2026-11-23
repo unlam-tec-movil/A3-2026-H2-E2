@@ -4,14 +4,15 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.map.RunGoal
+import com.trazo.app.ui.components.common.RunValueFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
-import jakarta.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import javax.inject.Inject
 
 data class ResultUiState(
     val isLoaded: Boolean = false,
@@ -19,7 +20,7 @@ data class ResultUiState(
     val goal: RunGoal? = null,
     val distanceText: String = "",
     val timeText: String = "",
-    /** `null` = la pantalla muestra «No disponible». */
+    /** `null` = la pantalla muestra «sin dato». */
     val regularityText: String? = null,
 )
 
@@ -34,7 +35,6 @@ class ResultViewModel
     constructor(
         savedStateHandle: SavedStateHandle,
         runSessionRepository: RunSessionRepository,
-        formatter: ResultFormatter,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(ResultUiState())
         val uiState: StateFlow<ResultUiState> = _uiState.asStateFlow()
@@ -46,7 +46,7 @@ class ResultViewModel
         val runId: String = savedStateHandle.get<String>(RUN_ID_KEY).orEmpty()
 
         init {
-            val summary = savedStateHandle.get<String>(RUN_ID_KEY)?.let(runSessionRepository::getFinishedSummary)
+            val summary = runSessionRepository.getFinishedSummary(runId)
             if (summary == null) {
                 _effect.trySend(ResultEffect.LeaveToMap)
             } else {
@@ -55,9 +55,9 @@ class ResultViewModel
                         isLoaded = true,
                         isGoalReached = summary.goalReached,
                         goal = summary.goal,
-                        distanceText = formatter.formatDistance(summary.metrics.distanceMeters),
-                        timeText = formatter.formatElapsedTime(summary.metrics.elapsedTimeSeconds),
-                        regularityText = summary.regularityPercent?.let(formatter::formatRegularity),
+                        distanceText = RunValueFormatter.formatDistanceKm(summary.metrics.distanceMeters),
+                        timeText = RunValueFormatter.formatDuration(summary.metrics.elapsedTimeSeconds),
+                        regularityText = summary.regularityPercent?.let(RunValueFormatter::formatRegularity),
                     )
             }
         }

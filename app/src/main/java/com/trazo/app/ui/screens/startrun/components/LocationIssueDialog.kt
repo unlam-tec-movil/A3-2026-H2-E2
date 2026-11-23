@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.common
+package com.trazo.app.ui.screens.startrun.components
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -10,6 +10,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.trazo.app.R
 import com.trazo.app.domain.model.LocationStatus
+import com.trazo.app.ui.components.common.PrimaryButton
 import com.trazo.app.ui.theme.TrazoTheme
 
 /** Avisa por qué no se puede comenzar el recorrido y ofrece ir a Configuración. */

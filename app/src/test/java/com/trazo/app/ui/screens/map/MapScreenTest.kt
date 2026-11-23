@@ -41,7 +41,6 @@ class MapScreenTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val repository = FakeRunSessionRepository()
-    private var startRunClicks = 0
 
     private val savedRunRepository = FakeSavedRunRepository()
     private var locationStatus = LocationStatus.READY
@@ -65,7 +64,6 @@ class MapScreenTest {
         composeTestRule.setContent {
             TrazoTheme {
                 MapScreen(
-                    onStartRunClick = { startRunClicks++ },
                     onNavigateToResults = {},
                     startRunFab = { Text("start-run-fab") },
                     gpsWaitingNotice = { Text("gps-waiting") },
@@ -117,20 +115,6 @@ class MapScreenTest {
 
         // Then
         assertTrue(viewModel.uiState.value.isMapCenteredOnRunner)
-    }
-
-    @Test
-    fun `given the start run effect, when the view model requests the modal, then the screen notifies it`() {
-        // Given
-        val viewModel = createViewModel()
-        showScreen(viewModel)
-
-        // When
-        composeTestRule.runOnIdle { viewModel.onStartRunClicked() }
-        composeTestRule.waitForIdle()
-
-        // Then
-        assertEquals(1, startRunClicks)
     }
 
     @Test
@@ -291,7 +275,7 @@ class MapScreenTest {
         val owner = TestLifecycleOwner()
         composeTestRule.setContent {
             CompositionLocalProvider(LocalLifecycleOwner provides owner) {
-                TrazoTheme { MapScreen(onStartRunClick = {}, onNavigateToResults = {}, viewModel = viewModel) }
+                TrazoTheme { MapScreen(onNavigateToResults = {}, viewModel = viewModel) }
             }
         }
         composeTestRule.runOnIdle { owner.moveTo(Lifecycle.State.RESUMED) }

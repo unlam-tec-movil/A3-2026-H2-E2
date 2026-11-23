@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.layout
+package com.trazo.app.ui.screens.map.components
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
@@ -27,7 +27,6 @@ class GoalCelebrationOverlayTest {
     private fun showOverlay(
         showCelebration: Boolean,
         goal: RunGoal?,
-        withFinish: Boolean = false,
     ) {
         composeTestRule.setContent {
             TrazoTheme {
@@ -35,7 +34,7 @@ class GoalCelebrationOverlayTest {
                     showCelebration = showCelebration,
                     goal = goal,
                     onDismiss = { dismissals++ },
-                    onFinish = if (withFinish) ({ finishes++ }) else null,
+                    onFinish = { finishes++ },
                 )
             }
         }
@@ -76,7 +75,7 @@ class GoalCelebrationOverlayTest {
     @Test
     fun `given the finish action, when tapping Finalizar, then notifies the finish`() {
         // Given
-        showOverlay(showCelebration = true, goal = RunGoal.THREE_KILOMETERS, withFinish = true)
+        showOverlay(showCelebration = true, goal = RunGoal.THREE_KILOMETERS)
 
         // When
         composeTestRule.onNodeWithText(context.getString(R.string.map_finish)).performClick()
@@ -87,12 +86,15 @@ class GoalCelebrationOverlayTest {
     }
 
     @Test
-    fun `given no finish action, when it is composed, then only the keep running button is shown`() {
-        // Given / When
+    fun `given the celebration is visible, when tapping the background, then notifies the dismissal`() {
+        // Given
         showOverlay(showCelebration = true, goal = null)
 
+        // When
+        composeTestRule.onNodeWithText(context.getString(R.string.map_celebration_title)).performClick()
+
         // Then
-        composeTestRule.onNodeWithText(context.getString(R.string.map_finish)).assertDoesNotExist()
-        composeTestRule.onNodeWithText(context.getString(R.string.map_celebration_button)).assertIsDisplayed()
+        assertEquals(1, dismissals)
+        assertEquals(0, finishes)
     }
 }

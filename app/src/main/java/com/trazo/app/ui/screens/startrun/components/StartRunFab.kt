@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.common
+package com.trazo.app.ui.screens.startrun.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize

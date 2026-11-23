@@ -34,6 +34,12 @@ object RunValueFormatter {
     /** `9.5` -> `9,5 km/h`. */
     fun formatAverageSpeedKmh(speedKmh: Double): String = String.format(locale, "%.1f km/h", speedKmh)
 
+    /** Distancia en vivo del Mapa, sin unidad (la pone el panel) y con dos decimales: `5234.0` -> `5,23`. */
+    fun formatLiveDistanceKm(distanceMeters: Double): String = String.format(locale, "%.2f", distanceMeters / METERS_PER_KILOMETER)
+
+    /** Velocidad sin unidad (la pone el panel), con un decimal: `9.46` -> `9,5`. */
+    fun formatSpeedValue(speedKmh: Double): String = String.format(locale, "%.1f", speedKmh)
+
     /** `80` -> `80 %`; sin dato (`null`) -> `–`. */
     fun formatRegularity(regularityPercent: Int?): String = regularityPercent?.let { String.format(locale, "%d %%", it) } ?: NO_DATA
 

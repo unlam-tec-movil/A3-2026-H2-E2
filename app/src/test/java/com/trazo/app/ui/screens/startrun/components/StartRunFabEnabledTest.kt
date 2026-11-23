@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.common
+package com.trazo.app.ui.screens.startrun.components
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsEnabled

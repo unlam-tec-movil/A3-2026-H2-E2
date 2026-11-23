@@ -37,7 +37,6 @@ class ResultFlowTest {
         return ResultViewModel(
             savedStateHandle = SavedStateHandle(mapOf("runId" to summary.id)),
             runSessionRepository = repository,
-            formatter = ResultFormatter(),
         ).uiState.value
     }
 

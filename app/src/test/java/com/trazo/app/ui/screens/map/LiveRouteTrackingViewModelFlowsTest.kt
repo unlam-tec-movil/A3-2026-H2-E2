@@ -18,10 +18,12 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -237,11 +239,10 @@ class LiveRouteTrackingViewModelFlowsTest {
 
             // When
             viewModel.onLocationPermissionRevoked()
-            viewModel.onStartRunClicked()
-            val effect = viewModel.uiEffect.first()
+            val effect = withTimeoutOrNull(1_000L) { viewModel.uiEffect.first() }
 
             // Then
-            assertEquals(LiveRouteTrackingUiEffect.OpenStartRunModal, effect)
+            assertNull(effect)
         }
 
     @Test

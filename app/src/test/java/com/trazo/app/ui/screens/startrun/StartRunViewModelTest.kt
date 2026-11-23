@@ -256,13 +256,12 @@ class StartRunViewModelTest {
 
     // 2.1
     @Test
-    fun onGoalSelected_marksGoalAndEnablesConfirm() =
+    fun onGoalSelected_marksGoal() =
         runTest(dispatcher) {
             openDialog()
             viewModel.onGoalSelected(RunGoal.FIVE_KILOMETERS)
 
             assertEquals(RunGoal.FIVE_KILOMETERS, viewModel.uiState.value.selectedGoal)
-            assertTrue(viewModel.uiState.value.isConfirmEnabled)
         }
 
     // 2.2

@@ -20,7 +20,6 @@ class ResultViewModelTest {
         ResultViewModel(
             savedStateHandle = SavedStateHandle(mapOf("runId" to runId)),
             runSessionRepository = repository,
-            formatter = ResultFormatter(),
         )
 
     @Test

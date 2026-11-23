@@ -73,6 +73,18 @@ class RunValueFormatterTest {
     }
 
     @Test
+    fun `distancia en vivo con dos decimales y sin unidad`() {
+        assertEquals("5,23", RunValueFormatter.formatLiveDistanceKm(5234.0))
+        assertEquals("0,00", RunValueFormatter.formatLiveDistanceKm(0.0))
+    }
+
+    @Test
+    fun `velocidad sin unidad con un decimal`() {
+        assertEquals("9,5", RunValueFormatter.formatSpeedValue(9.46))
+        assertEquals("0,0", RunValueFormatter.formatSpeedValue(0.0))
+    }
+
+    @Test
     fun `regularidad con porcentaje`() {
         assertEquals("80 %", RunValueFormatter.formatRegularity(80))
         assertEquals("0 %", RunValueFormatter.formatRegularity(0))

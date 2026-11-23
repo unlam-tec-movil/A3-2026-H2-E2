@@ -43,9 +43,6 @@ data class StartRunUiState(
 
     val isFabEnabled: Boolean
         get() = !isRunInProgress && !isWaitingForGps
-
-    val isConfirmEnabled: Boolean
-        get() = selectedGoal != null
 }
 
 /** Acciones de un solo uso que necesitan la UI (permisos del sistema y navegación). */
@@ -56,8 +53,8 @@ sealed interface StartRunEffect {
 }
 
 /**
- * Única fuente del flujo de inicio. Lo comparten Inicio y Mapa: `TrazoApp` lo crea fuera del
- * `NavHost` y les pasa el «+» ya armado.
+ * Única fuente del flujo de inicio. `TrazoApp` lo crea fuera del `NavHost` y le pasa a Actividad el
+ * «+» y el aviso de GPS ya armados.
  */
 @HiltViewModel
 class StartRunViewModel
@@ -134,7 +131,7 @@ class StartRunViewModel
         }
 
         /**
-         * Cierra el modal, lleva al Mapa y espera la señal GPS para comenzar con la meta elegida.
+         * Cierra el modal, lleva a Actividad y espera la señal GPS para comenzar con la meta elegida.
          * Sin meta no hace nada.
          */
         fun onConfirm() {

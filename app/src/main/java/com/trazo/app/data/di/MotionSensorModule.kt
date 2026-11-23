@@ -13,8 +13,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import jakarta.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import javax.inject.Singleton
 
 /**
  * Único proveedor de [MotionSource] (compartido) y de [MonotonicClock] para toda la app: tanto

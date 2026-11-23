@@ -8,13 +8,14 @@ import com.trazo.app.data.repository.SavedRunRepository
 import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.map.GpsQuality
-import com.trazo.app.domain.model.map.InitializedRunSession
 import com.trazo.app.domain.model.map.RoutePoint
+import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.saved.mostRecentNear
 import com.trazo.app.domain.services.RegularityMonitor
 import com.trazo.app.domain.usecases.FinishRunUseCase
+import com.trazo.app.ui.components.common.RunValueFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -31,8 +32,66 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Locale
 import javax.inject.Inject
+
+/** Traza de un recorrido guardado que el mapa dibuja: el [id] del recorrido y sus [points]. */
+data class SavedTraceUi(
+    val id: String,
+    val points: List<RoutePoint>,
+)
+
+data class LiveRouteTrackingUiState(
+    val hasActiveRun: Boolean = false,
+    val isRunInProgress: Boolean = false,
+    val runState: RunState = RunState.IDLE,
+    val goal: RunGoal? = null,
+    val formattedTime: String = "00:00:00",
+    val formattedDistance: String = "0",
+    val formattedSpeed: String = "0",
+    val formattedAverageSpeed: String = "0",
+    val routePoints: List<RoutePoint> = emptyList(),
+    val runnerPosition: RoutePoint? = null,
+    val isMapCenteredOnRunner: Boolean = true,
+    val gpsQuality: GpsQuality = GpsQuality.NO_SIGNAL,
+    val goalReached: Boolean = false,
+    val showFinishConfirmDialog: Boolean = false,
+    val showShortRunDialog: Boolean = false,
+    val showGoalCelebration: Boolean = false,
+    val areControlActionsAllowed: Boolean = false,
+    /** Falló el último intento de finalizar: el diálogo muestra el error y «Reintentar». */
+    val finishFailed: Boolean = false,
+    /** Hay un intento de finalizar en curso: los botones del diálogo quedan deshabilitados. */
+    val isFinishing: Boolean = false,
+    /**
+     * Trazas de los recorridos guardados, del más reciente al más antiguo. Solo hay trazas sin recorrido en
+     * curso y con ubicación precisa; no se mezclan con [routePoints], que es la traza en vivo.
+     */
+    val savedTraces: List<SavedTraceUi> = emptyList(),
+    /** Hay un recorrido en curso y el dispositivo no tiene acelerómetro: no se miden frenadas ni regularidad. */
+    val showMotionSensorMissing: Boolean = false,
+) {
+    val isRunning: Boolean
+        get() = runState == RunState.ACTIVE
+
+    val isPaused: Boolean
+        get() = runState == RunState.PAUSED || runState == RunState.PERSONAL_PAUSED
+
+    val isStopped: Boolean
+        get() = runState == RunState.STOPPED
+
+    /** En una frenada (STOPPED) el recorrido sigue en curso, así que también se puede pausar. */
+    val canPause: Boolean
+        get() = (isRunning || isStopped) && areControlActionsAllowed
+
+    val canResume: Boolean
+        get() = isPaused && areControlActionsAllowed
+
+    val canFinish: Boolean
+        get() = (isRunning || isPaused || isStopped) && areControlActionsAllowed
+
+    val suppressed: Boolean
+        get() = showGoalCelebration || showFinishConfirmDialog || showShortRunDialog
+}
 
 @HiltViewModel
 class LiveRouteTrackingViewModel
@@ -115,30 +174,12 @@ class LiveRouteTrackingViewModel
             }
         }
 
+        /** Posición sin recorrido registrando: con el recorrido activo, la posición sale de la traza. */
         @OptIn(ExperimentalCoroutinesApi::class)
         private val currentLocationFlow =
             activeSessionFlow.flatMapLatest { session ->
-                when (session) {
-                    is RunSession.ActiveSession -> {
-                        if (session.state == RunState.ACTIVE) {
-                            flowOf<RoutePoint?>(null)
-                        } else {
-                            locationRepository
-                                .getLocationUpdates(1_000L)
-                                .map<RoutePoint, RoutePoint?> { it }
-                                .catch { emit(null) }
-                                .onStart { emit(null) }
-                        }
-                    }
-
-                    is RunSession.Idle -> {
-                        locationRepository
-                            .getLocationUpdates(1_000L)
-                            .map<RoutePoint, RoutePoint?> { it }
-                            .catch { emit(null) }
-                            .onStart { emit(null) }
-                    }
-                }
+                val isTracking = session is RunSession.ActiveSession && session.state == RunState.ACTIVE
+                if (isTracking) flowOf(null) else locationUpdatesOrNull()
             }
 
         /** Estado de los diálogos y avisos de finalizar, agrupado para que el `combine` de [uiState] quede tipado. */
@@ -172,24 +213,11 @@ class LiveRouteTrackingViewModel
                 when (session) {
                     is RunSession.Idle -> {
                         LiveRouteTrackingUiState(
-                            hasActiveRun = false,
                             isRunInProgress = isRunInProgress,
-                            runState = RunState.IDLE,
-                            goal = null,
-                            formattedTime = "00:00:00",
-                            formattedDistance = "0",
-                            formattedSpeed = "0",
-                            formattedAverageSpeed = "0",
-                            routePoints = emptyList(),
                             runnerPosition = currentLocation,
                             isMapCenteredOnRunner = extras.isCentered,
-                            gpsQuality = GpsQuality.NO_SIGNAL,
-                            goalReached = false,
                             showFinishConfirmDialog = dialogs.showFinishConfirm,
                             showShortRunDialog = dialogs.showShortRun,
-                            showGoalCelebration = false,
-                            areControlActionsAllowed = false,
-                            rawDistanceMeters = 0.0,
                             finishFailed = dialogs.finishFailed,
                             isFinishing = dialogs.isFinishing,
                             savedTraces = extras.savedTraces,
@@ -197,20 +225,17 @@ class LiveRouteTrackingViewModel
                     }
 
                     is RunSession.ActiveSession -> {
-                        val lastPoint = session.routePoints.lastOrNull()
-                        val runnerPos = lastPoint ?: currentLocation
-
                         LiveRouteTrackingUiState(
                             hasActiveRun = true,
                             isRunInProgress = isRunInProgress,
                             runState = session.state,
                             goal = session.goal,
-                            formattedTime = formatElapsedTime(session.metrics.elapsedTimeSeconds),
-                            formattedDistance = formatDistance(session.metrics.distanceMeters),
-                            formattedSpeed = formatSpeed(session.metrics.currentSpeedKmh),
-                            formattedAverageSpeed = formatSpeed(session.metrics.averageSpeedKmh),
+                            formattedTime = RunValueFormatter.formatDuration(session.metrics.elapsedTimeSeconds),
+                            formattedDistance = RunValueFormatter.formatLiveDistanceKm(session.metrics.distanceMeters),
+                            formattedSpeed = RunValueFormatter.formatSpeedValue(session.metrics.currentSpeedKmh),
+                            formattedAverageSpeed = RunValueFormatter.formatSpeedValue(session.metrics.averageSpeedKmh),
                             routePoints = session.routePoints,
-                            runnerPosition = runnerPos,
+                            runnerPosition = session.routePoints.lastOrNull() ?: currentLocation,
                             isMapCenteredOnRunner = extras.isCentered,
                             gpsQuality = session.gpsQuality,
                             goalReached = session.goalReached,
@@ -218,7 +243,6 @@ class LiveRouteTrackingViewModel
                             showShortRunDialog = dialogs.showShortRun,
                             showGoalCelebration = dialogs.showCelebration,
                             areControlActionsAllowed = true,
-                            rawDistanceMeters = session.metrics.distanceMeters,
                             finishFailed = dialogs.finishFailed,
                             isFinishing = dialogs.isFinishing,
                             savedTraces = extras.savedTraces,
@@ -231,10 +255,6 @@ class LiveRouteTrackingViewModel
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = LiveRouteTrackingUiState(),
             )
-
-        fun attachActiveSession(session: InitializedRunSession) {
-            runSessionRepository.attachActiveSession(session)
-        }
 
         fun onPauseClicked() {
             viewModelScope.launch {
@@ -249,14 +269,12 @@ class LiveRouteTrackingViewModel
         }
 
         fun onFinishRequested() {
-            if (!uiState.value.hasActiveRun) return
+            val session = activeSessionFlow.value as? RunSession.ActiveSession ?: return
 
             finishFailedFlow.value = false
             isFinishingFlow.value = false
 
-            val currentState = uiState.value
-
-            if (currentState.rawDistanceMeters < 200.0) {
+            if (session.isShortRun) {
                 showShortRunDialogFlow.value = true
             } else {
                 showFinishConfirmDialogFlow.value = true
@@ -304,12 +322,6 @@ class LiveRouteTrackingViewModel
             showShortRunDialogFlow.value = false
         }
 
-        fun onStartRunClicked() {
-            viewModelScope.launch {
-                _uiEffect.send(LiveRouteTrackingUiEffect.OpenStartRunModal)
-            }
-        }
-
         /** Vuelve a leer la ubicación (permiso y estado del dispositivo): decide si se dibujan las trazas. */
         fun onLocationStatusRefreshed() {
             locationStatusFlow.value = locationRepository.readLocationStatus()
@@ -351,36 +363,15 @@ class LiveRouteTrackingViewModel
             }
         }
 
+        private fun locationUpdatesOrNull(): Flow<RoutePoint?> =
+            locationRepository
+                .getLocationUpdates(LOCATION_INTERVAL_MILLIS)
+                .map<RoutePoint, RoutePoint?> { it }
+                .catch { emit(null) }
+                .onStart { emit(null) }
+
         private companion object {
-            val SPANISH_LOCALE: Locale = Locale.forLanguageTag("es-AR")
-
-            fun formatElapsedTime(seconds: Long): String {
-                val hours = seconds / 3600
-                val minutes = (seconds % 3600) / 60
-                val remainingSeconds = seconds % 60
-
-                return String.format(
-                    Locale.ROOT,
-                    "%02d:%02d:%02d",
-                    hours,
-                    minutes,
-                    remainingSeconds,
-                )
-            }
-
-            fun formatDistance(meters: Double): String =
-                String.format(
-                    SPANISH_LOCALE,
-                    "%.2f",
-                    meters / 1000.0,
-                )
-
-            fun formatSpeed(speedKmh: Double): String =
-                String.format(
-                    SPANISH_LOCALE,
-                    "%.1f",
-                    speedKmh,
-                )
+            const val LOCATION_INTERVAL_MILLIS = 1_000L
         }
     }
 
@@ -388,8 +379,6 @@ sealed interface LiveRouteTrackingUiEffect {
     data class NavigateToResults(
         val summary: FrozenRunSummary,
     ) : LiveRouteTrackingUiEffect
-
-    data object OpenStartRunModal : LiveRouteTrackingUiEffect
 
     /** Se tocó la traza de un recorrido guardado: abrir su detalle. */
     data class OpenSavedRun(
