@@ -1,5 +1,6 @@
 package com.trazo.app.ui.screens.saverun
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -9,24 +10,34 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trazo.app.R
 import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
+import com.trazo.app.ui.theme.TrazoTheme
 
 /** Pantalla «Guardar recorrido»: conecta el ViewModel y avisa cuando hay que salir. */
 @Composable
@@ -47,11 +58,16 @@ fun SaveRunScreen(
         }
     }
 
+    // Botón o gesto de volver del sistema: en vez de salir, pedimos confirmación.
+    BackHandler(onBack = viewModel::onBackRequested)
+
     SaveRunContent(
         state = state,
         onTitleChange = viewModel::onTitleChange,
         onHighlightToggle = viewModel::onHighlightToggle,
         onSave = viewModel::onSave,
+        onDiscardConfirm = viewModel::onDiscardConfirm,
+        onDiscardDismiss = viewModel::onDiscardDismiss,
         modifier = modifier,
     )
 }
@@ -63,6 +79,8 @@ fun SaveRunContent(
     onTitleChange: (String) -> Unit,
     onHighlightToggle: (String) -> Unit,
     onSave: () -> Unit,
+    onDiscardConfirm: () -> Unit,
+    onDiscardDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -122,10 +140,23 @@ fun SaveRunContent(
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             highlightOptions.forEach { option ->
+                val selected = option in state.highlights
                 FilterChip(
-                    selected = option in state.highlights,
+                    selected = selected,
                     onClick = { onHighlightToggle(option) },
                     label = { Text(option) },
+                    leadingIcon =
+                        if (selected) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize),
+                                )
+                            }
+                        } else {
+                            null
+                        },
                 )
             }
         }
@@ -136,5 +167,53 @@ fun SaveRunContent(
         ) {
             Text(stringResource(R.string.save_run_save))
         }
+    }
+    if (state.showDiscardDialog) {
+        DiscardRunDialog(onConfirm = onDiscardConfirm, onDismiss = onDiscardDismiss)
+    }
+}
+
+/** Pregunta si se descarta el recorrido. «Descartar» usa el estilo destructivo (rojo). */
+@Composable
+private fun DiscardRunDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.save_run_discard_title)) },
+        text = { Text(stringResource(R.string.save_run_discard_text)) },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+            ) {
+                Text(stringResource(R.string.save_run_discard_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.save_run_discard_keep))
+            }
+        },
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SaveRunContentPreview() {
+    TrazoTheme {
+        SaveRunContent(
+            state = SaveRunUiState(title = "Mi carrera", highlights = setOf("Piso parejo")),
+            onTitleChange = {},
+            onHighlightToggle = {},
+            onSave = {},
+            onDiscardConfirm = {},
+            onDiscardDismiss = {},
+        )
     }
 }
