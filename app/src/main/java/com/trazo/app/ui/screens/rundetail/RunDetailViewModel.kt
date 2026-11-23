@@ -5,10 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.trazo.app.data.repository.SavedRunRepository
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
+import com.trazo.app.domain.model.saved.RunBadge
 import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.ui.components.common.RunValueFormatter
 import com.trazo.app.ui.components.common.StatusBadgeKind
-import com.trazo.app.ui.components.common.toStatusBadgeKind
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,6 +82,13 @@ class RunDetailViewModel
                 distanceText = RunValueFormatter.formatDistanceKm(distanceMeters),
                 durationText = RunValueFormatter.formatDuration(elapsedTimeSeconds),
             )
+
+        private fun RunBadge.toStatusBadgeKind(): StatusBadgeKind =
+            when (this) {
+                RunBadge.GOAL_REACHED -> StatusBadgeKind.GOAL_REACHED
+                RunBadge.INCOMPLETE -> StatusBadgeKind.INCOMPLETE
+                RunBadge.DEMO -> StatusBadgeKind.DEMO
+            }
 
         private companion object {
             const val STOP_TIMEOUT_MILLIS = 5_000L
