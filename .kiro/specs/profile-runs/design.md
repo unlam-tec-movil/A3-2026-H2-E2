@@ -135,8 +135,7 @@ app/src/main/java/com/trazo/app/
 │   ├── StatusBadge.kt             # Píldora «Incompleto» / «Demo» / «Meta cumplida»
 │   └── RunValueFormatter.kt       # Formato es-AR de km, duración, velocidad, regularidad, fecha
 ├── ui/components/layout/
-│   ├── TrazoMapState.kt           # rememberTrazoMapState: tiles, atribución y zoom compartidos
-│   └── RunTraceMap.kt             # Mapa de solo lectura con una traza encuadrada (detalle)
+│   └── TrazoMapState.kt           # rememberTrazoMapState: tiles, atribución y zoom compartidos
 ├── ui/screens/profile/components/
 │   └── RunCard.kt                 # Card de «Mis recorridos»
 └── ui/screens/rundetail/
@@ -144,21 +143,22 @@ app/src/main/java/com/trazo/app/
     ├── RunDetailDialog.kt         # Screen (Dialog) + RunDetailContent stateless
     └── components/
         ├── HighlightChips.kt      # Destacados del recorrido
-        └── RunPhotos.kt           # Fila de fotos (las del recorrido; el máximo es SavedRun.MAX_PHOTOS)
+        ├── RunPhotos.kt           # Fila de fotos (las del recorrido; el máximo es SavedRun.MAX_PHOTOS)
+        └── RunTraceMap.kt         # Mapa de solo lectura con una traza encuadrada
 ```
 
 ### Modified Files
 - `domain/model/saved/SavedRun.kt` — **sin cambios** (se lee tal cual).
 - `ui/screens/profile/ProfileViewModel.kt` — inyecta `SavedRunRepository`; `ProfileUiState` suma `runs: List<RunCardUi>`; `hasRecentRuns` pasa a derivarse de `runs`; incluye `RunCardUi`.
 - `ui/screens/profile/ProfileScreen.kt` — `LazyColumn`, lista de `RunCard`, callback `onRunClick`.
-- `ui/components/layout/MapLayer.kt` — usa `rememberTrazoMapState`; suma `savedTraces` y `onMapTap` (el toque es el tramo recortable).
+- `ui/screens/map/components/MapLayer.kt` — usa `rememberTrazoMapState`; suma `savedTraces` y `onMapTap` (el toque es el tramo recortable).
 - `ui/components/layout/WebMercator.kt` — suma conversión inversa a latitud/longitud, metros por pixel y encuadre de una traza.
-- `ui/screens/map/LiveRouteTrackingViewModel.kt` y `LiveRouteTrackingUiState.kt` — inyectan `SavedRunRepository`; exponen `savedTraces` (vacío si no corresponde) y el efecto `OpenSavedRun(id)`.
+- `ui/screens/map/LiveRouteTrackingViewModel.kt` (con `LiveRouteTrackingUiState` arriba) — inyecta `SavedRunRepository`; exponen `savedTraces` (vacío si no corresponde) y el efecto `OpenSavedRun(id)`.
 - `ui/screens/map/MapScreen.kt` — pasa `savedTraces` a `MapLayer`, reanuda la lectura de ubicación y propaga `onSavedRunClick`.
 - `ui/navigation/TrazoApp.kt` — crea `RunDetailViewModel`, muestra `RunDetailDialog` y conecta los dos callbacks.
 - `app/src/main/res/values/strings.xml` — textos `profile_run_*` y `run_detail_*`.
 
-> `RunCardUi` (id, título, fecha, km, duración, frenadas, porcentaje de regularidad y marcas) vive en `ProfileViewModel.kt`. `RunDetailUi` vive en `RunDetailViewModel.kt`. `SavedTraceUi(id, puntos)` vive en `LiveRouteTrackingUiState.kt`.
+> `RunCardUi` (id, título, fecha, km, duración, frenadas, porcentaje de regularidad y marcas) vive en `ProfileViewModel.kt`. `RunDetailUi` vive en `RunDetailViewModel.kt`. `SavedTraceUi(id, puntos)` vive en `LiveRouteTrackingViewModel.kt`.
 
 ## System Flows
 

@@ -8,7 +8,6 @@ import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.domain.model.saved.SavedRunTotals
 import com.trazo.app.ui.components.common.RunValueFormatter
 import com.trazo.app.ui.components.common.StatusBadgeKind
-import com.trazo.app.ui.components.common.toStatusBadgeKind
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -86,6 +85,13 @@ class ProfileViewModel
                         .filterNot { it == RunBadge.GOAL_REACHED }
                         .map { it.toStatusBadgeKind() },
             )
+
+        private fun RunBadge.toStatusBadgeKind(): StatusBadgeKind =
+            when (this) {
+                RunBadge.GOAL_REACHED -> StatusBadgeKind.GOAL_REACHED
+                RunBadge.INCOMPLETE -> StatusBadgeKind.INCOMPLETE
+                RunBadge.DEMO -> StatusBadgeKind.DEMO
+            }
 
         private companion object {
             const val STOP_TIMEOUT_MILLIS = 5_000L
