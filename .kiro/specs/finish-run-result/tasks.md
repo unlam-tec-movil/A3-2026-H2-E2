@@ -18,7 +18,7 @@
 > ella borra su versión provisoria; (4) la ruta `result/{runId}` y el cableado de `TrazoApp.kt` son de
 > esta spec, y ella no toca ese archivo.
 
-- [ ] 1. Fundación
+- [x] 1. Fundación
 - [x] 1.1 Fake del repositorio y uso de `rememberReduceMotion()` de `ui/theme`
   - `kotlinx-coroutines-test` y `ui-test-junit4` ya están en `app/build.gradle.kts`: no tocar dependencias
   - Crear (o reutilizar el del test de `LiveRouteTrackingViewModelTest`) un fake de `RunSessionRepository` con `getFinishedSummary(id)` controlable y registro de llamadas
@@ -34,8 +34,9 @@
   - _Boundary: strings_finish_run.xml, ic_goal_check_
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 2. Mapa: botón «Finalizar» en el aviso de meta existente — **a cargo de Persona 3 (HU-04); no se implementa en esta spec**
-- [ ] 2.1 (Persona 3) Acuerdo y manejo de errores de `finishSession()`
+- [x] 2. Mapa: botón «Finalizar» en el aviso de meta existente — **a cargo de Persona 3 (HU-04); no se implementa en esta spec**
+- [x] 2.1 (Persona 3) Acuerdo y manejo de errores de `finishSession()`
+  - Cumplido con la 2.2 y la 2.3
   - Acordado: Persona 3 agrega el botón y lo conecta al diálogo de confirmación existente; los archivos (`GoalCelebrationOverlay`, `MapScreen`, ViewModel) son suyos
   - Persona 3 también corrige el manejo de errores de `finishSession()` en `onConfirmFinish()` para poder reintentar sin perder la sesión (hoy no usa `onFailure`)
   - _Requirements: 1.1, 1.3_
@@ -50,7 +51,7 @@
   - _Depends: 2.1_
   - _Requirements: 2.3, 3.3_
 
-- [ ] 3. Resultado: dominio y estado
+- [x] 3. Resultado: dominio y estado
 - [x] 3.1 (P) Formateo de los valores del resultado
   - Distancia en km con coma decimal desde `RunMetrics.distanceMeters` (metros, Double), tiempo `HH:MM:SS` desde `elapsedTimeSeconds` y regularidad con espacio y sin decimales, en `es-AR`; solo formatea, no recalcula
   - Tests: `5200.0` m → `5,2 km`, `1930` s → `00:32:10`, `80` → `80 %`
@@ -71,7 +72,7 @@
   - _Depends: 3.1, 3.2_
   - _Requirements: 5.1, 5.2, 5.3, 5.5, 6.4_
 
-- [ ] 4. Resultado: pantalla
+- [x] 4. Resultado: pantalla
 - [x] 4.1 Pantalla y tarjeta de resultado
   - `ResultScreen` + `ResultContent` stateless: fondo primario, `GoalReachedCard` con título «¡Meta cumplida!» (check animado una vez) o «Recorrido finalizado» sin animación y marca «Incompleto»; recuadros de distancia, tiempo y regularidad («No disponible» sin dato); botón «Continuar» a todo el ancho; frenadas no se muestran
   - «Completaste tu meta de X.» usa `goalLabel(goal)` de `ui/components/layout/GoalLabel.kt`
@@ -81,7 +82,7 @@
   - _Depends: 1.2, 3.3_
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 6.1, 6.5_
 
-- [ ] 5. Integración
+- [x] 5. Integración
 - [x] 5.1 Ruta `result/{runId}` y navegación desde el Mapa
   - Esta spec (HU-06) es dueña de la ruta y del cableado en `TrazoApp.kt`; Persona 3 no toca ese archivo
   - En `TrazoApp`, reemplazar el `TODO (Persona 4)` de `onNavigateToResults`: navegar a `result/${summary.id}` con `launchSingleTop` (el efecto `NavigateToResults` hoy lleva el `FrozenRunSummary`; solo se usa su `id`)
@@ -103,26 +104,28 @@
   - _Depends: 5.2_
   - _Requirements: 6.1 (parcial)_
 
-- [ ] 6. Validación
+- [x] 6. Validación
 - [x] 6.1 Prueba de flujo con fakes
   - `ResultViewModel` con un resumen congelado: con meta → «¡Meta cumplida!»; sin meta → «Recorrido finalizado»
   - Regresión de 4.6: con menos de 200 m `onFinishRequested()` abre el aviso corto y no llama a `finishSession()`, así que no se llega al resultado (ya cubierto por `LiveRouteTrackingViewModelTest`; solo agregar si falta)
   - _Depends: 3.3_
   - _Requirements: 2.3, 3.3, 4.6, 5.2, 5.3, 6.4_
 
-- [ ] 7. Bloqueadas o a cargo de otras specs (sin trabajo en esta spec hasta que se destraben)
-- [ ] 7.1 Prioridad del cierre sobre la alerta de frenada (7.1–7.3) — bloqueada por `stop-detection`
+- [x] 7. Bloqueadas o a cargo de otras specs (sin trabajo en esta spec hasta que se destraben)
+- [x] 7.1 Prioridad del cierre sobre la alerta de frenada (7.1–7.3)
+  - Destrabada: `StopDetectionOverlay` recibe `suppressed` por el slot de `MapScreen`; con `suppressed` oculta la alerta y la consulta, y responde la consulta pendiente como frenada (`StopDetectionViewModel.process`)
   - Productor listo: `LiveRouteTrackingUiState.suppressed` ya refleja aviso de meta, confirmación y aviso corto
   - Falta el consumidor: no hay código de `stop-detection` en `main`. Cuando exista su overlay, conectar `suppressed` y resolver la consulta pendiente como frenada (una sola vez, al pasar a visible)
   - _Requirements: 7.1, 7.2, 7.3_
 - [x] 7.2 Frenadas y regularidad hacia «Guardar recorrido» (6.2)
   - `FrozenRunSummary` trae `brakes: List<BrakeEvent>` (con `brakeCount` calculado, igual que `SavedRun`) y `regularityPercent: Int?` (0..100, `null` sin tramos o sin sensor); `save-run` los lee con `getFinishedSummary(id)`
   - Los junta `FinishRunUseCase` (`domain/usecases`) con `BrakeRepository`, `StopMonitor` y `RegularityMonitor`, y se los pasa a `finishSession(brakes, regularityPercent)`. Una frenada abierta al finalizar (se guarda recién después, por `closedStops`) se cuenta desde el monitor, y se une por id con las guardadas para no contarla dos veces
-  - El Resultado muestra la regularidad con `ResultFormatter.formatRegularity`; las frenadas no se muestran ahí
+  - El Resultado muestra la regularidad con `RunValueFormatter.formatRegularity` («sin dato» si es `null`); las frenadas no se muestran ahí
   - `RegularityMonitor` arranca al iniciar la app (`TrazoApplication` lo inyecta), así que la regularidad ya se mide en la app real
   - _Requirements: 6.2_
-- [ ] 7.3 Limpieza del resumen — acordado: a cargo de Persona 3 (repositorio) y `save-run` (HU-07)
+- [x] 7.3 Limpieza del resumen — acordado: a cargo de Persona 3 (repositorio) y `save-run` (HU-07)
   - Persona 3 agrega `removeFinishedSummary(id)` a `RunSessionRepository`; `getFinishedSummary(id)` mantiene su nombre
   - `save-run` (HU-07) lo llama al terminar de guardar o al descartar el recorrido
   - HU-06 **no lo llama**: la pantalla de Resultado solo lee. El descarte de un recorrido corto usa `resetToIdle()` sin crear resumen, así que no hay nada que limpiar
+  - Estado al 2026-11-23: `removeFinishedSummary(id)` ya existe y tiene test; `save-run` todavía no lo llama. Queda pendiente en HU-07, no en esta spec
   - Sin trabajo de código en esta spec; solo mantener el fake de test alineado con la interfaz

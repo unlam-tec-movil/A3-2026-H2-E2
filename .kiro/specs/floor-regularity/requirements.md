@@ -161,10 +161,10 @@ va a medir, para no esperar frenadas ni regularidad que no van a aparecer.
 4. While el dispositivo no tiene acelerómetro, the Medidor de Regularidad shall informar la
    regularidad como «sin dato» y nunca como 0 %.
 5. While el dispositivo no tiene acelerómetro, the app shall tratar las frenadas del recorrido como
-   «sin dato». (Supuesto a validar con `save-run` y Persona 3, ver pregunta abierta 5.)
+   «sin dato». (Acordado: ver «Acuerdos cerrados».)
 6. The Medidor de Regularidad shall exponer si el dispositivo tiene acelerómetro y el texto del
-   aviso, para que la pantalla que corresponda los muestre sin tener que consultar el sensor. (La
-   ubicación del aviso en pantalla es de otras personas, ver pregunta abierta 6.)
+   aviso, para que la pantalla que corresponda los muestre sin tener que consultar el sensor. (Lo
+   muestra el Mapa, ver «Acuerdos cerrados».)
 7. While el dispositivo no tiene acelerómetro, the app shall no fallar ni interrumpir el recorrido.
 
 ### Requirement 6: Una sola lectura del acelerómetro, y solo mientras hace falta
@@ -213,12 +213,23 @@ con el equipo; no son valores acordados.
    manual, frenada o pausa personal no cuentan, porque quieto da vibración baja e inflaría el
    porcentaje.
 4. **Recorrido sin ningún tramo completo.** Propuesta: «sin dato».
-5. **Sin acelerómetro.** Regularidad «sin dato». Falta acordar si las frenadas también son «sin
-   dato» o 0 (con `save-run` y Persona 3).
-6. **Dónde se muestra el aviso de E11.** Las pantallas del Mapa son de otras personas: esta spec
-   define la señal de disponibilidad del sensor y el texto del aviso, pero no lo cablea.
+5. **Sin acelerómetro.** Regularidad «sin dato». Resuelto: las frenadas también son «sin dato»
+   en el resumen (ver «Acuerdos cerrados»).
+6. **Dónde se muestra el aviso de E11.** Resuelto: en el Mapa, mientras hay un recorrido en curso
+   (ver «Acuerdos cerrados»).
 
-## Dependencias y acuerdos abiertos
+## Acuerdos cerrados (2026-11-23)
+
+Cierran la tarea 6.1. Están implementados en `develop` y mandan sobre la tabla de propuestas de abajo.
+
+| Con quién | Acuerdo |
+|-----------|---------|
+| Persona 3 (`FinishRunUseCase`, `FrozenRunSummary`) | **El valor llega al resumen por `FinishRunUseCase`** (`domain/usecases/`): al finalizar lee `RegularityMonitor.state` y pasa `regularityPercent` a `finishSession(brakes, regularityPercent)`. Solo se usa si el estado es del mismo recorrido (`runId`); si no, queda `null`. |
+| Persona 3 | **Sin acelerómetro, las frenadas son «sin dato»**: `FrozenRunSummary.brakes` es `null` (no una lista vacía) y `brakeCount` también. Con sensor, la lista incluye la frenada que quedó abierta al finalizar. |
+| `save-run` (HU-07) | **Lee los dos valores del resumen congelado** con `getFinishedSummary(id)`, que no depende del monitor: se puede leer aunque ya haya empezado otro recorrido. Al guardar, la regularidad pasa tal cual (`null` = «sin dato») y las frenadas «sin dato» se guardan como lista vacía (`summary.brakes.orEmpty()`), porque `SavedRun.brakes` no admite `null`. |
+| Pantallas del Mapa y del resultado | **El Mapa muestra el aviso sin acelerómetro** (`MotionSensorMissingNotice`, con `LiveRouteTrackingUiState.showMotionSensorMissing`) mientras hay un recorrido en curso. **El Resultado muestra «sin dato»** (`run_value_no_data`) cuando la regularidad es `null`; las frenadas no se muestran ahí. |
+
+## Dependencias y acuerdos (propuesta original)
 
 | Con quién | Qué falta acordar | Propuesta de esta spec |
 |-----------|-------------------|------------------------|

@@ -29,7 +29,7 @@
 > `MotionSensorModule`) y el adaptador del estado del
 > recorrido de HU-04. Esta spec no modifica `stop-detection`, `FrozenRunSummary` ni `MapScreen`.
 
-- [ ] 1. Fundaciones: modelos, configuración y puertos del dominio
+- [x] 1. Fundaciones: modelos, configuración y puertos del dominio
 
 - [x] 1.1 Definir los modelos, la configuración y los puertos de la regularidad
   - Configuración con tramo de 10 s, umbral de vibración baja (valor inicial provisional, marcado
@@ -44,7 +44,7 @@
   - _Boundary: RegularityConfig, RegularityState, ActiveRunStateSource, MotionSensorAvailability, RegularityRepository_
   - _Requirements: 3.3, 3.4, 3.9, 4.2, 4.3, 5.4, 5.6_
 
-- [ ] 2. Núcleo: medidor, sensor compartido y repositorio
+- [x] 2. Núcleo: medidor, sensor compartido y repositorio
 
 - [x] 2.1 (P) Medidor de tramos de 10 segundos
   - Agrupa las muestras en tramos consecutivos y clasifica cada tramo cerrado por el desvío estándar
@@ -86,7 +86,7 @@
   - _Depends: 2.1, 2.2, 2.3_
   - _Requirements: 1.4, 2.2, 2.3, 3.5, 3.6, 4.1, 4.4, 4.5, 5.3, 5.4, 5.7, 6.2, 6.3, 6.6_
 
-- [ ] 3. Verificación sobre stop-detection y aviso
+- [x] 3. Verificación sobre stop-detection y aviso
 
 - [x] 3.1 (P) Verificar con pruebas que la pausa manual y la reanudación no afectan a las frenadas
   - Sin modificar `stop-detection`: pausar durante una detención de menos de 8 s no registra frenada
@@ -104,7 +104,7 @@
   - _Boundary: MotionSensorMissingNotice, strings_
   - _Requirements: 5.1, 5.2, 5.6_
 
-- [ ] 4. Integración
+- [x] 4. Integración
 
 - [x] 4.1 Adaptar el estado del recorrido de HU-04
   - Convierte la sesión activa en instantánea con id y estado, y la sesión inactiva en ausencia de
@@ -161,9 +161,10 @@
   - _Depends: 4.3_
   - _Requirements: 5.1, 5.7, 6.2, 6.3, 6.4, 7.1_
 
-- [ ] 6. Acuerdos con otras personas (sin código)
+- [x] 6. Acuerdos con otras personas (sin código)
 
-- [ ] 6.1 Cerrar los acuerdos abiertos
+- [x] 6.1 Cerrar los acuerdos abiertos
+  - Cerrados el 2026-11-23: ver «Acuerdos cerrados» en `requirements.md` y `design.md`
   - Persona 3: cómo llega el valor al resumen en `finishSession()` y frenadas «sin dato» o 0
   - `save-run`: cuándo lee la regularidad (antes de iniciar el siguiente recorrido)
   - Pantallas del Mapa y resultado: quién muestra el aviso y cómo se presenta «sin dato»

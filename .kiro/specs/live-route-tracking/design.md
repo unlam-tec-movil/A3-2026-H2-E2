@@ -1,5 +1,32 @@
 # Documento de Diseño Técnico: live-route-tracking (HU-04)
 
+> **Revisión 2026-11-23 · cierre HU-01 a HU-06 (refactor #128).** Esta nota manda sobre lo que se
+> contradiga más abajo.
+>
+> - Pestañas: «Mapa» es **Actividad** e «Historial» es «Mis recorridos», dentro de Perfil (ver la
+>   revisión de `requirements.md`).
+> - `FinishRunUseCase` volvió a existir (`domain/usecases/`, PR #122): junta las frenadas y la
+>   regularidad y llama a `finishSession(brakes, regularityPercent)`. Los demás casos de uso de la
+>   revisión 2026-11-20 siguen eliminados.
+> - `LiveRouteTrackingUiState` y `SavedTraceUi` viven arriba de `LiveRouteTrackingViewModel.kt`; el
+>   archivo `LiveRouteTrackingUiState.kt` ya no existe. Se borraron `distanceUnit` y `speedUnit` (la
+>   unidad la pone `RunPanel`).
+> - `MapScreen(onNavigateToResults, modifier, onSavedRunClick, startRunFab, gpsWaitingNotice,
+>   stopDetectionOverlay, viewModel)` conecta el ViewModel, los efectos y la ventana. Lo que se
+>   dibuja está en `MapContent`, sin estado, que recibe `uiState` y `MapActions`. Se borraron
+>   `onStartRunClick` y el slot `shortRunNotice`: el aviso de recorrido corto es un diálogo privado de
+>   `MapScreen`.
+> - Del ViewModel se borraron `onStartRunClicked()`, `attachActiveSession()` y los efectos
+>   `OpenStartRunModal` y `ReturnToIdleMap`. `ShowLocationPermissionLostMessage` es un
+>   `data object`: el texto lo pone la pantalla.
+> - La regla de los 200 m está en el dominio: `RunSession.isShortRun`, con
+>   `RunSession.MIN_FINISH_DISTANCE_METERS`.
+> - Los textos de las métricas los arma `RunValueFormatter` (`ui/components/common/`):
+>   `formatDuration`, `formatLiveDistanceKm` y `formatSpeedValue`.
+> - Los componentes que usa solo el Mapa están en `ui/screens/map/components/`: `MapLayer`,
+>   `RunPanel`, `RunControls`, `GpsIndicator`, `FinishConfirmDialog` y `GoalCelebrationOverlay`.
+> - Las tareas, armadas después de implementar, están en `tasks.md`.
+
 > **Revisión 2026-11-20 · refactor de dominio de sesión.** Esta nota manda sobre lo que se
 > contradiga más abajo. Clases eliminadas o renombradas y su reemplazo:
 >

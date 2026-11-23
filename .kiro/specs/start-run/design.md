@@ -1,5 +1,19 @@
 # Design Document · start-run (HU-02 y HU-03)
 
+> **Revisión 2026-11-23 · cierre HU-01 a HU-06 (refactor #128).** Esta nota manda sobre lo que se
+> contradiga más abajo.
+>
+> - Pestañas: donde dice Inicio o Mapa, vale la revisión de `requirements.md`. El «+» está solo en
+>   **Actividad** (antes Mapa) y HU-03 quedó fusionada con HU-02.
+> - Los componentes que usa solo esta spec pasaron a `ui/screens/startrun/components/`:
+>   `StartRunFab`, `StartRunDialog`, `LocationIssueDialog` y `GoalChip`, junto a `GpsWaitingNotice`.
+>   Sus tests se movieron igual (`StartRunFabTest`, entre otros).
+> - `MapLayer` pasó a `ui/screens/map/components/` (el slot `belowCenterButton` no cambia).
+> - `StartRunUiState.isConfirmEnabled` se borró porque nadie lo usaba: el modal habilita «Comenzar»
+>   con `selectedGoal != null` y `onConfirm()` no hace nada sin meta.
+> - `onStartRunClicked()` y el efecto `OpenStartRunModal` del Mapa ya no existen (antes quedaban sin
+>   uso), y `MapScreen` ya no recibe `onStartRunClick`.
+
 ## Overview
 
 **Purpose**: permitir que el corredor inicie un recorrido desde Inicio o desde Mapa con un único
