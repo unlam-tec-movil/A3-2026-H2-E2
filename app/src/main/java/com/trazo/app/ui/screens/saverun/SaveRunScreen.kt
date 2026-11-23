@@ -9,10 +9,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -21,12 +26,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trazo.app.R
 import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
+import com.trazo.app.ui.theme.TrazoTheme
 
 /** Pantalla «Guardar recorrido»: conecta el ViewModel y avisa cuando hay que salir. */
 @Composable
@@ -122,10 +129,23 @@ fun SaveRunContent(
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             highlightOptions.forEach { option ->
+                val selected = option in state.highlights
                 FilterChip(
-                    selected = option in state.highlights,
+                    selected = selected,
                     onClick = { onHighlightToggle(option) },
                     label = { Text(option) },
+                    leadingIcon =
+                        if (selected) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize),
+                                )
+                            }
+                        } else {
+                            null
+                        },
                 )
             }
         }
@@ -136,5 +156,18 @@ fun SaveRunContent(
         ) {
             Text(stringResource(R.string.save_run_save))
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SaveRunContentPreview() {
+    TrazoTheme {
+        SaveRunContent(
+            state = SaveRunUiState(title = "Mi carrera", highlights = setOf("Piso parejo")),
+            onTitleChange = {},
+            onHighlightToggle = {},
+            onSave = {},
+        )
     }
 }
