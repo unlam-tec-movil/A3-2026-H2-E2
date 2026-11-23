@@ -2,6 +2,7 @@ package com.trazo.app.ui.screens.saverun
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -46,6 +48,7 @@ fun SaveRunScreen(
     SaveRunContent(
         state = state,
         onTitleChange = viewModel::onTitleChange,
+        onHighlightToggle = viewModel::onHighlightToggle,
         onSave = viewModel::onSave,
         modifier = modifier,
     )
@@ -56,6 +59,7 @@ fun SaveRunScreen(
 fun SaveRunContent(
     state: SaveRunUiState,
     onTitleChange: (String) -> Unit,
+    onHighlightToggle: (String) -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -83,6 +87,31 @@ fun SaveRunContent(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
+
+        val highlightOptions =
+            listOf(
+                stringResource(R.string.save_run_highlight_even_floor),
+                stringResource(R.string.save_run_highlight_safe),
+                stringResource(R.string.save_run_highlight_lit),
+                stringResource(R.string.save_run_highlight_shade),
+            )
+        Text(
+            text = stringResource(R.string.save_run_highlights_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            highlightOptions.forEach { option ->
+                FilterChip(
+                    selected = option in state.highlights,
+                    onClick = { onHighlightToggle(option) },
+                    label = { Text(option) },
+                )
+            }
+        }
+
         Button(
             onClick = onSave,
             modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.buttonHeight),
