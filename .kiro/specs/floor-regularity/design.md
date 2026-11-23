@@ -23,6 +23,15 @@
 >   calidad de señal y estado del permiso por ahí, no por `LocationClient`.
 > - Los monitores se proveen desde `di/MonitorModule.kt` (`@Singleton`, `@ApplicationScope`).
 
+> **Revisión 2026-11-23 · cierre HU-01 a HU-06.** Esta nota manda sobre lo que se contradiga más abajo.
+>
+> - `ActiveRunSnapshot` ya no es un modelo aparte: es una clase `internal` dentro de
+>   `RegularityMonitor.kt`. El monitor ya no guarda `lastRunId`: compara contra el `runId` de su
+>   propio estado para empezar de cero en un recorrido nuevo.
+> - Los acuerdos abiertos se cerraron: ver «Acuerdos cerrados» en `requirements.md`. En resumen, el
+>   valor llega al resumen por `FinishRunUseCase`, sin acelerómetro las frenadas son «sin dato»
+>   (`null`), el Mapa muestra el aviso y el Resultado muestra «sin dato».
+
 ## Overview
 
 **Propósito**: esta funcionalidad entrega al corredor la métrica «Regularidad»: el porcentaje de
@@ -515,10 +524,9 @@ de `save-run`. Invariantes: `lowVibrationSegments <= completedSegments`; `percen
   porcentaje; se mide en calibración. Resolverlo exigiría exponer la fase de `stop-detection`, fuera
   de esta spec.
 - **Redondeo** al entero más cercano: supuesto a validar.
-- **Frenadas sin acelerómetro** («sin dato» o 0): a acordar con `save-run` y Persona 3.
+- **Frenadas sin acelerómetro**: resuelto, «sin dato» (`null`) en el resumen; ver «Acuerdos cerrados» en `requirements.md`.
 - **Doble binding Hilt** de `MotionSource` y `MonotonicClock` con el módulo de `stop-detection`:
   resuelto en la 4.2 (proveedor único: `MotionSensorModule`); verificar que no reaparezca.
-- **Cómo llega el valor al resumen en `finishSession()`** (Persona 3) y **cuándo lo lee `save-run`**:
-  abiertos; el diseño garantiza que el valor está disponible antes de armar el resumen y hasta el
-  siguiente recorrido.
-- **Ubicación del aviso de E11 en pantalla**: de otras personas.
+- **Cómo llega el valor al resumen y cuándo lo lee `save-run`**: resuelto, por `FinishRunUseCase` y
+  desde el resumen congelado; ver «Acuerdos cerrados» en `requirements.md`.
+- **Ubicación del aviso de E11 en pantalla**: resuelto, en el Mapa.

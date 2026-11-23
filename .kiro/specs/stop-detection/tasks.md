@@ -32,7 +32,7 @@
 > (ver la revisión al inicio de `design.md`): `SensorStopMonitor` + `SaveStopUseCase` +
 > `BrakeRepository` bobo. La frenada se guarda al cerrar la parada y ya no se borra.
 
-- [ ] 1. Fundaciones: utilidad compartida, pruebas con tiempo virtual y contratos del dominio
+- [x] 1. Fundaciones: utilidad compartida, pruebas con tiempo virtual y contratos del dominio
 
 - [x] 1.1 Crear la utilidad compartida «Quitar animaciones»
   - Una función componible que informa si el corredor tiene desactivadas las animaciones del sistema
@@ -62,7 +62,7 @@
   - _Boundary: Domain (model/stops, repository)_
   - _Requirements: 1.1, 2.2, 2.4, 4.1_
 
-- [ ] 2. Núcleo: detección, sensor y repositorio
+- [x] 2. Núcleo: detección, sensor y repositorio
 
 - [x] 2.1 (P) Estimar si el corredor está quieto con una ventana de aceleración
   - Decide «quieto» con la desviación de la magnitud en una ventana de 1 s, sin depender de la
@@ -126,7 +126,7 @@
   - _Boundary: AccelerometerMotionSource_
   - _Requirements: 1.1, 1.4_
 
-- [ ] 3. Interfaz: alerta, consulta y superposición
+- [x] 3. Interfaz: alerta, consulta y superposición
 
 - [x] 3.1 Agregar los recursos de la alerta y la consulta
   - Textos con prefijo `map_` («Frenada detectada», «Semáforo o intersección», pregunta de la
@@ -173,7 +173,7 @@
   - _Depends: 3.2, 3.3, 3.4_
   - _Requirements: 3.1, 4.1_
 
-- [ ] 4. Integración con HU-04 y Mapa (La 4.3 se implementa ahora; la 4.4 y la verificación manual de transiciones esperan los cambios de Persona 3 en `develop`)
+- [x] 4. Integración con HU-04 y Mapa
 
 - [x] 4.1 Adaptar el recorrido y la ubicación de HU-04
   - El «recorrido en curso» entrega el id mientras la sesión está activa, detenida o en pausa
@@ -216,8 +216,10 @@
   - _Depends: 2.6, 4.1, 4.2_
   - _Requirements: 1.4_
 
-- [ ] 4.4 Montar la superposición en el Mapa por parámetro
-  - Bloqueada por dependencia con la 4.3: espera el aviso de Persona 3 (cambios D1–D3 en `develop`)
+- [x] 4.4 Montar la superposición en el Mapa por parámetro
+  - Hecho: `TrazoApp` pasa `StopDetectionOverlay` por el slot `stopDetectionOverlay` de `MapScreen`, que
+    le entrega `LiveRouteTrackingUiState.suppressed`. Los cambios D1–D3 de Persona 3 ya están en
+    `develop` (`markStopped`, `markMoving` y `pausePersonally` en `RunSessionRepository`)
   - Coordinar con Persona 3 (dueña del Mapa): se suma la pieza con `suppressed` sin reescribir la
     pantalla; la alimenta el cierre de HU-06
   - En el Mapa con un recorrido en curso aparece la alerta sobre el panel del temporizador y, a los

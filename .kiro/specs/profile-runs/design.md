@@ -151,14 +151,14 @@ app/src/main/java/com/trazo/app/
 - `domain/model/saved/SavedRun.kt` — **sin cambios** (se lee tal cual).
 - `ui/screens/profile/ProfileViewModel.kt` — inyecta `SavedRunRepository`; `ProfileUiState` suma `runs: List<RunCardUi>`; `hasRecentRuns` pasa a derivarse de `runs`; incluye `RunCardUi`.
 - `ui/screens/profile/ProfileScreen.kt` — `LazyColumn`, lista de `RunCard`, callback `onRunClick`.
-- `ui/components/layout/MapLayer.kt` — usa `rememberTrazoMapState`; suma `savedTraces` y `onMapTap` (el toque es el tramo recortable).
+- `ui/screens/map/components/MapLayer.kt` (antes en `ui/components/layout/`) — usa `rememberTrazoMapState`; suma `savedTraces` y `onMapTap` (el toque es el tramo recortable).
 - `ui/components/layout/WebMercator.kt` — suma conversión inversa a latitud/longitud, metros por pixel y encuadre de una traza.
-- `ui/screens/map/LiveRouteTrackingViewModel.kt` y `LiveRouteTrackingUiState.kt` — inyectan `SavedRunRepository`; exponen `savedTraces` (vacío si no corresponde) y el efecto `OpenSavedRun(id)`.
+- `ui/screens/map/LiveRouteTrackingViewModel.kt` (con `LiveRouteTrackingUiState` arriba, en el mismo archivo) — inyecta `SavedRunRepository`; exponen `savedTraces` (vacío si no corresponde) y el efecto `OpenSavedRun(id)`.
 - `ui/screens/map/MapScreen.kt` — pasa `savedTraces` a `MapLayer`, reanuda la lectura de ubicación y propaga `onSavedRunClick`.
 - `ui/navigation/TrazoApp.kt` — crea `RunDetailViewModel`, muestra `RunDetailDialog` y conecta los dos callbacks.
 - `app/src/main/res/values/strings.xml` — textos `profile_run_*` y `run_detail_*`.
 
-> `RunCardUi` (id, título, fecha, km, duración, frenadas, porcentaje de regularidad y marcas) vive en `ProfileViewModel.kt`. `RunDetailUi` vive en `RunDetailViewModel.kt`. `SavedTraceUi(id, puntos)` vive en `LiveRouteTrackingUiState.kt`.
+> `RunCardUi` (id, título, fecha, km, duración, frenadas, porcentaje de regularidad y marcas) vive en `ProfileViewModel.kt`. `RunDetailUi` vive en `RunDetailViewModel.kt`. `SavedTraceUi(id, puntos)` vive en `LiveRouteTrackingViewModel.kt`.
 
 ## System Flows
 

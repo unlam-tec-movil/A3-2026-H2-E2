@@ -95,7 +95,7 @@
   - _Depends: 2.2, 4.1, 4.2_
   - _Requirements: 5.2, 5.4, 6.1, 8.2, 9.1, 9.4_
 
-- [ ] 5. Validación
+- [x] 5. Validación
 
 - [x] 5.1 Verificación automática
   - `ktlintCheck`, `testDebugUnitTest`, `assembleDebug` y `assembleDebugAndroidTest` pasan

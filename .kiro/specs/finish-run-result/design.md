@@ -1,5 +1,19 @@
 # Design Document · finish-run-result
 
+> **Revisión 2026-11-23 · cierre HU-01 a HU-06 (refactor #128).** Esta nota manda sobre lo que se
+> contradiga más abajo.
+>
+> - `ResultFormatter` se borró: el Resultado usa `RunValueFormatter` (`ui/components/common/`), con
+>   los mismos formatos (`5,2 km`, `00:32:10`, `80 %`). Su test es `RunValueFormatterTest`.
+> - `GetFinishedRunSummaryUseCase` ya no existe: `ResultViewModel` lee
+>   `RunSessionRepository.getFinishedSummary(id)` directo.
+> - La regularidad `null` se muestra como «sin dato» (`run_value_no_data`), no como «No disponible».
+> - «Continuar» ya navega a `saverun/{runId}` (HU-07): el parche de la tarea 5.3 no corre más.
+> - El slot `shortRunNotice` de `MapScreen` se borró: el aviso de recorrido corto es un diálogo
+>   privado de `MapScreen`.
+> - `GoalCelebrationOverlay` y `FinishConfirmDialog` pasaron a `ui/screens/map/components/`, y
+>   `onFinish` es obligatorio en `GoalCelebrationOverlay`.
+
 > Revisado contra el código real de `feat/hu-06-resultado` (con HU-04 ya mergeada desde `develop`).
 > Los requisitos no cambian. Varias piezas que este diseño pensaba crear **ya existen** en HU-04
 > (Persona 3); lo que queda para esta spec es la pantalla de resultado, su ruta y un ajuste mínimo
