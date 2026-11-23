@@ -1,10 +1,12 @@
 package com.trazo.app.ui.screens.map
 
 import android.content.Context
+import android.view.WindowManager
+import androidx.activity.ComponentActivity
 import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -27,6 +29,7 @@ import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.ui.theme.TrazoTheme
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -37,7 +40,7 @@ import kotlin.time.Instant
 @RunWith(AndroidJUnit4::class)
 class MapScreenTest {
     @get:Rule
-    val composeTestRule = createComposeRule()
+    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val repository = FakeRunSessionRepository()
@@ -292,6 +295,49 @@ class MapScreenTest {
 
         // Then
         assertEquals(listOf("a"), viewModel.traceIds())
+    }
+
+    @Test
+    fun `given an active run, when the map screen is shown, then the screen stays on`() {
+        // Given
+        repository.setSession(activeSession())
+
+        // When
+        showScreen()
+        composeTestRule.waitForIdle()
+
+        // Then
+        assertTrue(isKeepScreenOnSet())
+    }
+
+    @Test
+    fun `given no active run, when the map screen is shown, then the screen can turn off`() {
+        // Given / When
+        showScreen()
+        composeTestRule.waitForIdle()
+
+        // Then
+        assertFalse(isKeepScreenOnSet())
+    }
+
+    @Test
+    fun `given an active run, when the run ends, then the screen can turn off again`() {
+        // Given
+        repository.setSession(activeSession())
+        showScreen()
+        composeTestRule.waitForIdle()
+
+        // When
+        composeTestRule.runOnIdle { repository.resetToIdle() }
+        composeTestRule.waitForIdle()
+
+        // Then
+        assertFalse(isKeepScreenOnSet())
+    }
+
+    private fun isKeepScreenOnSet(): Boolean {
+        val flags = composeTestRule.activity.window.attributes.flags
+        return flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON != 0
     }
 
     private fun LiveRouteTrackingViewModel.traceIds() = uiState.value.savedTraces.map { it.id }

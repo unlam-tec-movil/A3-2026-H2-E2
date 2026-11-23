@@ -420,4 +420,46 @@ class StartRunViewModelTest {
             assertEquals(LocationStatus.PERMISSION_DENIED, viewModel.uiState.value.locationIssue)
             assertEquals(RunSession.Idle, repository.activeSession.value)
         }
+
+    // 8.5: si la espera falla pero el permiso y el GPS siguen bien, el aviso es «Ubicación desactivada».
+    @Test
+    fun locationErrorWhileWaiting_withLocationReady_showsDeviceLocationOff() =
+        runTest(dispatcher) {
+            locationUpdates = flow { throw IllegalStateException("el proveedor de ubicación falló") }
+            openDialog()
+            viewModel.onGoalSelected(RunGoal.FIVE_KILOMETERS)
+            viewModel.onConfirm()
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.isWaitingForGps)
+            assertEquals(LocationStatus.DEVICE_LOCATION_OFF, viewModel.uiState.value.locationIssue)
+            assertEquals(RunSession.Idle, repository.activeSession.value)
+        }
+
+    // Confirmar de nuevo mientras se espera la señal reemplaza la espera anterior: arranca un solo
+    // recorrido, con la última meta elegida.
+    @Test
+    fun onConfirm_twice_cancelsThePreviousWait_andStartsOnlyTheLastGoal() =
+        runTest(dispatcher) {
+            val updates = MutableSharedFlow<RoutePoint>()
+            locationUpdates = updates
+            openDialog()
+            viewModel.onGoalSelected(RunGoal.THREE_KILOMETERS)
+            viewModel.onConfirm()
+            advanceUntilIdle()
+
+            viewModel.onGoalSelected(RunGoal.TEN_KILOMETERS)
+            viewModel.onConfirm()
+            advanceUntilIdle()
+            assertEquals(1, updates.subscriptionCount.value)
+            assertEquals(RunGoal.TEN_KILOMETERS, viewModel.uiState.value.waitingGoal)
+
+            updates.emit(point(10f))
+            advanceUntilIdle()
+
+            val session = repository.activeSession.value as RunSession.ActiveSession
+            assertEquals(RunGoal.TEN_KILOMETERS, session.goal)
+            assertEquals(0, updates.subscriptionCount.value)
+            assertFalse(viewModel.uiState.value.isWaitingForGps)
+        }
 }

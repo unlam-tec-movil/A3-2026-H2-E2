@@ -18,7 +18,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.trazo.app.R
-import com.trazo.app.domain.model.saved.RunBadge
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme
 
@@ -28,14 +27,6 @@ enum class StatusBadgeKind {
     INCOMPLETE,
     DEMO,
 }
-
-/** Mapea la marca de dominio a la que dibuja la UI. */
-fun RunBadge.toStatusBadgeKind(): StatusBadgeKind =
-    when (this) {
-        RunBadge.GOAL_REACHED -> StatusBadgeKind.GOAL_REACHED
-        RunBadge.INCOMPLETE -> StatusBadgeKind.INCOMPLETE
-        RunBadge.DEMO -> StatusBadgeKind.DEMO
-    }
 
 private val BadgeMinHeight = 24.dp
 
