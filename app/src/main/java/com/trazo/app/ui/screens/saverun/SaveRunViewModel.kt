@@ -3,6 +3,7 @@ package com.trazo.app.ui.screens.saverun
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.domain.usecases.SaveRunResult
 import com.trazo.app.domain.usecases.SaveRunUseCase
@@ -23,13 +24,15 @@ data class SaveRunUiState(
     val photoPaths: List<String> = emptyList(),
     /** Verdadero si el último intento de guardar falló por un título inválido. */
     val titleError: Boolean = false,
+    /** Verdadero si hay que mostrar el diálogo «¿Descartar el recorrido?». */
+    val showDiscardDialog: Boolean = false,
 )
 
 sealed interface SaveRunEffect {
     /** El recorrido se guardó: la pantalla vuelve al mapa. */
     data object Saved : SaveRunEffect
 
-    /** El recorrido ya no está disponible: no hay nada que guardar. */
+    /** No hay nada que guardar (recorrido no disponible o descartado): la pantalla se cierra. */
     data object Close : SaveRunEffect
 }
 
@@ -40,6 +43,7 @@ class SaveRunViewModel
     constructor(
         savedStateHandle: SavedStateHandle,
         private val saveRun: SaveRunUseCase,
+        private val runSessions: RunSessionRepository,
     ) : ViewModel() {
         private val runId: String = savedStateHandle.get<String>(RUN_ID_KEY).orEmpty()
 
@@ -73,6 +77,23 @@ class SaveRunViewModel
                     SaveRunResult.TooManyPhotos -> Unit
                 }
             }
+        }
+
+        /** El usuario quiere volver sin guardar: pedimos confirmación. */
+        fun onBackRequested() {
+            _uiState.update { it.copy(showDiscardDialog = true) }
+        }
+
+        /** «Seguir editando»: se cierra el diálogo y todo queda como estaba. */
+        fun onDiscardDismiss() {
+            _uiState.update { it.copy(showDiscardDialog = false) }
+        }
+
+        /** «Descartar»: se borra el resumen pendiente y se sale de la pantalla. */
+        fun onDiscardConfirm() {
+            _uiState.update { it.copy(showDiscardDialog = false) }
+            runSessions.removeFinishedSummary(runId)
+            viewModelScope.launch { _effect.send(SaveRunEffect.Close) }
         }
 
         private companion object {
