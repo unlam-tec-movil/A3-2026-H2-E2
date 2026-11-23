@@ -94,7 +94,7 @@ private fun SignalBars(
     color: Color,
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
         verticalAlignment = Alignment.Bottom,
     ) {
         BarHeights.forEachIndexed { index, barHeight ->

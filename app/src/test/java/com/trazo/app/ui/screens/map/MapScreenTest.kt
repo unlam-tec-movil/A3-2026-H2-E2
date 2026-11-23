@@ -24,8 +24,6 @@ import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.saved.SavedRun
-import com.trazo.app.domain.usecases.testFinishRunUseCase
-import com.trazo.app.domain.usecases.testRegularityMonitor
 import com.trazo.app.ui.theme.TrazoTheme
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -50,13 +48,7 @@ class MapScreenTest {
     private val silentLocationRepository = FakeLocationRepository(locationStatus = { locationStatus })
 
     private fun createViewModel(sensorAvailable: Boolean = true) =
-        LiveRouteTrackingViewModel(
-            runSessionRepository = repository,
-            locationRepository = silentLocationRepository,
-            finishRun = testFinishRunUseCase(repository),
-            savedRunRepository = savedRunRepository,
-            regularityMonitor = testRegularityMonitor(repository, sensorAvailable),
-        )
+        testLiveRouteTrackingViewModel(repository, silentLocationRepository, savedRunRepository, sensorAvailable)
 
     private fun activeSession() =
         RunSession.ActiveSession(

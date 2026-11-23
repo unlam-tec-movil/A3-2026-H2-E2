@@ -7,8 +7,6 @@ import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.saved.SavedRun
-import com.trazo.app.domain.usecases.testFinishRunUseCase
-import com.trazo.app.domain.usecases.testRegularityMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -44,13 +42,7 @@ class LiveRouteTrackingViewModelSavedTracesTest {
 
     private fun TestScope.subscribedViewModel(): LiveRouteTrackingViewModel {
         val viewModel =
-            LiveRouteTrackingViewModel(
-                runSessionRepository = sessionRepository,
-                locationRepository = locationRepository,
-                finishRun = testFinishRunUseCase(sessionRepository),
-                savedRunRepository = savedRunRepository,
-                regularityMonitor = testRegularityMonitor(sessionRepository),
-            )
+            testLiveRouteTrackingViewModel(sessionRepository, locationRepository, savedRunRepository)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }

@@ -2,13 +2,10 @@ package com.trazo.app.ui.screens.map
 
 import com.trazo.app.data.repository.FakeLocationRepository
 import com.trazo.app.data.repository.FakeRunSessionRepository
-import com.trazo.app.data.repository.FakeSavedRunRepository
 import com.trazo.app.domain.model.map.RoutePoint
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunSession
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.domain.usecases.testFinishRunUseCase
-import com.trazo.app.domain.usecases.testRegularityMonitor
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -53,13 +50,7 @@ class LiveRouteTrackingViewModelFlowsTest {
     }
 
     private fun createViewModel(sensorAvailable: Boolean = true) =
-        LiveRouteTrackingViewModel(
-            runSessionRepository = repository,
-            locationRepository = locationRepository,
-            finishRun = testFinishRunUseCase(repository),
-            savedRunRepository = FakeSavedRunRepository(),
-            regularityMonitor = testRegularityMonitor(repository, sensorAvailable),
-        )
+        testLiveRouteTrackingViewModel(repository, locationRepository, sensorAvailable = sensorAvailable)
 
     private fun session(state: RunState) =
         RunSession.ActiveSession(
