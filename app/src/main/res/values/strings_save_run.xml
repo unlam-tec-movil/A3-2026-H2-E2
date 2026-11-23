@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="save_run_heading">Guardar recorrido</string>
+    <string name="save_run_title_label">Título del recorrido</string>
+    <string name="save_run_title_error">El título debe tener entre 3 y 50 caracteres.</string>
+    <string name="save_run_save">Guardar</string>
+</resources>

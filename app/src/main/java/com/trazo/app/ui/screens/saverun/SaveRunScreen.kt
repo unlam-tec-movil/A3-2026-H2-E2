@@ -1,0 +1,93 @@
+package com.trazo.app.ui.screens.saverun
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.trazo.app.R
+import com.trazo.app.ui.theme.Sizes
+import com.trazo.app.ui.theme.Spacing
+
+/** Pantalla «Guardar recorrido»: conecta el ViewModel y avisa cuando hay que salir. */
+@Composable
+fun SaveRunScreen(
+    onSaved: () -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: SaveRunViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(viewModel) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                SaveRunEffect.Saved -> onSaved()
+                SaveRunEffect.Close -> onClose()
+            }
+        }
+    }
+
+    SaveRunContent(
+        state = state,
+        onTitleChange = viewModel::onTitleChange,
+        onSave = viewModel::onSave,
+        modifier = modifier,
+    )
+}
+
+/** Dibuja el formulario. No conoce el ViewModel: recibe el estado y avisa con funciones. */
+@Composable
+fun SaveRunContent(
+    state: SaveRunUiState,
+    onTitleChange: (String) -> Unit,
+    onSave: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .safeDrawingPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+    ) {
+        Text(
+            text = stringResource(R.string.save_run_heading),
+            style = MaterialTheme.typography.headlineMedium,
+        )
+        OutlinedTextField(
+            value = state.title,
+            onValueChange = onTitleChange,
+            label = { Text(stringResource(R.string.save_run_title_label)) },
+            isError = state.titleError,
+            supportingText = {
+                if (state.titleError) Text(stringResource(R.string.save_run_title_error))
+            },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Button(
+            onClick = onSave,
+            modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.buttonHeight),
+        ) {
+            Text(stringResource(R.string.save_run_save))
+        }
+    }
+}

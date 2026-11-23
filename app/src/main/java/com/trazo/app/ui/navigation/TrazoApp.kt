@@ -21,6 +21,7 @@ import com.trazo.app.ui.screens.profile.ProfileScreen
 import com.trazo.app.ui.screens.result.ResultScreen
 import com.trazo.app.ui.screens.rundetail.RunDetailDialog
 import com.trazo.app.ui.screens.rundetail.RunDetailViewModel
+import com.trazo.app.ui.screens.saverun.SaveRunScreen
 import com.trazo.app.ui.screens.settings.SettingsScreen
 import com.trazo.app.ui.screens.startrun.StartRunEffect
 import com.trazo.app.ui.screens.startrun.StartRunViewModel
@@ -98,10 +99,16 @@ fun TrazoApp() {
         },
         resultScreen = { onLeaveToActivity ->
             ResultScreen(
-                // Parche temporal (aprobado por Rocío): hasta que save-run (HU-07) publique
-                // saverun/{runId}, «Continuar» vuelve a Actividad. Reemplazar por navigate("saverun/$runId").
-                onContinue = { _ -> onLeaveToActivity() },
+                onContinue = { runId ->
+                    navController.navigate("saverun/$runId") { launchSingleTop = true }
+                },
                 onLeave = onLeaveToActivity,
+            )
+        },
+        saveRunScreen = { onLeaveToActivity ->
+            SaveRunScreen(
+                onSaved = onLeaveToActivity,
+                onClose = onLeaveToActivity,
             )
         },
         settingsScreen = { onBackClick ->
