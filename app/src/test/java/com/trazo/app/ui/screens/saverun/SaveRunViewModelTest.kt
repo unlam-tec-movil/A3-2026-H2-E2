@@ -18,6 +18,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -106,10 +107,44 @@ class SaveRunViewModelTest {
         assertEquals(SavedRun.TITLE_MAX_LENGTH, viewModel.uiState.value.title.length)
     }
 
+    @Test
+    fun `pedir volver abre el dialogo de descartar`() {
+        val viewModel = viewModel()
+
+        viewModel.onBackRequested()
+
+        assertTrue(viewModel.uiState.value.showDiscardDialog)
+    }
+
+    @Test
+    fun `seguir editando cierra el dialogo y conserva el titulo`() {
+        val viewModel = viewModel()
+        viewModel.onTitleChange("Mi carrera")
+        viewModel.onBackRequested()
+
+        viewModel.onDiscardDismiss()
+
+        assertFalse(viewModel.uiState.value.showDiscardDialog)
+        assertEquals("Mi carrera", viewModel.uiState.value.title)
+    }
+
+    @Test
+    fun `descartar borra el resumen y cierra la pantalla`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.onBackRequested()
+
+            viewModel.onDiscardConfirm()
+
+            assertNull(runSessions.getFinishedSummary("r1"))
+            assertEquals(SaveRunEffect.Close, viewModel.effect.first())
+        }
+
     private fun viewModel(runId: String = "r1") =
         SaveRunViewModel(
             savedStateHandle = SavedStateHandle(mapOf("runId" to runId)),
             saveRun = SaveRunUseCase(runSessions, savedRuns),
+            runSessions = runSessions,
         )
 
     private fun summary() =
