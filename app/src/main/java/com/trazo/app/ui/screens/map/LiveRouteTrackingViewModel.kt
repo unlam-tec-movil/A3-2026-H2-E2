@@ -15,6 +15,7 @@ import com.trazo.app.domain.model.map.RunState
 import com.trazo.app.domain.model.saved.mostRecentNear
 import com.trazo.app.domain.services.RegularityMonitor
 import com.trazo.app.domain.usecases.FinishRunUseCase
+import com.trazo.app.ui.components.common.RunValueFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -31,7 +32,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -205,10 +205,10 @@ class LiveRouteTrackingViewModel
                             isRunInProgress = isRunInProgress,
                             runState = session.state,
                             goal = session.goal,
-                            formattedTime = formatElapsedTime(session.metrics.elapsedTimeSeconds),
-                            formattedDistance = formatDistance(session.metrics.distanceMeters),
-                            formattedSpeed = formatSpeed(session.metrics.currentSpeedKmh),
-                            formattedAverageSpeed = formatSpeed(session.metrics.averageSpeedKmh),
+                            formattedTime = RunValueFormatter.formatDuration(session.metrics.elapsedTimeSeconds),
+                            formattedDistance = RunValueFormatter.formatLiveDistanceKm(session.metrics.distanceMeters),
+                            formattedSpeed = RunValueFormatter.formatSpeedValue(session.metrics.currentSpeedKmh),
+                            formattedAverageSpeed = RunValueFormatter.formatSpeedValue(session.metrics.averageSpeedKmh),
                             routePoints = session.routePoints,
                             runnerPosition = runnerPos,
                             isMapCenteredOnRunner = extras.isCentered,
@@ -349,38 +349,6 @@ class LiveRouteTrackingViewModel
 
                 _uiEffect.trySend(LiveRouteTrackingUiEffect.ShowLocationPermissionLostMessage)
             }
-        }
-
-        private companion object {
-            val SPANISH_LOCALE: Locale = Locale.forLanguageTag("es-AR")
-
-            fun formatElapsedTime(seconds: Long): String {
-                val hours = seconds / 3600
-                val minutes = (seconds % 3600) / 60
-                val remainingSeconds = seconds % 60
-
-                return String.format(
-                    Locale.ROOT,
-                    "%02d:%02d:%02d",
-                    hours,
-                    minutes,
-                    remainingSeconds,
-                )
-            }
-
-            fun formatDistance(meters: Double): String =
-                String.format(
-                    SPANISH_LOCALE,
-                    "%.2f",
-                    meters / 1000.0,
-                )
-
-            fun formatSpeed(speedKmh: Double): String =
-                String.format(
-                    SPANISH_LOCALE,
-                    "%.1f",
-                    speedKmh,
-                )
         }
     }
 

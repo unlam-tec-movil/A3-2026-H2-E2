@@ -30,7 +30,6 @@ class ResultScreenTest {
         ResultViewModel(
             savedStateHandle = SavedStateHandle(if (runId == null) emptyMap() else mapOf("runId" to runId)),
             runSessionRepository = repository,
-            formatter = ResultFormatter(),
         )
 
     private fun showScreen(viewModel: ResultViewModel) {
