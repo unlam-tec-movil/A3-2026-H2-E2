@@ -223,6 +223,7 @@ class RunSessionRepositoryImplTest {
                 )
 
             repository.attachActiveSession(initializedSession)
+            fakeLocationClient.awaitLocationSubscriber()
 
             val firstTimestamp = SystemClock.elapsedRealtime()
 
