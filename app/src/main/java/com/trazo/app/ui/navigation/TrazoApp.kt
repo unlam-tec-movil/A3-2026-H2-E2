@@ -86,7 +86,6 @@ fun TrazoApp() {
         navController = navController,
         activityScreen = { onNavigateToResult ->
             MapScreen(
-                onStartRunClick = startRunViewModel::onOptionClick,
                 onNavigateToResults = { summary -> onNavigateToResult(summary.id) },
                 onSavedRunClick = runDetailViewModel::open,
                 startRunFab = startRunFab,

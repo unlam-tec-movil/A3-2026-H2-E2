@@ -36,8 +36,8 @@ fun GoalCelebrationOverlay(
     showCelebration: Boolean,
     goal: RunGoal?,
     onDismiss: () -> Unit,
+    onFinish: () -> Unit,
     modifier: Modifier = Modifier,
-    onFinish: (() -> Unit)? = null,
 ) {
     val reduceMotion = rememberReduceMotion()
 
@@ -84,31 +84,22 @@ fun GoalCelebrationOverlay(
                     modifier = Modifier.padding(top = Spacing.sm),
                 )
 
-                if (onFinish != null) {
-                    Column(
-                        modifier = Modifier.padding(top = Spacing.xl),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    ) {
-                        Button(onClick = onFinish) {
-                            Text(text = stringResource(R.string.map_finish))
-                        }
-
-                        OutlinedButton(
-                            onClick = onDismiss,
-                            colors =
-                                ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary),
-                        ) {
-                            Text(text = stringResource(R.string.map_celebration_button))
-                        }
+                Column(
+                    modifier = Modifier.padding(top = Spacing.xl),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    Button(onClick = onFinish) {
+                        Text(text = stringResource(R.string.map_finish))
                     }
-                } else {
-                    Button(
+
+                    OutlinedButton(
                         onClick = onDismiss,
-                        modifier = Modifier.padding(top = Spacing.xl),
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary),
                     ) {
                         Text(text = stringResource(R.string.map_celebration_button))
                     }

@@ -184,7 +184,14 @@ sealed interface RunSession {
                 gpsQuality = GpsQuality.WEAK_SIGNAL,
             )
 
+        /** Recorrido demasiado corto para guardarlo: al finalizar se ofrece descartarlo (HU-06). */
+        val isShortRun: Boolean
+            get() = metrics.distanceMeters < MIN_FINISH_DISTANCE_METERS
+
         companion object {
+            /** Distancia mínima para guardar un recorrido; por debajo, «Finalizar» ofrece descartarlo. */
+            const val MIN_FINISH_DISTANCE_METERS = 200.0
+
             /** Sesión recién iniciada: activa, sin puntos y con el primer tramo abierto en [nowMillis]. */
             fun start(
                 session: InitializedRunSession,

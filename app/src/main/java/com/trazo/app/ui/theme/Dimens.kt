@@ -7,7 +7,7 @@ object Spacing {
     val xxs = 2.dp // valor y unidad de una métrica
     val xs = 4.dp // ícono y texto en chip/badge
     val sm = 8.dp // entre chips
-    val md = 12.dp // entre cards del Historial
+    val md = 12.dp // entre cards de «Mis recorridos»
     val lg = 16.dp // margen lateral de pantalla, padding de cards
     val xl = 24.dp // padding de modales, entre secciones
     val xxl = 32.dp // bloques de «Guardar recorrido»
