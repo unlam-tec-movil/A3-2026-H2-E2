@@ -18,6 +18,7 @@ import androidx.navigation.navArgument
 
 internal const val RESULT_ROUTE = "result/{runId}"
 internal const val SETTINGS_ROUTE = "settings"
+internal const val SAVE_RUN_ROUTE = "saverun/{runId}"
 
 /** Cambia de pestaña guardando y restaurando el estado de cada una, sin apilar pestañas repetidas. */
 internal fun NavController.navigateToTab(destination: TrazoDestination) {
@@ -40,6 +41,7 @@ internal fun NavController.navigateToTab(destination: TrazoDestination) {
  * @param profileScreen pestaña Perfil; recibe cómo abrir la configuración (`onSettingsClick`).
  * @param resultScreen resultado del recorrido; recibe cómo volver a Actividad.
  * @param settingsScreen pantalla Configuración; recibe cómo volver a la pantalla anterior.
+ * @param saveRunScreen pantalla Guardar recorrido; recibe cómo volver a Actividad al guardar o cerrar.
  */
 @Composable
 internal fun TrazoScaffold(
@@ -47,6 +49,7 @@ internal fun TrazoScaffold(
     activityScreen: @Composable (onNavigateToResult: (runId: String) -> Unit) -> Unit,
     profileScreen: @Composable (onSettingsClick: () -> Unit) -> Unit,
     resultScreen: @Composable (onLeaveToActivity: () -> Unit) -> Unit,
+    saveRunScreen: @Composable (onLeaveToActivity: () -> Unit) -> Unit,
     settingsScreen: @Composable (onBackClick: () -> Unit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -57,7 +60,7 @@ internal fun TrazoScaffold(
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (currentRoute != RESULT_ROUTE && currentRoute != SETTINGS_ROUTE) {
+            if (currentRoute != RESULT_ROUTE && currentRoute != SETTINGS_ROUTE && currentRoute != SAVE_RUN_ROUTE) {
                 BottomNavBar(
                     currentRoute = currentRoute,
                     onDestinationSelected = navController::navigateToTab,
@@ -85,6 +88,17 @@ internal fun TrazoScaffold(
                 arguments = listOf(navArgument("runId") { type = NavType.StringType }),
             ) {
                 resultScreen {
+                    navController.navigate(TrazoDestination.ACTIVITY.route) {
+                        popUpTo(RESULT_ROUTE) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            }
+            composable(
+                route = SAVE_RUN_ROUTE,
+                arguments = listOf(navArgument("runId") { type = NavType.StringType }),
+            ) {
+                saveRunScreen {
                     navController.navigate(TrazoDestination.ACTIVITY.route) {
                         popUpTo(RESULT_ROUTE) { inclusive = true }
                         launchSingleTop = true
