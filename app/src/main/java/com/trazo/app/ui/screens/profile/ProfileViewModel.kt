@@ -34,12 +34,23 @@ data class RunCardUi(
 )
 
 /**
+ * Cuánto se llena cada barra de «Mis estadísticas», de 0 a 1. Cada métrica se compara contra un
+ * tope fijo y, al superarlo, la barra queda llena.
+ */
+data class ProfileStatsFill(
+    val runs: Float = 0f,
+    val distance: Float = 0f,
+    val time: Float = 0f,
+)
+
+/**
  * Estado inmutable de la pestaña Perfil. Los totales no cuentan los recorridos demo.
  * [hasRecentRuns] se deriva de [runs]: no se guarda aparte.
  */
 data class ProfileUiState(
     val runs: List<RunCardUi> = emptyList(),
     val totals: SavedRunTotals = SavedRunTotals(0, 0.0, 0),
+    val statsFill: ProfileStatsFill = ProfileStatsFill(),
 ) {
     val hasRecentRuns: Boolean get() = runs.isNotEmpty()
 }
@@ -64,11 +75,26 @@ class ProfileViewModel
                     initialValue = ProfileUiState(),
                 )
 
-        private fun List<SavedRun>.toUiState(): ProfileUiState =
-            ProfileUiState(
+        private fun List<SavedRun>.toUiState(): ProfileUiState {
+            val totals = SavedRunTotals.from(this)
+            return ProfileUiState(
                 runs = map { it.toCard() },
-                totals = SavedRunTotals.from(this),
+                totals = totals,
+                statsFill = totals.toStatsFill(),
             )
+        }
+
+        private fun SavedRunTotals.toStatsFill(): ProfileStatsFill =
+            ProfileStatsFill(
+                runs = fraction(runCount.toDouble(), RUNS_CEILING),
+                distance = fraction(distanceKm, DISTANCE_CEILING_KM),
+                time = fraction(timeSeconds.toDouble(), TIME_CEILING_SECONDS),
+            )
+
+        private fun fraction(
+            value: Double,
+            ceiling: Double,
+        ): Float = (value / ceiling).toFloat().coerceIn(0f, 1f)
 
         private fun SavedRun.toCard(): RunCardUi =
             RunCardUi(
@@ -95,5 +121,10 @@ class ProfileViewModel
 
         private companion object {
             const val STOP_TIMEOUT_MILLIS = 5_000L
+
+            // Topes de las barras de «Mis estadísticas»: al llegar, la barra queda llena.
+            const val RUNS_CEILING = 20.0
+            const val DISTANCE_CEILING_KM = 50.0
+            const val TIME_CEILING_SECONDS = 36_000.0 // 10 h
         }
     }

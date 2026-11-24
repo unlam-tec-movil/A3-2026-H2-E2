@@ -67,6 +67,10 @@ data class TrazoExtendedColors(
     val brakePin: Color = Error600,
     val startPin: Color = Secondary700,
     val locationHalo: Color = Primary300.copy(alpha = 0.35f),
+    // Barras de «Mis estadísticas» (decorativas: el dato siempre va en texto)
+    val statBarRuns: Color = Neutral300,
+    val statBarDistance: Color = Neutral500,
+    val statBarTime: Color = Neutral600,
 )
 
 val LocalTrazoColors = staticCompositionLocalOf { TrazoExtendedColors() }

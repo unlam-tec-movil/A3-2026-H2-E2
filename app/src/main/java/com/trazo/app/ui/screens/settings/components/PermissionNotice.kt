@@ -102,7 +102,7 @@ private fun NoticeCard(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                Text(text = body, style = MaterialTheme.typography.bodySmall)
+                Text(text = body, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

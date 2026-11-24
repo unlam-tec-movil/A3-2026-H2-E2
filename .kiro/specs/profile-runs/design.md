@@ -1,5 +1,17 @@
 # Design Document: profile-runs
 
+> **Revisión 2026-11-24 · nueva UI de Perfil.** Esta nota manda sobre lo que se contradiga más
+> abajo (ver también la revisión de `requirements.md`).
+>
+> - `ProfileUiState` suma `statsFill: ProfileStatsFill` (fracciones de 0 a 1). El ViewModel la
+>   calcula desde `SavedRunTotals` contra topes fijos (`RUNS_CEILING`, `DISTANCE_CEILING_KM`,
+>   `TIME_CEILING_SECONDS`); la UI solo la dibuja.
+> - Componentes en `ui/screens/profile/components/`: `ProfileSectionCard` (card con título),
+>   `ProfileStatColumn` (reemplaza a `ProfileStatRow`: barra animada con `animateFloatAsState`,
+>   estática con `rememberReduceMotion()`) y `EmptyState` (ícono en círculos, título y texto; ya no
+>   usa `img_empty_runs`).
+> - Colores extendidos nuevos: `statBarRuns`, `statBarDistance`, `statBarTime`.
+
 ## Overview
 **Purpose**: Esta funcionalidad le da al corredor un lugar para revisar lo que guardó: «Mis recorridos» y «Mis estadísticas» en Perfil, el detalle de cada recorrido guardado en un modal y las trazas guardadas sobre el mapa de Actividad.
 **Users**: Corredores recreativos que ya guardaron recorridos y quieren compararlos, ver sus totales y recordar por dónde corrieron.

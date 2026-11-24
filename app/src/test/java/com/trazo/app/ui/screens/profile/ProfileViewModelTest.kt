@@ -239,6 +239,45 @@ class ProfileViewModelTest {
         }
 
     @Test
+    fun `sin recorridos las barras de estadisticas quedan vacias`() =
+        runTest {
+            assertEquals(ProfileStatsFill(0f, 0f, 0f), subscribed().uiState.value.statsFill)
+        }
+
+    @Test
+    fun `las barras se llenan en proporcion al tope de cada metrica`() =
+        runTest {
+            // Topes: 20 recorridos, 50 km y 10 h.
+            repository.save(run("a", startedAtSeconds = 100, distanceMeters = 10_000.0, elapsedTimeSeconds = 3_600L))
+            repository.save(run("b", startedAtSeconds = 200, distanceMeters = 15_000.0, elapsedTimeSeconds = 5_400L))
+
+            val fill = subscribed().uiState.value.statsFill
+
+            assertEquals(0.1f, fill.runs, 0.0001f)
+            assertEquals(0.5f, fill.distance, 0.0001f)
+            assertEquals(0.25f, fill.time, 0.0001f)
+        }
+
+    @Test
+    fun `al superar el tope la barra queda llena`() =
+        runTest {
+            repository.save(run("largo", distanceMeters = 80_000.0, elapsedTimeSeconds = 50_000L))
+
+            val fill = subscribed().uiState.value.statsFill
+
+            assertEquals(1f, fill.distance, 0f)
+            assertEquals(1f, fill.time, 0f)
+        }
+
+    @Test
+    fun `los recorridos demo no llenan las barras`() =
+        runTest {
+            repository.save(run("demo", isDemo = true, distanceMeters = 9_000.0, elapsedTimeSeconds = 5_000L))
+
+            assertEquals(ProfileStatsFill(), subscribed().uiState.value.statsFill)
+        }
+
+    @Test
     fun `sin dato de regularidad la card trae el porcentaje en null`() =
         runTest {
             repository.save(run("a", regularityPercent = null))
