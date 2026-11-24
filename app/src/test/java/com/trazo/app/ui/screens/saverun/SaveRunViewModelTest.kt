@@ -199,6 +199,32 @@ class SaveRunViewModelTest {
         assertNull(viewModel.uiState.value.summary)
     }
 
+    @Test
+    fun `si falla el guardado se marca el error`() {
+        savedRuns.failOnSave = true
+        val viewModel = viewModel()
+        viewModel.onTitleChange("Mi carrera")
+
+        viewModel.onSave()
+
+        assertTrue(viewModel.uiState.value.saveError)
+    }
+
+    @Test
+    fun `reintentar despues de un fallo borra el error y guarda`() =
+        runTest {
+            savedRuns.failOnSave = true
+            val viewModel = viewModel()
+            viewModel.onTitleChange("Mi carrera")
+            viewModel.onSave()
+
+            savedRuns.failOnSave = false
+            viewModel.onSave()
+
+            assertFalse(viewModel.uiState.value.saveError)
+            assertEquals(SaveRunEffect.Saved, viewModel.effect.first())
+        }
+
     private fun viewModel(runId: String = "r1") =
         SaveRunViewModel(
             savedStateHandle = SavedStateHandle(mapOf("runId" to runId)),

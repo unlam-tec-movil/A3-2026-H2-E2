@@ -241,6 +241,15 @@ fun SaveRunContent(
             }
         }
 
+        if (state.saveError) {
+            Text(
+                text = stringResource(R.string.save_run_save_error),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = Spacing.lg),
+            )
+        }
+
         // Botón fijo abajo: queda fuera del área que se desplaza.
         Button(
             onClick = onSave,

@@ -31,6 +31,8 @@ data class SaveRunUiState(
     val showCamera: Boolean = false,
     /** Datos del recorrido terminado, para la tarjeta de resumen. Null si ya no está disponible. */
     val summary: FrozenRunSummary? = null,
+    /** Verdadero si el último intento de guardar falló al escribir; se puede volver a intentar. */
+    val saveError: Boolean = false,
 )
 
 sealed interface SaveRunEffect {
@@ -77,11 +79,13 @@ class SaveRunViewModel
 
         fun onSave() {
             viewModelScope.launch {
+                _uiState.update { it.copy(saveError = false) }
                 val state = _uiState.value
                 when (saveRun(runId, state.title, state.highlights.toList(), state.photoPaths)) {
                     SaveRunResult.Saved -> _effect.send(SaveRunEffect.Saved)
                     SaveRunResult.InvalidTitle -> _uiState.update { it.copy(titleError = true) }
                     SaveRunResult.RunNotFound -> _effect.send(SaveRunEffect.Close)
+                    SaveRunResult.SaveFailed -> _uiState.update { it.copy(saveError = true) }
                     // La pantalla no deja agregar más fotos que el máximo, así que no debería pasar.
                     SaveRunResult.TooManyPhotos -> Unit
                 }
