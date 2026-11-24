@@ -24,13 +24,19 @@ data class SettingsUiState(
     val isDemoModeEnabled: Boolean = false,
     val isRunInProgress: Boolean = false,
 ) {
+    /** Falta la ubicación precisa (Denegada o Aproximada). */
     val showLocationSettingsButton: Boolean
         get() =
             locationStatus == LocationStatus.APPROXIMATE_ONLY ||
                 locationStatus == LocationStatus.PERMISSION_DENIED
 
+    /** Falta el permiso de cámara. */
     val showCameraSettingsButton: Boolean
         get() = cameraPermissionStatus != CameraPermissionStatus.GRANTED
+
+    /** Ubicación precisa y cámara concedidas: el aviso de permisos pasa a la variante de todo listo. */
+    val arePermissionsGranted: Boolean
+        get() = !showLocationSettingsButton && !showCameraSettingsButton
 
     val isDemoModeSwitchEnabled: Boolean
         get() = !isRunInProgress

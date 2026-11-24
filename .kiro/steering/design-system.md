@@ -51,7 +51,7 @@ Ubicación inicial de los componentes del sistema de diseño:
 | `RunCard` (card completa), `RunDetailSheet` | `screens/profile/components/` | Previstos en «Mis recorridos» de Perfil |
 | `HighlightChip`, `PhotoPicker` | `screens/saverun/components/` | Solo en Guardar recorrido |
 | `GoalReachedCard` | `screens/result/components/` | Solo en Resultado |
-| `PermissionRow`, switch de modo demo | `screens/settings/components/` | Solo en Configuración |
+| `PermissionRow`, `PermissionNotice`, `SettingsGroup`, switch de modo demo | `screens/settings/components/` | Solo en Configuración |
 
 ## Tema
 

@@ -11,7 +11,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,8 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -37,7 +38,10 @@ import com.trazo.app.domain.model.CameraPermissionStatus
 import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.ui.navigation.appDetailsSettingsIntent
 import com.trazo.app.ui.screens.settings.components.DemoModeSwitch
+import com.trazo.app.ui.screens.settings.components.PermissionNotice
 import com.trazo.app.ui.screens.settings.components.PermissionRow
+import com.trazo.app.ui.screens.settings.components.SettingsGroup
+import com.trazo.app.ui.screens.settings.components.SettingsSectionHeader
 import com.trazo.app.ui.screens.settings.components.cameraPermissionStatusText
 import com.trazo.app.ui.screens.settings.components.locationPermissionStatusText
 import com.trazo.app.ui.theme.Spacing
@@ -69,10 +73,7 @@ fun SettingsScreen(
     SettingsContent(
         state = state,
         onBackClick = onBackClick,
-        onLocationSettingsClick = {
-            context.startActivity(appDetailsSettingsIntent(context))
-        },
-        onCameraSettingsClick = {
+        onOpenSystemSettingsClick = {
             context.startActivity(appDetailsSettingsIntent(context))
         },
         onDemoModeToggle = viewModel::onDemoModeToggled,
@@ -85,8 +86,7 @@ fun SettingsScreen(
 fun SettingsContent(
     state: SettingsUiState,
     onBackClick: () -> Unit,
-    onLocationSettingsClick: () -> Unit,
-    onCameraSettingsClick: () -> Unit,
+    onOpenSystemSettingsClick: () -> Unit,
     onDemoModeToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -127,41 +127,40 @@ fun SettingsContent(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = Spacing.lg, vertical = Spacing.xl),
         ) {
-            Text(
-                text = stringResource(R.string.settings_permissions_section),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.semantics { heading() },
-            )
+            SettingsSectionHeader(text = stringResource(R.string.settings_permissions_section))
 
-            Spacer(modifier = Modifier.height(Spacing.md))
+            Spacer(modifier = Modifier.height(Spacing.sm))
 
-            PermissionRow(
-                label = stringResource(R.string.settings_location_label),
-                statusText = locationPermissionStatusText(state.locationStatus),
-                showSettingsButton = state.showLocationSettingsButton,
-                onSettingsClick = onLocationSettingsClick,
-            )
+            SettingsGroup {
+                PermissionRow(
+                    icon = Icons.Filled.LocationOn,
+                    label = stringResource(R.string.settings_location_label),
+                    subtitle = stringResource(R.string.settings_location_subtitle),
+                    statusText = locationPermissionStatusText(state.locationStatus),
+                    onClick = onOpenSystemSettingsClick,
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                PermissionRow(
+                    icon = Icons.Filled.PhotoCamera,
+                    label = stringResource(R.string.settings_camera_label),
+                    subtitle = stringResource(R.string.settings_camera_subtitle),
+                    statusText = cameraPermissionStatusText(state.cameraPermissionStatus),
+                    onClick = onOpenSystemSettingsClick,
+                )
+            }
 
-            Spacer(modifier = Modifier.height(Spacing.md))
+            Spacer(modifier = Modifier.height(Spacing.xl))
 
-            PermissionRow(
-                label = stringResource(R.string.settings_camera_label),
-                statusText = cameraPermissionStatusText(state.cameraPermissionStatus),
-                showSettingsButton = state.showCameraSettingsButton,
-                onSettingsClick = onCameraSettingsClick,
+            PermissionNotice(
+                arePermissionsGranted = state.arePermissionsGranted,
+                onOpenSystemSettingsClick = onOpenSystemSettingsClick,
             )
 
             Spacer(modifier = Modifier.height(Spacing.xl))
 
-            Text(
-                text = stringResource(R.string.settings_demo_mode_section),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.semantics { heading() },
-            )
+            SettingsSectionHeader(text = stringResource(R.string.settings_advanced_section))
 
-            Spacer(modifier = Modifier.height(Spacing.md))
+            Spacer(modifier = Modifier.height(Spacing.sm))
 
             DemoModeSwitch(
                 state = state,
@@ -171,21 +170,36 @@ fun SettingsContent(
     }
 }
 
-@Preview(showBackground = true, widthDp = 360, heightDp = 640)
+@Preview(showBackground = true, widthDp = 360, heightDp = 720)
 @Composable
-private fun SettingsContentPreview() {
+private fun SettingsContentRestrictedPreview() {
+    TrazoTheme {
+        SettingsContent(
+            state =
+                SettingsUiState(
+                    locationStatus = LocationStatus.APPROXIMATE_ONLY,
+                    cameraPermissionStatus = CameraPermissionStatus.DENIED,
+                ),
+            onBackClick = {},
+            onOpenSystemSettingsClick = {},
+            onDemoModeToggle = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 720)
+@Composable
+private fun SettingsContentGrantedPreview() {
     TrazoTheme {
         SettingsContent(
             state =
                 SettingsUiState(
                     locationStatus = LocationStatus.READY,
-                    cameraPermissionStatus = CameraPermissionStatus.DENIED,
+                    cameraPermissionStatus = CameraPermissionStatus.GRANTED,
                     isDemoModeEnabled = true,
-                    isRunInProgress = false,
                 ),
             onBackClick = {},
-            onLocationSettingsClick = {},
-            onCameraSettingsClick = {},
+            onOpenSystemSettingsClick = {},
             onDemoModeToggle = {},
         )
     }
