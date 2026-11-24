@@ -225,6 +225,108 @@ class SaveRunViewModelTest {
             assertEquals(SaveRunEffect.Saved, viewModel.effect.first())
         }
 
+    private val predefined = listOf("Piso parejo", "Seguro")
+
+    @Test
+    fun `agregar un destacado nuevo lo suma ya seleccionado y cierra el dialogo`() {
+        val viewModel = viewModel()
+        viewModel.onAddHighlightClick()
+        viewModel.onNewHighlightChange("  Vista al rio  ")
+
+        viewModel.onNewHighlightConfirm(predefined)
+
+        val state = viewModel.uiState.value
+        assertEquals(listOf("Vista al rio"), state.customHighlights)
+        assertEquals(setOf("Vista al rio"), state.highlights)
+        assertFalse(state.showAddHighlightDialog)
+    }
+
+    @Test
+    fun `un destacado vacio no se agrega y escribir de nuevo borra el error`() {
+        val viewModel = viewModel()
+        viewModel.onAddHighlightClick()
+        viewModel.onNewHighlightChange("   ")
+
+        viewModel.onNewHighlightConfirm(predefined)
+
+        assertEquals(NewHighlightError.Empty, viewModel.uiState.value.newHighlightError)
+        assertTrue(
+            viewModel.uiState.value.customHighlights
+                .isEmpty(),
+        )
+        assertTrue(viewModel.uiState.value.showAddHighlightDialog)
+
+        viewModel.onNewHighlightChange("a")
+        assertNull(viewModel.uiState.value.newHighlightError)
+    }
+
+    @Test
+    fun `un destacado igual a uno predefinido no se agrega aunque cambien las mayusculas`() {
+        val viewModel = viewModel()
+        viewModel.onAddHighlightClick()
+        viewModel.onNewHighlightChange("piso PAREJO")
+
+        viewModel.onNewHighlightConfirm(predefined)
+
+        assertEquals(NewHighlightError.Duplicate, viewModel.uiState.value.newHighlightError)
+        assertTrue(
+            viewModel.uiState.value.customHighlights
+                .isEmpty(),
+        )
+    }
+
+    @Test
+    fun `un destacado igual a uno personalizado ya agregado tampoco se agrega`() {
+        val viewModel = viewModel()
+        viewModel.onNewHighlightChange("Vista")
+        viewModel.onNewHighlightConfirm(predefined)
+        viewModel.onAddHighlightClick()
+        viewModel.onNewHighlightChange("vista")
+
+        viewModel.onNewHighlightConfirm(predefined)
+
+        assertEquals(NewHighlightError.Duplicate, viewModel.uiState.value.newHighlightError)
+        assertEquals(listOf("Vista"), viewModel.uiState.value.customHighlights)
+    }
+
+    @Test
+    fun `el destacado nuevo no puede pasar de 20 caracteres`() {
+        val viewModel = viewModel()
+
+        viewModel.onNewHighlightChange("a".repeat(30))
+
+        assertEquals(20, viewModel.uiState.value.newHighlightText.length)
+    }
+
+    @Test
+    fun `cancelar el destacado nuevo cierra el dialogo sin agregar nada`() {
+        val viewModel = viewModel()
+        viewModel.onAddHighlightClick()
+        viewModel.onNewHighlightChange("Algo")
+
+        viewModel.onNewHighlightDismiss()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.showAddHighlightDialog)
+        assertTrue(state.customHighlights.isEmpty())
+        assertEquals("", state.newHighlightText)
+    }
+
+    @Test
+    fun `un destacado personalizado se puede deseleccionar y sigue ofrecido`() {
+        val viewModel = viewModel()
+        viewModel.onNewHighlightChange("Vista")
+        viewModel.onNewHighlightConfirm(predefined)
+
+        viewModel.onHighlightToggle("Vista")
+
+        assertTrue(
+            viewModel.uiState.value.highlights
+                .isEmpty(),
+        )
+        assertEquals(listOf("Vista"), viewModel.uiState.value.customHighlights)
+    }
+
     private fun viewModel(runId: String = "r1") =
         SaveRunViewModel(
             savedStateHandle = SavedStateHandle(mapOf("runId" to runId)),

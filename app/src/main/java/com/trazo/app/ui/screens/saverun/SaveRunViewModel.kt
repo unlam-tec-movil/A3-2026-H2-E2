@@ -33,7 +33,18 @@ data class SaveRunUiState(
     val summary: FrozenRunSummary? = null,
     /** Verdadero si el último intento de guardar falló al escribir; se puede volver a intentar. */
     val saveError: Boolean = false,
+    /** Destacados que el corredor agregó en este recorrido, en el orden en que los creó. */
+    val customHighlights: List<String> = emptyList(),
+    /** Verdadero si hay que mostrar el diálogo para escribir un destacado nuevo. */
+    val showAddHighlightDialog: Boolean = false,
+    /** Texto que se está escribiendo en el diálogo del destacado nuevo. */
+    val newHighlightText: String = "",
+    /** Problema con el texto escrito, o null si no hay. */
+    val newHighlightError: NewHighlightError? = null,
 )
+
+/** Por qué no se pudo agregar un destacado nuevo. */
+enum class NewHighlightError { Empty, Duplicate }
 
 sealed interface SaveRunEffect {
     /** El recorrido se guardó: la pantalla vuelve al mapa. */
@@ -74,6 +85,51 @@ class SaveRunViewModel
                 val updated =
                     if (highlight in state.highlights) state.highlights - highlight else state.highlights + highlight
                 state.copy(highlights = updated)
+            }
+        }
+
+        /** «Agregar»: abre el diálogo con el campo vacío. */
+        fun onAddHighlightClick() {
+            _uiState.update {
+                it.copy(showAddHighlightDialog = true, newHighlightText = "", newHighlightError = null)
+            }
+        }
+
+        /** Se escribió en el campo del destacado nuevo: se corta en el máximo y se borra el error. */
+        fun onNewHighlightChange(text: String) {
+            _uiState.update {
+                it.copy(newHighlightText = text.take(HIGHLIGHT_MAX_LENGTH), newHighlightError = null)
+            }
+        }
+
+        /** Se canceló: se cierra el diálogo sin agregar nada. */
+        fun onNewHighlightDismiss() {
+            _uiState.update {
+                it.copy(showAddHighlightDialog = false, newHighlightText = "", newHighlightError = null)
+            }
+        }
+
+        /**
+         * Confirma el destacado nuevo. [predefined] son los destacados fijos de la pantalla: sus textos
+         * viven en los recursos, que el ViewModel no lee, así que la pantalla nos los pasa.
+         */
+        fun onNewHighlightConfirm(predefined: List<String>) {
+            _uiState.update { state ->
+                val text = state.newHighlightText.trim()
+                val existing = predefined + state.customHighlights
+                when {
+                    text.isEmpty() -> state.copy(newHighlightError = NewHighlightError.Empty)
+                    existing.any { it.equals(text, ignoreCase = true) } ->
+                        state.copy(newHighlightError = NewHighlightError.Duplicate)
+                    else ->
+                        state.copy(
+                            customHighlights = state.customHighlights + text,
+                            highlights = state.highlights + text,
+                            showAddHighlightDialog = false,
+                            newHighlightText = "",
+                            newHighlightError = null,
+                        )
+                }
             }
         }
 
@@ -139,5 +195,6 @@ class SaveRunViewModel
 
         private companion object {
             const val RUN_ID_KEY = "runId"
+            const val HIGHLIGHT_MAX_LENGTH = 20
         }
     }
