@@ -90,6 +90,10 @@ kover {
                     "*.ComposableSingletons*",
                     "*.BuildConfig",
                 )
+                annotatedBy(
+                    "*Preview",
+                    "androidx.compose.ui.tooling.preview.Preview",
+                )
             }
         }
         verify {

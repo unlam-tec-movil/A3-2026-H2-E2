@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -55,7 +56,7 @@ fun BrakeAlert(
     val reduceMotion = rememberReduceMotion()
     AnimatedVisibility(
         visible = visible,
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         enter =
             if (reduceMotion) {
                 EnterTransition.None
@@ -69,21 +70,27 @@ fun BrakeAlert(
                 slideOutVertically { fullHeight -> fullHeight } + fadeOut()
             },
     ) {
-        BrakeAlertSurface()
+        BrakeAlertSurface(modifier = Modifier.fillMaxWidth())
     }
 }
 
 @Composable
-private fun BrakeAlertSurface() {
+private fun BrakeAlertSurface(modifier: Modifier = Modifier) {
     Surface(
-        modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.inverseSurface,
         contentColor = MaterialTheme.colorScheme.inverseOnSurface,
         shadowElevation = Elevation.level3,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.md),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.md, vertical = Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
@@ -102,7 +109,9 @@ private fun BrakeAlertSurface() {
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
-            Column {
+            Column(
+                modifier = Modifier.weight(1f),
+            ) {
                 Text(
                     text = stringResource(R.string.map_brake_alert_title),
                     style = MaterialTheme.typography.titleSmall,

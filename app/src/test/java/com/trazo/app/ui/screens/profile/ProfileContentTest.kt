@@ -98,6 +98,7 @@ class ProfileContentTest {
         setContent(ProfileUiState())
 
         assertTextShown(string(R.string.profile_empty_runs))
+        assertTextShown(string(R.string.profile_empty_runs_body))
     }
 
     // 5.1, 5.2, 5.3
@@ -136,23 +137,23 @@ class ProfileContentTest {
         assertTextShown(string(R.string.profile_stats_runs_label))
         assertTextShown(string(R.string.profile_stats_distance_label))
         assertTextShown(string(R.string.profile_stats_time_label))
-        assertTextShown("0 recorridos")
+        assertTextShown("0")
         assertTextShown("0 km")
         assertTextShown("00:00:00")
     }
 
     @Test
-    fun oneRun_usesSingular() {
+    fun oneRun_showsOnlyTheNumber() {
         setContent(ProfileUiState(totals = oneRun))
 
-        assertTextShown("1 recorrido")
+        assertTextShown("1")
     }
 
     @Test
     fun withTotals_showsFormattedValues() {
         setContent(ProfileUiState(totals = SavedRunTotals(runCount = 2, distanceKm = 8.5, timeSeconds = 3_300L)))
 
-        assertTextShown("2 recorridos")
+        assertTextShown("2")
         assertTextShown("8,5 km")
         assertTextShown("00:55:00")
     }
@@ -186,7 +187,7 @@ class ProfileContentTest {
             ),
         )
 
-        assertTextShown("2 recorridos")
+        assertTextShown("2")
         assertTextShown("10,4 km")
         composeTestRule.onNodeWithContentDescription(description("a")).assertIsDisplayed()
         composeTestRule.onNodeWithText(string(R.string.profile_empty_runs)).assertDoesNotExist()

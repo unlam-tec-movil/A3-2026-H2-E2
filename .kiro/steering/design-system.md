@@ -46,7 +46,7 @@ Ubicación inicial de los componentes del sistema de diseño:
 | `StatusBadge` («Meta cumplida», «Incompleto», «Demo») | `components/common/` | Lo usan profile («Mis recorridos») y result |
 | `GoalChip` + modal «Iniciar nuevo recorrido» | `components/common/` | Se abre desde el «+» de Actividad |
 | `BottomNavBar` | `navigation/` | Conoce las rutas |
-| `ProfileStatRow` (fila de «Mis estadísticas») | `screens/profile/components/` | Solo en Perfil |
+| `ProfileSectionCard`, `ProfileStatColumn` (barra de «Mis estadísticas»), `EmptyState` | `screens/profile/components/` | Solo en Perfil |
 | `RunPanel`, `RunControls`, `BrakeAlert`, `GpsIndicator`, capa de traza | `screens/map/components/` | Solo en Actividad |
 | `RunCard` (card completa), `RunDetailSheet` | `screens/profile/components/` | Previstos en «Mis recorridos» de Perfil |
 | `HighlightChip`, `PhotoPicker` | `screens/saverun/components/` | Solo en Guardar recorrido |

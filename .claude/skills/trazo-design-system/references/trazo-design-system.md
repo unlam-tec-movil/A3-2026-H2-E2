@@ -133,6 +133,7 @@ Se exponen con `TrazoTheme.extendedColors` (CompositionLocal):
 | brakePin | Error600: círculo de 22 dp con borde blanco de 3 dp y un guion blanco |
 | startPin | Secondary700: círculo de 16 dp con borde blanco de 3 dp |
 | locationHalo | Primary300 al 35 % (radio 26 dp) alrededor de un punto Primary950 de 20 dp con borde blanco |
+| statBarRuns / statBarDistance / statBarTime | Neutral300 / Neutral500 / Neutral600: barras decorativas de «Mis estadísticas» (el dato va siempre en texto) |
 
 ### 3.4 Pares de contraste verificados
 
@@ -390,7 +391,7 @@ Los avisos que no requieren acción usan `role=status`. Los de error usan `role=
 | Pantalla | Estructura |
 |---|---|
 | **Actividad** (pantalla de inicio) | Mapa a pantalla completa, también detrás de la barra de estado (íconos de estado oscuros). Barra superior flotante con GPS. Botón "Centrar". Alerta de frenada cuando corresponde. Panel del recorrido en curso. Barra de navegación (Actividad activo). Sin recorrido: trazas guardadas, panel en cero y FAB "+" (el único de la app) |
-| **Perfil** | Barra superior primary con "Trazo" y engranaje. Con scroll: «Mis estadísticas» (titleMedium, encabezado) con 3 filas etiqueta/valor: "Recorridos guardados", "Distancia total" y "Tiempo total" (valor en titleMedium tabular, HH:MM:SS); y «Mis recorridos» con la lista de cards completas (más recientes primero). Sin FAB. Barra de navegación (Perfil activo). **Estado vacío:** ilustración y "Todavía no hay recorridos" |
+| **Perfil** | Barra superior primary con "Trazo" y engranaje. Con scroll: card blanca «Mis estadísticas» (titleMedium, encabezado) con 3 columnas: una barra en píldora de 56 dp que crece hacia arriba de 12 a 48 dp según un tope fijo por métrica (20 recorridos, 50 km, 10 h), animada (sin animación con "Quitar animaciones"); debajo el valor en titleMedium tabular ("0", "0 km", HH:MM:SS) y la etiqueta en bodySmall: "Recorridos guardados", "Distancia total" y "Tiempo total". Luego «Mis recorridos» con la lista de cards completas (más recientes primero). Sin FAB. Barra de navegación (Perfil activo). **Estado vacío:** card «Mis recorridos» con el ícono `directions_run` en dos círculos concéntricos (surfaceContainer / surfaceContainerHigh), "Todavía no hay recorridos" (titleMedium) y un texto que invita a ir a Actividad (bodySmall) |
 | **Modal "Iniciar nuevo recorrido"** | Scrim al 32 %. Modal extraLarge con el título (headlineSmall), "Seleccioná una meta:", chips 3/5/10 km, y botones "Cancelar" (outlined) y "Comenzar" (filled, deshabilitado sin meta) |
 | **¡Meta cumplida! / Recorrido finalizado** | Ver 6.13 |
 | **Guardar recorrido** | Barra superior con volver. Card de resumen (fecha, marca, 3 métricas). Campo de título. "¿Qué destacarías del recorrido?" (opcional) con chips. "Fotos" con contador. Botón fijo "Guardar recorrido". Si el corredor vuelve sin guardar, aparece el diálogo "¿Descartar el recorrido?" con "Descartar" y "Seguir editando" |

@@ -4,19 +4,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -28,7 +29,8 @@ import com.trazo.app.domain.model.saved.SavedRunTotals
 import com.trazo.app.ui.components.common.RunValueFormatter
 import com.trazo.app.ui.components.common.StatusBadgeKind
 import com.trazo.app.ui.screens.profile.components.EmptyState
-import com.trazo.app.ui.screens.profile.components.ProfileStatRow
+import com.trazo.app.ui.screens.profile.components.ProfileSectionCard
+import com.trazo.app.ui.screens.profile.components.ProfileStatColumn
 import com.trazo.app.ui.screens.profile.components.RunCard
 import com.trazo.app.ui.screens.profile.components.TrazoTopBar
 import com.trazo.app.ui.theme.Spacing
@@ -59,9 +61,10 @@ fun ProfileScreen(
 
 /**
  * Contenido de Perfil. Se dibuja solo a partir de [state]; no guarda estado propio.
- * Arriba va la barra superior con "Trazo" y Configuración; debajo, en una lista perezosa, «Mis
- * estadísticas», el título «Mis recorridos» y una card por recorrido. Mientras no hay recorridos
- * se muestra el estado vacío y los totales quedan en cero. No tiene «+».
+ * Arriba va la barra superior con "Trazo" y Configuración; debajo, en una lista perezosa, la card
+ * «Mis estadísticas» (tres barras animadas con tope, valor y etiqueta) y «Mis recorridos». Sin
+ * recorridos, «Mis recorridos» es una card con el estado vacío y los totales quedan en cero; con
+ * recorridos, va el título y una card por recorrido. No tiene «+».
  *
  * @param onRunClick recibe el id del recorrido tocado.
  */
@@ -93,56 +96,76 @@ fun ProfileContent(
         ) {
             item(key = "stats") { ProfileStats(state = state) }
 
-            item(key = "runs-title") {
-                ProfileSectionTitle(text = stringResource(R.string.profile_runs_title))
-            }
-
             if (state.hasRecentRuns) {
+                item(key = "runs-title") {
+                    ProfileSectionTitle(
+                        text = stringResource(R.string.profile_runs_title),
+                        modifier = Modifier.padding(top = Spacing.sm),
+                    )
+                }
                 items(items = state.runs, key = { it.id }) { run ->
                     RunCard(run = run, onClick = { onRunClick(run.id) })
                 }
             } else {
                 item(key = "empty") {
-                    // EmptyState ya aplica el margen lateral de pantalla.
-                    EmptyState(
-                        illustrationRes = R.drawable.img_empty_runs,
-                        message = stringResource(R.string.profile_empty_runs),
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(top = Spacing.xl),
-                    )
+                    ProfileSectionCard(title = stringResource(R.string.profile_runs_title)) {
+                        EmptyState(
+                            icon = Icons.AutoMirrored.Filled.DirectionsRun,
+                            title = stringResource(R.string.profile_empty_runs),
+                            body = stringResource(R.string.profile_empty_runs_body),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = Spacing.sm),
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-/** «Mis estadísticas»: título y las tres filas de totales. */
+/** Card «Mis estadísticas»: tres barras con su valor y etiqueta. */
 @Composable
 private fun ProfileStats(
     state: ProfileUiState,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.padding(bottom = Spacing.md)) {
-        ProfileSectionTitle(text = stringResource(R.string.profile_stats_title))
-        Spacer(modifier = Modifier.height(Spacing.sm))
-        ProfileStatRow(
-            label = stringResource(R.string.profile_stats_runs_label),
-            value = pluralStringResource(R.plurals.profile_stats_runs, state.totals.runCount, state.totals.runCount),
-        )
-        ProfileStatRow(
-            label = stringResource(R.string.profile_stats_distance_label),
-            value =
-                stringResource(
-                    R.string.profile_stats_distance,
-                    RunValueFormatter.formatTotalDistanceKm(state.totals.distanceKm),
-                ),
-        )
-        ProfileStatRow(
-            label = stringResource(R.string.profile_stats_time_label),
-            value = RunValueFormatter.formatDuration(state.totals.timeSeconds),
-        )
+    ProfileSectionCard(
+        title = stringResource(R.string.profile_stats_title),
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.Top,
+        ) {
+            ProfileStatColumn(
+                label = stringResource(R.string.profile_stats_runs_label),
+                value = state.totals.runCount.toString(),
+                fill = state.statsFill.runs,
+                barColor = TrazoTheme.extendedColors.statBarRuns,
+                modifier = Modifier.weight(1f),
+            )
+            ProfileStatColumn(
+                label = stringResource(R.string.profile_stats_distance_label),
+                value =
+                    stringResource(
+                        R.string.profile_stats_distance,
+                        RunValueFormatter.formatTotalDistanceKm(state.totals.distanceKm),
+                    ),
+                fill = state.statsFill.distance,
+                barColor = TrazoTheme.extendedColors.statBarDistance,
+                modifier = Modifier.weight(1f),
+            )
+            ProfileStatColumn(
+                label = stringResource(R.string.profile_stats_time_label),
+                value = RunValueFormatter.formatDuration(state.totals.timeSeconds),
+                fill = state.statsFill.time,
+                barColor = TrazoTheme.extendedColors.statBarTime,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
@@ -203,6 +226,7 @@ private fun ProfileContentWithRunsPreview() {
                             ),
                         ),
                     totals = SavedRunTotals(runCount = 1, distanceKm = 5.2, timeSeconds = 3_300L),
+                    statsFill = ProfileStatsFill(runs = 0.05f, distance = 0.1f, time = 0.09f),
                 ),
             onSettingsClick = {},
             onRunClick = {},

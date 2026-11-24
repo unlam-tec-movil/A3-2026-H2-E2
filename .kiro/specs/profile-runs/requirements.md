@@ -1,5 +1,16 @@
 # Requirements Document
 
+> **Revisión 2026-11-24 · nueva UI de Perfil.** Esta nota manda sobre lo que se contradiga más
+> abajo.
+>
+> - «Mis estadísticas» es una card con tres columnas: una barra que crece hacia arriba (con
+>   animación y un tope chico), el valor y la etiqueta. Cada barra se llena contra un tope fijo:
+>   20 recorridos, 50 km y 10 h; al superarlo queda llena. Los demo no suman.
+> - «Recorridos guardados» muestra solo el número («0», «2»), sin la palabra.
+> - El estado vacío es una card «Mis recorridos» con un ícono de corredor en círculos, «Todavía no
+>   hay recorridos» y «Acá vas a ver la lista de tus recorridos finalizados cuando los guardes.
+>   Andá a Actividad para empezar uno.», en lugar de la ilustración.
+
 ## Project Description (Input)
 profile-runs: Mis recorridos y detalle (HU-09), Mis estadísticas (HU-16) y trazas guardadas en el mapa de Actividad (HU-12), según Trazo v0.7. Mis recorridos: tarjetas del más reciente al más antiguo, con título (con puntos suspensivos si es largo), fecha, km, duración, frenadas, regularidad y marca Incompleto o Demo. Detalle en modal: mapa con la traza, título, velocidad promedio, meta y estado, destacados y fotos (máx. 2), marca Demo; si no hay destacados o fotos, esas secciones se ocultan. Sin recorridos: ilustración con «Todavía no hay recorridos» y totales en cero. Mis estadísticas: recorridos, km y tiempo totales; suman los incompletos, no suman los demo, y el tiempo no incluye pausas personales. HU-12: con recorridos guardados, sin recorrido en curso y con ubicación precisa, el mapa de Actividad dibuja todas las trazas; al tocar una se abre el modal de detalle. No nombrar clases del contrato: hablar de «recorrido guardado».
 
