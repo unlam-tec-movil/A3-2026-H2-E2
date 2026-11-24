@@ -1,5 +1,7 @@
 package com.trazo.app.ui.screens.map.components
 
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -31,6 +33,17 @@ class BrakeAlertTest {
         composeTestRule.onNodeWithText(string(R.string.map_brake_alert_title)).assertIsDisplayed()
         composeTestRule.onNodeWithText(string(R.string.map_brake_alert_detail)).assertIsDisplayed()
         composeTestRule.onNodeWithTag(BRAKE_ALERT_ICON_TAG, useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun visibleAlert_withCustomModifier_isDisplayed() {
+        composeTestRule.setContent {
+            TrazoTheme {
+                BrakeAlert(visible = true, modifier = Modifier.testTag("custom_brake_alert"))
+            }
+        }
+
+        composeTestRule.onNodeWithTag("custom_brake_alert").assertIsDisplayed()
     }
 
     @Test
