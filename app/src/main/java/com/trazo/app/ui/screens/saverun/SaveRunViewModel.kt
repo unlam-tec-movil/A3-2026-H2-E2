@@ -26,6 +26,8 @@ data class SaveRunUiState(
     val titleError: Boolean = false,
     /** Verdadero si hay que mostrar el diálogo «¿Descartar el recorrido?». */
     val showDiscardDialog: Boolean = false,
+    /** Verdadero si hay que mostrar la cámara en lugar del formulario. */
+    val showCamera: Boolean = false,
 )
 
 sealed interface SaveRunEffect {
@@ -94,6 +96,34 @@ class SaveRunViewModel
             _uiState.update { it.copy(showDiscardDialog = false) }
             runSessions.removeFinishedSummary(runId)
             viewModelScope.launch { _effect.send(SaveRunEffect.Close) }
+        }
+
+        /** «Agregar foto»: abre la cámara solo si todavía hay lugar. */
+        fun onAddPhotoClick() {
+            _uiState.update { state ->
+                if (state.photoPaths.size < SavedRun.MAX_PHOTOS) state.copy(showCamera = true) else state
+            }
+        }
+
+        /** La cámara devolvió una foto: se suma a la lista y se cierra la cámara. */
+        fun onPhotoConfirmed(path: String) {
+            _uiState.update { state ->
+                if (state.photoPaths.size < SavedRun.MAX_PHOTOS) {
+                    state.copy(photoPaths = state.photoPaths + path, showCamera = false)
+                } else {
+                    state.copy(showCamera = false)
+                }
+            }
+        }
+
+        /** Se cerró la cámara sin sacar foto. */
+        fun onCameraDismiss() {
+            _uiState.update { it.copy(showCamera = false) }
+        }
+
+        /** Quita una foto de la lista. */
+        fun onPhotoRemove(path: String) {
+            _uiState.update { it.copy(photoPaths = it.photoPaths - path) }
         }
 
         private companion object {

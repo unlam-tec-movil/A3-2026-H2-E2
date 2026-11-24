@@ -15,4 +15,10 @@
     <string name="save_run_discard_text">Si salís ahora, el recorrido no se guarda.</string>
     <string name="save_run_discard_confirm">Descartar</string>
     <string name="save_run_discard_keep">Seguir editando</string>
+    <string name="save_run_photos_title">Fotos</string>
+    <string name="save_run_photos_counter">%1$d/%2$d</string>
+    <string name="save_run_photos_hint">Podés agregar hasta %1$d fotos</string>
+    <string name="save_run_add_photo">Agregar foto</string>
+    <string name="save_run_photo_description">Foto del recorrido %1$d</string>
+    <string name="save_run_remove_photo">Quitar foto</string>
 </resources>

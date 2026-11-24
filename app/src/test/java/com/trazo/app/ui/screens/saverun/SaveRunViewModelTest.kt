@@ -140,6 +140,47 @@ class SaveRunViewModelTest {
             assertEquals(SaveRunEffect.Close, viewModel.effect.first())
         }
 
+    @Test
+    fun `agregar foto abre la camara`() {
+        val viewModel = viewModel()
+
+        viewModel.onAddPhotoClick()
+
+        assertTrue(viewModel.uiState.value.showCamera)
+    }
+
+    @Test
+    fun `una foto confirmada se suma y cierra la camara`() {
+        val viewModel = viewModel()
+        viewModel.onAddPhotoClick()
+
+        viewModel.onPhotoConfirmed("/fotos/a.jpg")
+
+        assertEquals(listOf("/fotos/a.jpg"), viewModel.uiState.value.photoPaths)
+        assertFalse(viewModel.uiState.value.showCamera)
+    }
+
+    @Test
+    fun `con el maximo de fotos no se abre la camara`() {
+        val viewModel = viewModel()
+        repeat(SavedRun.MAX_PHOTOS) { viewModel.onPhotoConfirmed("/fotos/$it.jpg") }
+
+        viewModel.onAddPhotoClick()
+
+        assertFalse(viewModel.uiState.value.showCamera)
+    }
+
+    @Test
+    fun `quitar una foto la saca de la lista`() {
+        val viewModel = viewModel()
+        viewModel.onPhotoConfirmed("/fotos/a.jpg")
+        viewModel.onPhotoConfirmed("/fotos/b.jpg")
+
+        viewModel.onPhotoRemove("/fotos/a.jpg")
+
+        assertEquals(listOf("/fotos/b.jpg"), viewModel.uiState.value.photoPaths)
+    }
+
     private fun viewModel(runId: String = "r1") =
         SaveRunViewModel(
             savedStateHandle = SavedStateHandle(mapOf("runId" to runId)),

@@ -2,6 +2,7 @@ package com.trazo.app.ui.screens.saverun
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -12,32 +13,43 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.trazo.app.R
 import com.trazo.app.domain.model.saved.SavedRun
+import com.trazo.app.ui.screens.camera.CameraCaptureScreen
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme
+import java.io.File
 
 /** Pantalla «Guardar recorrido»: conecta el ViewModel y avisa cuando hay que salir. */
 @Composable
@@ -58,18 +70,29 @@ fun SaveRunScreen(
         }
     }
 
-    // Botón o gesto de volver del sistema: en vez de salir, pedimos confirmación.
-    BackHandler(onBack = viewModel::onBackRequested)
+    if (state.showCamera) {
+        // La cámara ocupa toda la pantalla; Atrás la cierra sin perder lo escrito.
+        BackHandler(onBack = viewModel::onCameraDismiss)
+        CameraCaptureScreen(
+            onPhotoConfirmed = viewModel::onPhotoConfirmed,
+            modifier = modifier.safeDrawingPadding(),
+        )
+    } else {
+        // Botón o gesto de volver del sistema: en vez de salir, pedimos confirmación.
+        BackHandler(onBack = viewModel::onBackRequested)
 
-    SaveRunContent(
-        state = state,
-        onTitleChange = viewModel::onTitleChange,
-        onHighlightToggle = viewModel::onHighlightToggle,
-        onSave = viewModel::onSave,
-        onDiscardConfirm = viewModel::onDiscardConfirm,
-        onDiscardDismiss = viewModel::onDiscardDismiss,
-        modifier = modifier,
-    )
+        SaveRunContent(
+            state = state,
+            onTitleChange = viewModel::onTitleChange,
+            onHighlightToggle = viewModel::onHighlightToggle,
+            onSave = viewModel::onSave,
+            onDiscardConfirm = viewModel::onDiscardConfirm,
+            onDiscardDismiss = viewModel::onDiscardDismiss,
+            onAddPhoto = viewModel::onAddPhotoClick,
+            onPhotoRemove = viewModel::onPhotoRemove,
+            modifier = modifier,
+        )
+    }
 }
 
 /** Dibuja el formulario. No conoce el ViewModel: recibe el estado y avisa con funciones. */
@@ -81,6 +104,8 @@ fun SaveRunContent(
     onSave: () -> Unit,
     onDiscardConfirm: () -> Unit,
     onDiscardDismiss: () -> Unit,
+    onAddPhoto: () -> Unit,
+    onPhotoRemove: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -161,6 +186,57 @@ fun SaveRunContent(
             }
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(R.string.save_run_photos_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text =
+                    stringResource(
+                        R.string.save_run_photos_counter,
+                        state.photoPaths.size,
+                        SavedRun.MAX_PHOTOS,
+                    ),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        Text(
+            text = stringResource(R.string.save_run_photos_hint, SavedRun.MAX_PHOTOS),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            state.photoPaths.forEachIndexed { index, path ->
+                Box(modifier = Modifier.size(96.dp)) {
+                    AsyncImage(
+                        model = File(path),
+                        contentDescription = stringResource(R.string.save_run_photo_description, index + 1),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                    )
+                    FilledTonalIconButton(
+                        onClick = { onPhotoRemove(path) },
+                        modifier = Modifier.align(Alignment.TopEnd).size(32.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.save_run_remove_photo),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+            }
+        }
+        OutlinedButton(
+            onClick = onAddPhoto,
+            enabled = state.photoPaths.size < SavedRun.MAX_PHOTOS,
+        ) {
+            Text(stringResource(R.string.save_run_add_photo))
+        }
+
         Button(
             onClick = onSave,
             modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.buttonHeight),
@@ -214,6 +290,8 @@ private fun SaveRunContentPreview() {
             onSave = {},
             onDiscardConfirm = {},
             onDiscardDismiss = {},
+            onAddPhoto = {},
+            onPhotoRemove = {},
         )
     }
 }
