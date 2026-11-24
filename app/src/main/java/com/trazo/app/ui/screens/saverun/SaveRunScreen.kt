@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.trazo.app.R
 import com.trazo.app.domain.model.saved.SavedRun
+import com.trazo.app.ui.screens.camera.CameraCaptureScreen
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme
@@ -69,20 +70,29 @@ fun SaveRunScreen(
         }
     }
 
-    // Botón o gesto de volver del sistema: en vez de salir, pedimos confirmación.
-    BackHandler(onBack = viewModel::onBackRequested)
+    if (state.showCamera) {
+        // La cámara ocupa toda la pantalla; Atrás la cierra sin perder lo escrito.
+        BackHandler(onBack = viewModel::onCameraDismiss)
+        CameraCaptureScreen(
+            onPhotoConfirmed = viewModel::onPhotoConfirmed,
+            modifier = modifier.safeDrawingPadding(),
+        )
+    } else {
+        // Botón o gesto de volver del sistema: en vez de salir, pedimos confirmación.
+        BackHandler(onBack = viewModel::onBackRequested)
 
-    SaveRunContent(
-        state = state,
-        onTitleChange = viewModel::onTitleChange,
-        onHighlightToggle = viewModel::onHighlightToggle,
-        onSave = viewModel::onSave,
-        onDiscardConfirm = viewModel::onDiscardConfirm,
-        onDiscardDismiss = viewModel::onDiscardDismiss,
-        onAddPhoto = viewModel::onAddPhotoClick,
-        onPhotoRemove = viewModel::onPhotoRemove,
-        modifier = modifier,
-    )
+        SaveRunContent(
+            state = state,
+            onTitleChange = viewModel::onTitleChange,
+            onHighlightToggle = viewModel::onHighlightToggle,
+            onSave = viewModel::onSave,
+            onDiscardConfirm = viewModel::onDiscardConfirm,
+            onDiscardDismiss = viewModel::onDiscardDismiss,
+            onAddPhoto = viewModel::onAddPhotoClick,
+            onPhotoRemove = viewModel::onPhotoRemove,
+            modifier = modifier,
+        )
+    }
 }
 
 /** Dibuja el formulario. No conoce el ViewModel: recibe el estado y avisa con funciones. */
