@@ -181,6 +181,24 @@ class SaveRunViewModelTest {
         assertEquals(listOf("/fotos/b.jpg"), viewModel.uiState.value.photoPaths)
     }
 
+    @Test
+    fun `al abrir carga el resumen del recorrido`() {
+        val viewModel = viewModel()
+
+        assertEquals(
+            "r1",
+            viewModel.uiState.value.summary
+                ?.id,
+        )
+    }
+
+    @Test
+    fun `si el recorrido no existe no hay resumen`() {
+        val viewModel = viewModel(runId = "otro")
+
+        assertNull(viewModel.uiState.value.summary)
+    }
+
     private fun viewModel(runId: String = "r1") =
         SaveRunViewModel(
             savedStateHandle = SavedStateHandle(mapOf("runId" to runId)),

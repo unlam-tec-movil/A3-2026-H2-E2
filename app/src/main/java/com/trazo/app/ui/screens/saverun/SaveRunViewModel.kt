@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trazo.app.data.repository.RunSessionRepository
+import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.domain.usecases.SaveRunResult
 import com.trazo.app.domain.usecases.SaveRunUseCase
@@ -28,6 +29,8 @@ data class SaveRunUiState(
     val showDiscardDialog: Boolean = false,
     /** Verdadero si hay que mostrar la cámara en lugar del formulario. */
     val showCamera: Boolean = false,
+    /** Datos del recorrido terminado, para la tarjeta de resumen. Null si ya no está disponible. */
+    val summary: FrozenRunSummary? = null,
 )
 
 sealed interface SaveRunEffect {
@@ -54,6 +57,10 @@ class SaveRunViewModel
 
         private val _effect = Channel<SaveRunEffect>(Channel.BUFFERED)
         val effect: Flow<SaveRunEffect> = _effect.receiveAsFlow()
+
+        init {
+            _uiState.update { it.copy(summary = runSessions.getFinishedSummary(runId)) }
+        }
 
         fun onTitleChange(title: String) {
             _uiState.update { it.copy(title = title.take(SavedRun.TITLE_MAX_LENGTH), titleError = false) }

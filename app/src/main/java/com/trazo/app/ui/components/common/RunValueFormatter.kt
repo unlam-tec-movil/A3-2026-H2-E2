@@ -56,4 +56,13 @@ object RunValueFormatter {
         val raw = format.format(Date(instant.toEpochMilliseconds())).replace(".", "")
         return raw.replaceFirstChar { it.titlecase(locale) }
     }
+
+    /** `14:05`: hora del día en 24 h. */
+    fun formatTime(
+        instant: Instant,
+        timeZone: TimeZone = TimeZone.getDefault(),
+    ): String {
+        val format = SimpleDateFormat("HH:mm", locale).apply { this.timeZone = timeZone }
+        return format.format(Date(instant.toEpochMilliseconds()))
+    }
 }

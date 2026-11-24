@@ -122,6 +122,8 @@ fun SaveRunContent(
                     .padding(Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.xl),
         ) {
+            state.summary?.let { SaveRunSummaryCard(summary = it) }
+
             OutlinedTextField(
                 value = state.title,
                 onValueChange = onTitleChange,
