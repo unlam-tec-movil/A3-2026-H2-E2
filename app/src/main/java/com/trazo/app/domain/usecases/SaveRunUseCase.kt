@@ -4,6 +4,7 @@ import com.trazo.app.data.repository.RunSessionRepository
 import com.trazo.app.data.repository.SavedRunRepository
 import com.trazo.app.domain.model.saved.SavedRun
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 
 /** Resultado de intentar guardar un recorrido. */
 sealed interface SaveRunResult {
@@ -14,6 +15,9 @@ sealed interface SaveRunResult {
     data object TooManyPhotos : SaveRunResult
 
     data object RunNotFound : SaveRunResult
+
+    /** El título y el recorrido eran válidos, pero no se pudo escribir en el almacenamiento. */
+    data object SaveFailed : SaveRunResult
 }
 
 /** Valida lo que cargó el usuario, arma el [SavedRun] con lo medido y lo guarda. */
@@ -35,7 +39,7 @@ class SaveRunUseCase
             val summary =
                 runSessionRepository.getFinishedSummary(runId) ?: return SaveRunResult.RunNotFound
 
-            savedRunRepository.save(
+            val savedRun =
                 SavedRun(
                     id = summary.id,
                     title = cleanTitle,
@@ -52,9 +56,16 @@ class SaveRunUseCase
                     regularityPercent = summary.regularityPercent,
                     highlights = highlights,
                     photoPaths = photoPaths,
-                ),
-            )
-            return SaveRunResult.Saved
+                )
+            return try {
+                savedRunRepository.save(savedRun)
+                SaveRunResult.Saved
+            } catch (error: CancellationException) {
+                // Si se cancela la corrutina, hay que dejarla cancelarse: no es un fallo de guardado.
+                throw error
+            } catch (error: Exception) {
+                SaveRunResult.SaveFailed
+            }
         }
 
         private companion object {

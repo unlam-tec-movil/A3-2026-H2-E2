@@ -2,9 +2,9 @@
 <resources>
     <string name="save_run_heading">Guardar recorrido</string>
     <string name="save_run_title_label">Título del recorrido</string>
-    <string name="save_run_title_error">El título debe tener entre 3 y 50 caracteres.</string>
+    <string name="save_run_title_error">Escribí un título</string>
     <string name="save_run_save">Guardar</string>
-    <string name="save_run_highlights_title">Destacados</string>
+    <string name="save_run_highlights_title">¿Qué destacarías del recorrido?</string>
     <string name="save_run_highlight_even_floor">Piso parejo</string>
     <string name="save_run_highlight_safe">Seguro</string>
     <string name="save_run_highlight_lit">Iluminado</string>
@@ -21,4 +21,13 @@
     <string name="save_run_add_photo">Agregar foto</string>
     <string name="save_run_photo_description">Foto del recorrido %1$d</string>
     <string name="save_run_remove_photo">Quitar foto</string>
+    <string name="save_run_back">Volver</string>
+    <string name="save_run_summary_date">%1$s · %2$s</string>
+    <string name="save_run_summary_goal_reached">Meta cumplida</string>
+    <string name="save_run_summary_incomplete">Incompleto</string>
+    <string name="save_run_summary_demo">Demo</string>
+    <string name="save_run_summary_distance">Distancia</string>
+    <string name="save_run_summary_time">Tiempo</string>
+    <string name="save_run_summary_brakes">Frenadas</string>
+    <string name="save_run_save_error">No se pudo guardar el recorrido. Probá de nuevo.</string>
 </resources>

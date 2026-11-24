@@ -181,6 +181,50 @@ class SaveRunViewModelTest {
         assertEquals(listOf("/fotos/b.jpg"), viewModel.uiState.value.photoPaths)
     }
 
+    @Test
+    fun `al abrir carga el resumen del recorrido`() {
+        val viewModel = viewModel()
+
+        assertEquals(
+            "r1",
+            viewModel.uiState.value.summary
+                ?.id,
+        )
+    }
+
+    @Test
+    fun `si el recorrido no existe no hay resumen`() {
+        val viewModel = viewModel(runId = "otro")
+
+        assertNull(viewModel.uiState.value.summary)
+    }
+
+    @Test
+    fun `si falla el guardado se marca el error`() {
+        savedRuns.failOnSave = true
+        val viewModel = viewModel()
+        viewModel.onTitleChange("Mi carrera")
+
+        viewModel.onSave()
+
+        assertTrue(viewModel.uiState.value.saveError)
+    }
+
+    @Test
+    fun `reintentar despues de un fallo borra el error y guarda`() =
+        runTest {
+            savedRuns.failOnSave = true
+            val viewModel = viewModel()
+            viewModel.onTitleChange("Mi carrera")
+            viewModel.onSave()
+
+            savedRuns.failOnSave = false
+            viewModel.onSave()
+
+            assertFalse(viewModel.uiState.value.saveError)
+            assertEquals(SaveRunEffect.Saved, viewModel.effect.first())
+        }
+
     private fun viewModel(runId: String = "r1") =
         SaveRunViewModel(
             savedStateHandle = SavedStateHandle(mapOf("runId" to runId)),

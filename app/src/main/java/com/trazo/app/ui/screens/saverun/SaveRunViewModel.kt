@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trazo.app.data.repository.RunSessionRepository
+import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.domain.usecases.SaveRunResult
 import com.trazo.app.domain.usecases.SaveRunUseCase
@@ -28,6 +29,10 @@ data class SaveRunUiState(
     val showDiscardDialog: Boolean = false,
     /** Verdadero si hay que mostrar la cámara en lugar del formulario. */
     val showCamera: Boolean = false,
+    /** Datos del recorrido terminado, para la tarjeta de resumen. Null si ya no está disponible. */
+    val summary: FrozenRunSummary? = null,
+    /** Verdadero si el último intento de guardar falló al escribir; se puede volver a intentar. */
+    val saveError: Boolean = false,
 )
 
 sealed interface SaveRunEffect {
@@ -55,6 +60,10 @@ class SaveRunViewModel
         private val _effect = Channel<SaveRunEffect>(Channel.BUFFERED)
         val effect: Flow<SaveRunEffect> = _effect.receiveAsFlow()
 
+        init {
+            _uiState.update { it.copy(summary = runSessions.getFinishedSummary(runId)) }
+        }
+
         fun onTitleChange(title: String) {
             _uiState.update { it.copy(title = title.take(SavedRun.TITLE_MAX_LENGTH), titleError = false) }
         }
@@ -70,11 +79,13 @@ class SaveRunViewModel
 
         fun onSave() {
             viewModelScope.launch {
+                _uiState.update { it.copy(saveError = false) }
                 val state = _uiState.value
                 when (saveRun(runId, state.title, state.highlights.toList(), state.photoPaths)) {
                     SaveRunResult.Saved -> _effect.send(SaveRunEffect.Saved)
                     SaveRunResult.InvalidTitle -> _uiState.update { it.copy(titleError = true) }
                     SaveRunResult.RunNotFound -> _effect.send(SaveRunEffect.Close)
+                    SaveRunResult.SaveFailed -> _uiState.update { it.copy(saveError = true) }
                     // La pantalla no deja agregar más fotos que el máximo, así que no debería pasar.
                     SaveRunResult.TooManyPhotos -> Unit
                 }
