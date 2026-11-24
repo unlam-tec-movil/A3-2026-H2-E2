@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trazo.app.data.repository.RunSessionRepository
+import com.trazo.app.domain.model.map.FrozenRunSummary
 import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.domain.usecases.SaveRunResult
 import com.trazo.app.domain.usecases.SaveRunUseCase
@@ -26,7 +27,24 @@ data class SaveRunUiState(
     val titleError: Boolean = false,
     /** Verdadero si hay que mostrar el diálogo «¿Descartar el recorrido?». */
     val showDiscardDialog: Boolean = false,
+    /** Verdadero si hay que mostrar la cámara en lugar del formulario. */
+    val showCamera: Boolean = false,
+    /** Datos del recorrido terminado, para la tarjeta de resumen. Null si ya no está disponible. */
+    val summary: FrozenRunSummary? = null,
+    /** Verdadero si el último intento de guardar falló al escribir; se puede volver a intentar. */
+    val saveError: Boolean = false,
+    /** Destacados que el corredor agregó en este recorrido, en el orden en que los creó. */
+    val customHighlights: List<String> = emptyList(),
+    /** Verdadero si hay que mostrar el diálogo para escribir un destacado nuevo. */
+    val showAddHighlightDialog: Boolean = false,
+    /** Texto que se está escribiendo en el diálogo del destacado nuevo. */
+    val newHighlightText: String = "",
+    /** Problema con el texto escrito, o null si no hay. */
+    val newHighlightError: NewHighlightError? = null,
 )
+
+/** Por qué no se pudo agregar un destacado nuevo. */
+enum class NewHighlightError { Empty, Duplicate }
 
 sealed interface SaveRunEffect {
     /** El recorrido se guardó: la pantalla vuelve al mapa. */
@@ -53,6 +71,10 @@ class SaveRunViewModel
         private val _effect = Channel<SaveRunEffect>(Channel.BUFFERED)
         val effect: Flow<SaveRunEffect> = _effect.receiveAsFlow()
 
+        init {
+            _uiState.update { it.copy(summary = runSessions.getFinishedSummary(runId)) }
+        }
+
         fun onTitleChange(title: String) {
             _uiState.update { it.copy(title = title.take(SavedRun.TITLE_MAX_LENGTH), titleError = false) }
         }
@@ -66,13 +88,60 @@ class SaveRunViewModel
             }
         }
 
+        /** «Agregar»: abre el diálogo con el campo vacío. */
+        fun onAddHighlightClick() {
+            _uiState.update {
+                it.copy(showAddHighlightDialog = true, newHighlightText = "", newHighlightError = null)
+            }
+        }
+
+        /** Se escribió en el campo del destacado nuevo: se corta en el máximo y se borra el error. */
+        fun onNewHighlightChange(text: String) {
+            _uiState.update {
+                it.copy(newHighlightText = text.take(HIGHLIGHT_MAX_LENGTH), newHighlightError = null)
+            }
+        }
+
+        /** Se canceló: se cierra el diálogo sin agregar nada. */
+        fun onNewHighlightDismiss() {
+            _uiState.update {
+                it.copy(showAddHighlightDialog = false, newHighlightText = "", newHighlightError = null)
+            }
+        }
+
+        /**
+         * Confirma el destacado nuevo. [predefined] son los destacados fijos de la pantalla: sus textos
+         * viven en los recursos, que el ViewModel no lee, así que la pantalla nos los pasa.
+         */
+        fun onNewHighlightConfirm(predefined: List<String>) {
+            _uiState.update { state ->
+                val text = state.newHighlightText.trim()
+                val existing = predefined + state.customHighlights
+                when {
+                    text.isEmpty() -> state.copy(newHighlightError = NewHighlightError.Empty)
+                    existing.any { it.equals(text, ignoreCase = true) } ->
+                        state.copy(newHighlightError = NewHighlightError.Duplicate)
+                    else ->
+                        state.copy(
+                            customHighlights = state.customHighlights + text,
+                            highlights = state.highlights + text,
+                            showAddHighlightDialog = false,
+                            newHighlightText = "",
+                            newHighlightError = null,
+                        )
+                }
+            }
+        }
+
         fun onSave() {
             viewModelScope.launch {
+                _uiState.update { it.copy(saveError = false) }
                 val state = _uiState.value
                 when (saveRun(runId, state.title, state.highlights.toList(), state.photoPaths)) {
                     SaveRunResult.Saved -> _effect.send(SaveRunEffect.Saved)
                     SaveRunResult.InvalidTitle -> _uiState.update { it.copy(titleError = true) }
                     SaveRunResult.RunNotFound -> _effect.send(SaveRunEffect.Close)
+                    SaveRunResult.SaveFailed -> _uiState.update { it.copy(saveError = true) }
                     // La pantalla no deja agregar más fotos que el máximo, así que no debería pasar.
                     SaveRunResult.TooManyPhotos -> Unit
                 }
@@ -96,7 +165,36 @@ class SaveRunViewModel
             viewModelScope.launch { _effect.send(SaveRunEffect.Close) }
         }
 
+        /** «Agregar foto»: abre la cámara solo si todavía hay lugar. */
+        fun onAddPhotoClick() {
+            _uiState.update { state ->
+                if (state.photoPaths.size < SavedRun.MAX_PHOTOS) state.copy(showCamera = true) else state
+            }
+        }
+
+        /** La cámara devolvió una foto: se suma a la lista y se cierra la cámara. */
+        fun onPhotoConfirmed(path: String) {
+            _uiState.update { state ->
+                if (state.photoPaths.size < SavedRun.MAX_PHOTOS) {
+                    state.copy(photoPaths = state.photoPaths + path, showCamera = false)
+                } else {
+                    state.copy(showCamera = false)
+                }
+            }
+        }
+
+        /** Se cerró la cámara sin sacar foto. */
+        fun onCameraDismiss() {
+            _uiState.update { it.copy(showCamera = false) }
+        }
+
+        /** Quita una foto de la lista. */
+        fun onPhotoRemove(path: String) {
+            _uiState.update { it.copy(photoPaths = it.photoPaths - path) }
+        }
+
         private companion object {
             const val RUN_ID_KEY = "runId"
+            const val HIGHLIGHT_MAX_LENGTH = 20
         }
     }

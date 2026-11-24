@@ -140,6 +140,193 @@ class SaveRunViewModelTest {
             assertEquals(SaveRunEffect.Close, viewModel.effect.first())
         }
 
+    @Test
+    fun `agregar foto abre la camara`() {
+        val viewModel = viewModel()
+
+        viewModel.onAddPhotoClick()
+
+        assertTrue(viewModel.uiState.value.showCamera)
+    }
+
+    @Test
+    fun `una foto confirmada se suma y cierra la camara`() {
+        val viewModel = viewModel()
+        viewModel.onAddPhotoClick()
+
+        viewModel.onPhotoConfirmed("/fotos/a.jpg")
+
+        assertEquals(listOf("/fotos/a.jpg"), viewModel.uiState.value.photoPaths)
+        assertFalse(viewModel.uiState.value.showCamera)
+    }
+
+    @Test
+    fun `con el maximo de fotos no se abre la camara`() {
+        val viewModel = viewModel()
+        repeat(SavedRun.MAX_PHOTOS) { viewModel.onPhotoConfirmed("/fotos/$it.jpg") }
+
+        viewModel.onAddPhotoClick()
+
+        assertFalse(viewModel.uiState.value.showCamera)
+    }
+
+    @Test
+    fun `quitar una foto la saca de la lista`() {
+        val viewModel = viewModel()
+        viewModel.onPhotoConfirmed("/fotos/a.jpg")
+        viewModel.onPhotoConfirmed("/fotos/b.jpg")
+
+        viewModel.onPhotoRemove("/fotos/a.jpg")
+
+        assertEquals(listOf("/fotos/b.jpg"), viewModel.uiState.value.photoPaths)
+    }
+
+    @Test
+    fun `al abrir carga el resumen del recorrido`() {
+        val viewModel = viewModel()
+
+        assertEquals(
+            "r1",
+            viewModel.uiState.value.summary
+                ?.id,
+        )
+    }
+
+    @Test
+    fun `si el recorrido no existe no hay resumen`() {
+        val viewModel = viewModel(runId = "otro")
+
+        assertNull(viewModel.uiState.value.summary)
+    }
+
+    @Test
+    fun `si falla el guardado se marca el error`() {
+        savedRuns.failOnSave = true
+        val viewModel = viewModel()
+        viewModel.onTitleChange("Mi carrera")
+
+        viewModel.onSave()
+
+        assertTrue(viewModel.uiState.value.saveError)
+    }
+
+    @Test
+    fun `reintentar despues de un fallo borra el error y guarda`() =
+        runTest {
+            savedRuns.failOnSave = true
+            val viewModel = viewModel()
+            viewModel.onTitleChange("Mi carrera")
+            viewModel.onSave()
+
+            savedRuns.failOnSave = false
+            viewModel.onSave()
+
+            assertFalse(viewModel.uiState.value.saveError)
+            assertEquals(SaveRunEffect.Saved, viewModel.effect.first())
+        }
+
+    private val predefined = listOf("Piso parejo", "Seguro")
+
+    @Test
+    fun `agregar un destacado nuevo lo suma ya seleccionado y cierra el dialogo`() {
+        val viewModel = viewModel()
+        viewModel.onAddHighlightClick()
+        viewModel.onNewHighlightChange("  Vista al rio  ")
+
+        viewModel.onNewHighlightConfirm(predefined)
+
+        val state = viewModel.uiState.value
+        assertEquals(listOf("Vista al rio"), state.customHighlights)
+        assertEquals(setOf("Vista al rio"), state.highlights)
+        assertFalse(state.showAddHighlightDialog)
+    }
+
+    @Test
+    fun `un destacado vacio no se agrega y escribir de nuevo borra el error`() {
+        val viewModel = viewModel()
+        viewModel.onAddHighlightClick()
+        viewModel.onNewHighlightChange("   ")
+
+        viewModel.onNewHighlightConfirm(predefined)
+
+        assertEquals(NewHighlightError.Empty, viewModel.uiState.value.newHighlightError)
+        assertTrue(
+            viewModel.uiState.value.customHighlights
+                .isEmpty(),
+        )
+        assertTrue(viewModel.uiState.value.showAddHighlightDialog)
+
+        viewModel.onNewHighlightChange("a")
+        assertNull(viewModel.uiState.value.newHighlightError)
+    }
+
+    @Test
+    fun `un destacado igual a uno predefinido no se agrega aunque cambien las mayusculas`() {
+        val viewModel = viewModel()
+        viewModel.onAddHighlightClick()
+        viewModel.onNewHighlightChange("piso PAREJO")
+
+        viewModel.onNewHighlightConfirm(predefined)
+
+        assertEquals(NewHighlightError.Duplicate, viewModel.uiState.value.newHighlightError)
+        assertTrue(
+            viewModel.uiState.value.customHighlights
+                .isEmpty(),
+        )
+    }
+
+    @Test
+    fun `un destacado igual a uno personalizado ya agregado tampoco se agrega`() {
+        val viewModel = viewModel()
+        viewModel.onNewHighlightChange("Vista")
+        viewModel.onNewHighlightConfirm(predefined)
+        viewModel.onAddHighlightClick()
+        viewModel.onNewHighlightChange("vista")
+
+        viewModel.onNewHighlightConfirm(predefined)
+
+        assertEquals(NewHighlightError.Duplicate, viewModel.uiState.value.newHighlightError)
+        assertEquals(listOf("Vista"), viewModel.uiState.value.customHighlights)
+    }
+
+    @Test
+    fun `el destacado nuevo no puede pasar de 20 caracteres`() {
+        val viewModel = viewModel()
+
+        viewModel.onNewHighlightChange("a".repeat(30))
+
+        assertEquals(20, viewModel.uiState.value.newHighlightText.length)
+    }
+
+    @Test
+    fun `cancelar el destacado nuevo cierra el dialogo sin agregar nada`() {
+        val viewModel = viewModel()
+        viewModel.onAddHighlightClick()
+        viewModel.onNewHighlightChange("Algo")
+
+        viewModel.onNewHighlightDismiss()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.showAddHighlightDialog)
+        assertTrue(state.customHighlights.isEmpty())
+        assertEquals("", state.newHighlightText)
+    }
+
+    @Test
+    fun `un destacado personalizado se puede deseleccionar y sigue ofrecido`() {
+        val viewModel = viewModel()
+        viewModel.onNewHighlightChange("Vista")
+        viewModel.onNewHighlightConfirm(predefined)
+
+        viewModel.onHighlightToggle("Vista")
+
+        assertTrue(
+            viewModel.uiState.value.highlights
+                .isEmpty(),
+        )
+        assertEquals(listOf("Vista"), viewModel.uiState.value.customHighlights)
+    }
+
     private fun viewModel(runId: String = "r1") =
         SaveRunViewModel(
             savedStateHandle = SavedStateHandle(mapOf("runId" to runId)),

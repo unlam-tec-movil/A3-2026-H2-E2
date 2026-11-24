@@ -76,6 +76,17 @@ class SaveRunUseCaseTest {
         }
 
     @Test
+    fun `si el repositorio falla al escribir devuelve SaveFailed`() =
+        runTest {
+            savedRuns.failOnSave = true
+
+            val result = useCase("r1", "Mi carrera", emptyList(), emptyList())
+
+            assertEquals(SaveRunResult.SaveFailed, result)
+            assertNull(savedRuns.getById("r1"))
+        }
+
+    @Test
     fun `sin acelerometro las frenadas sin dato se guardan como lista vacia`() =
         runTest {
             runSessions.putFinishedSummary(summary().copy(brakes = null))
