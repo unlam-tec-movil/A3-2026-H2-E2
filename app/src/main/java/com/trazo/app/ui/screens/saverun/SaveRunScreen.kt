@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
@@ -25,6 +26,7 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -83,6 +85,7 @@ fun SaveRunScreen(
 
         SaveRunContent(
             state = state,
+            onBack = viewModel::onBackRequested,
             onTitleChange = viewModel::onTitleChange,
             onHighlightToggle = viewModel::onHighlightToggle,
             onSave = viewModel::onSave,
@@ -99,6 +102,7 @@ fun SaveRunScreen(
 @Composable
 fun SaveRunContent(
     state: SaveRunUiState,
+    onBack: () -> Unit,
     onTitleChange: (String) -> Unit,
     onHighlightToggle: (String) -> Unit,
     onSave: () -> Unit,
@@ -108,144 +112,167 @@ fun SaveRunContent(
     onPhotoRemove: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .safeDrawingPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xl),
-    ) {
-        Text(
-            text = stringResource(R.string.save_run_heading),
-            style = MaterialTheme.typography.headlineMedium,
-        )
-        OutlinedTextField(
-            value = state.title,
-            onValueChange = onTitleChange,
-            label = { Text(stringResource(R.string.save_run_title_label)) },
-            isError = state.titleError,
-            supportingText = {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        stringResource(
-                            if (state.titleError) R.string.save_run_title_error else R.string.save_run_title_helper,
-                        ),
-                    )
-                    Text(
-                        stringResource(
-                            R.string.save_run_title_counter,
-                            state.title.length,
-                            SavedRun.TITLE_MAX_LENGTH,
-                        ),
-                    )
-                }
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        val highlightOptions =
-            listOf(
-                stringResource(R.string.save_run_highlight_even_floor),
-                stringResource(R.string.save_run_highlight_safe),
-                stringResource(R.string.save_run_highlight_lit),
-                stringResource(R.string.save_run_highlight_shade),
+    Column(modifier = modifier.fillMaxSize().safeDrawingPadding()) {
+        SaveRunTopBar(onBack = onBack)
+        Column(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+        ) {
+            OutlinedTextField(
+                value = state.title,
+                onValueChange = onTitleChange,
+                label = { Text(stringResource(R.string.save_run_title_label)) },
+                isError = state.titleError,
+                supportingText = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            stringResource(
+                                if (state.titleError) R.string.save_run_title_error else R.string.save_run_title_helper,
+                            ),
+                        )
+                        Text(
+                            stringResource(
+                                R.string.save_run_title_counter,
+                                state.title.length,
+                                SavedRun.TITLE_MAX_LENGTH,
+                            ),
+                        )
+                    }
+                },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
             )
-        Text(
-            text = stringResource(R.string.save_run_highlights_title),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            highlightOptions.forEach { option ->
-                val selected = option in state.highlights
-                FilterChip(
-                    selected = selected,
-                    onClick = { onHighlightToggle(option) },
-                    label = { Text(option) },
-                    leadingIcon =
-                        if (selected) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Filled.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(FilterChipDefaults.IconSize),
-                                )
-                            }
-                        } else {
-                            null
-                        },
-                )
-            }
-        }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
+            val highlightOptions =
+                listOf(
+                    stringResource(R.string.save_run_highlight_even_floor),
+                    stringResource(R.string.save_run_highlight_safe),
+                    stringResource(R.string.save_run_highlight_lit),
+                    stringResource(R.string.save_run_highlight_shade),
+                )
             Text(
-                text = stringResource(R.string.save_run_photos_title),
+                text = stringResource(R.string.save_run_highlights_title),
                 style = MaterialTheme.typography.titleMedium,
             )
-            Text(
-                text =
-                    stringResource(
-                        R.string.save_run_photos_counter,
-                        state.photoPaths.size,
-                        SavedRun.MAX_PHOTOS,
-                    ),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        Text(
-            text = stringResource(R.string.save_run_photos_hint, SavedRun.MAX_PHOTOS),
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            state.photoPaths.forEachIndexed { index, path ->
-                Box(modifier = Modifier.size(96.dp)) {
-                    AsyncImage(
-                        model = File(path),
-                        contentDescription = stringResource(R.string.save_run_photo_description, index + 1),
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                highlightOptions.forEach { option ->
+                    val selected = option in state.highlights
+                    FilterChip(
+                        selected = selected,
+                        onClick = { onHighlightToggle(option) },
+                        label = { Text(option) },
+                        leadingIcon =
+                            if (selected) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize),
+                                    )
+                                }
+                            } else {
+                                null
+                            },
                     )
-                    FilledTonalIconButton(
-                        onClick = { onPhotoRemove(path) },
-                        modifier = Modifier.align(Alignment.TopEnd).size(32.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = stringResource(R.string.save_run_remove_photo),
-                            modifier = Modifier.size(16.dp),
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringResource(R.string.save_run_photos_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.save_run_photos_counter,
+                            state.photoPaths.size,
+                            SavedRun.MAX_PHOTOS,
+                        ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            Text(
+                text = stringResource(R.string.save_run_photos_hint, SavedRun.MAX_PHOTOS),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                state.photoPaths.forEachIndexed { index, path ->
+                    Box(modifier = Modifier.size(96.dp)) {
+                        AsyncImage(
+                            model = File(path),
+                            contentDescription = stringResource(R.string.save_run_photo_description, index + 1),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
                         )
+                        FilledTonalIconButton(
+                            onClick = { onPhotoRemove(path) },
+                            modifier = Modifier.align(Alignment.TopEnd).size(32.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = stringResource(R.string.save_run_remove_photo),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                     }
                 }
             }
-        }
-        OutlinedButton(
-            onClick = onAddPhoto,
-            enabled = state.photoPaths.size < SavedRun.MAX_PHOTOS,
-        ) {
-            Text(stringResource(R.string.save_run_add_photo))
+            OutlinedButton(
+                onClick = onAddPhoto,
+                enabled = state.photoPaths.size < SavedRun.MAX_PHOTOS,
+            ) {
+                Text(stringResource(R.string.save_run_add_photo))
+            }
         }
 
+        // Botón fijo abajo: queda fuera del área que se desplaza.
         Button(
             onClick = onSave,
-            modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.buttonHeight),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.lg)
+                    .heightIn(min = Sizes.buttonHeight),
         ) {
             Text(stringResource(R.string.save_run_save))
         }
     }
     if (state.showDiscardDialog) {
         DiscardRunDialog(onConfirm = onDiscardConfirm, onDismiss = onDiscardDismiss)
+    }
+}
+
+/** Barra superior: flecha para volver y el título de la pantalla. */
+@Composable
+private fun SaveRunTopBar(onBack: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.save_run_back),
+            )
+        }
+        Text(
+            text = stringResource(R.string.save_run_heading),
+            style = MaterialTheme.typography.titleLarge,
+        )
     }
 }
 
@@ -285,6 +312,7 @@ private fun SaveRunContentPreview() {
     TrazoTheme {
         SaveRunContent(
             state = SaveRunUiState(title = "Mi carrera", highlights = setOf("Piso parejo")),
+            onBack = {},
             onTitleChange = {},
             onHighlightToggle = {},
             onSave = {},
