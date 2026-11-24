@@ -30,4 +30,10 @@
     <string name="save_run_summary_time">Tiempo</string>
     <string name="save_run_summary_brakes">Frenadas</string>
     <string name="save_run_save_error">No se pudo guardar el recorrido. Probá de nuevo.</string>
+    <string name="save_run_highlight_add">Agregar</string>
+    <string name="save_run_new_highlight_title">Nuevo destacado</string>
+    <string name="save_run_new_highlight_label">Destacado</string>
+    <string name="save_run_new_highlight_empty">Escribí un texto</string>
+    <string name="save_run_new_highlight_duplicate">Ese destacado ya existe</string>
+    <string name="save_run_new_highlight_cancel">Cancelar</string>
 </resources>

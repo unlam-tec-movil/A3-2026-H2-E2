@@ -17,9 +17,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconButton
@@ -93,6 +95,10 @@ fun SaveRunScreen(
             onDiscardDismiss = viewModel::onDiscardDismiss,
             onAddPhoto = viewModel::onAddPhotoClick,
             onPhotoRemove = viewModel::onPhotoRemove,
+            onAddHighlight = viewModel::onAddHighlightClick,
+            onNewHighlightChange = viewModel::onNewHighlightChange,
+            onNewHighlightConfirm = viewModel::onNewHighlightConfirm,
+            onNewHighlightDismiss = viewModel::onNewHighlightDismiss,
             modifier = modifier,
         )
     }
@@ -110,8 +116,20 @@ fun SaveRunContent(
     onDiscardDismiss: () -> Unit,
     onAddPhoto: () -> Unit,
     onPhotoRemove: (String) -> Unit,
+    onAddHighlight: () -> Unit,
+    onNewHighlightChange: (String) -> Unit,
+    onNewHighlightConfirm: (List<String>) -> Unit,
+    onNewHighlightDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val highlightOptions =
+        listOf(
+            stringResource(R.string.save_run_highlight_even_floor),
+            stringResource(R.string.save_run_highlight_safe),
+            stringResource(R.string.save_run_highlight_lit),
+            stringResource(R.string.save_run_highlight_shade),
+        )
+
     Column(modifier = modifier.fillMaxSize().safeDrawingPadding()) {
         SaveRunTopBar(onBack = onBack)
         Column(
@@ -152,13 +170,6 @@ fun SaveRunContent(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            val highlightOptions =
-                listOf(
-                    stringResource(R.string.save_run_highlight_even_floor),
-                    stringResource(R.string.save_run_highlight_safe),
-                    stringResource(R.string.save_run_highlight_lit),
-                    stringResource(R.string.save_run_highlight_shade),
-                )
             Text(
                 text = stringResource(R.string.save_run_highlights_title),
                 style = MaterialTheme.typography.titleMedium,
@@ -167,7 +178,7 @@ fun SaveRunContent(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                highlightOptions.forEach { option ->
+                (highlightOptions + state.customHighlights).forEach { option ->
                     val selected = option in state.highlights
                     FilterChip(
                         selected = selected,
@@ -187,6 +198,17 @@ fun SaveRunContent(
                             },
                     )
                 }
+                AssistChip(
+                    onClick = onAddHighlight,
+                    label = { Text(stringResource(R.string.save_run_highlight_add)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(FilterChipDefaults.IconSize),
+                        )
+                    },
+                )
             }
 
             Row(
@@ -265,6 +287,15 @@ fun SaveRunContent(
     if (state.showDiscardDialog) {
         DiscardRunDialog(onConfirm = onDiscardConfirm, onDismiss = onDiscardDismiss)
     }
+    if (state.showAddHighlightDialog) {
+        AddHighlightDialog(
+            text = state.newHighlightText,
+            error = state.newHighlightError,
+            onTextChange = onNewHighlightChange,
+            onConfirm = { onNewHighlightConfirm(highlightOptions) },
+            onDismiss = onNewHighlightDismiss,
+        )
+    }
 }
 
 /** Barra superior: flecha para volver y el título de la pantalla. */
@@ -317,6 +348,49 @@ private fun DiscardRunDialog(
     )
 }
 
+/** Pide el texto del destacado nuevo. Muestra un error si está vacío o ya existe. */
+@Composable
+private fun AddHighlightDialog(
+    text: String,
+    error: NewHighlightError?,
+    onTextChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.save_run_new_highlight_title)) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = onTextChange,
+                label = { Text(stringResource(R.string.save_run_new_highlight_label)) },
+                isError = error != null,
+                supportingText = {
+                    when (error) {
+                        NewHighlightError.Empty ->
+                            Text(stringResource(R.string.save_run_new_highlight_empty))
+                        NewHighlightError.Duplicate ->
+                            Text(stringResource(R.string.save_run_new_highlight_duplicate))
+                        null -> Unit
+                    }
+                },
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.save_run_highlight_add))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.save_run_new_highlight_cancel))
+            }
+        },
+    )
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun SaveRunContentPreview() {
@@ -331,6 +405,10 @@ private fun SaveRunContentPreview() {
             onDiscardDismiss = {},
             onAddPhoto = {},
             onPhotoRemove = {},
+            onAddHighlight = {},
+            onNewHighlightChange = {},
+            onNewHighlightConfirm = {},
+            onNewHighlightDismiss = {},
         )
     }
 }
