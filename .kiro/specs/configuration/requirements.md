@@ -1,5 +1,17 @@
 # Requirements Document
 
+> **Revisión 2026-11-23 · nueva UI de Configuración.** Esta nota manda sobre lo que se contradiga más
+> abajo.
+>
+> - 1.3: la sección del modo demo se llama **«Avanzado»**; adentro está la fila «Modo demo · Simular
+>   recorridos» con el interruptor.
+> - 3.1 y 3.2: ya no hay un botón por permiso. Debajo de los permisos hay un aviso: si falta alguno,
+>   «Acceso restringido»; con todos concedidos, «Todos los permisos necesarios están configurados
+>   correctamente para el seguimiento de tu recorrido.». En los dos casos sigue **un único** botón
+>   «Ir a configuración», porque el corredor también tiene que poder revocar permisos. Las dos filas
+>   de permisos se pueden tocar siempre y abren los ajustes del sistema.
+> - 4.2: al volver de los ajustes se actualizan las etiquetas y el aviso.
+
 ## Project Description (Input)
 Como corredor quiero una pantalla de Configuración donde ver el estado de los permisos y activar el modo demo, para resolver problemas de permisos y probar la app sin salir a correr.
 

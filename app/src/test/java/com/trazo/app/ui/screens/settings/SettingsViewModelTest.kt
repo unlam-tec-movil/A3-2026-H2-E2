@@ -72,6 +72,7 @@ class SettingsViewModelTest {
         assertFalse(initialState.isDemoModeSwitchEnabled)
         assertTrue(initialState.showLocationSettingsButton)
         assertTrue(initialState.showCameraSettingsButton)
+        assertFalse(initialState.arePermissionsGranted)
     }
 
     @Test
@@ -89,6 +90,7 @@ class SettingsViewModelTest {
             assertEquals(CameraPermissionStatus.GRANTED, state.cameraPermissionStatus)
             assertFalse(state.showLocationSettingsButton)
             assertFalse(state.showCameraSettingsButton)
+            assertTrue(state.arePermissionsGranted)
             assertTrue(state.isDemoModeSwitchEnabled)
             assertFalse(state.isRunInProgress)
         }

@@ -31,8 +31,7 @@ class SettingsContentTest {
     val composeTestRule = createComposeRule()
 
     private var backClicks = 0
-    private var locationSettingsClicks = 0
-    private var cameraSettingsClicks = 0
+    private var systemSettingsClicks = 0
     private var lastToggledDemoMode: Boolean? = null
 
     private fun string(
@@ -45,8 +44,7 @@ class SettingsContentTest {
                 SettingsContent(
                     state = state,
                     onBackClick = { backClicks++ },
-                    onLocationSettingsClick = { locationSettingsClicks++ },
-                    onCameraSettingsClick = { cameraSettingsClicks++ },
+                    onOpenSystemSettingsClick = { systemSettingsClicks++ },
                     onDemoModeToggle = { lastToggledDemoMode = it },
                 )
             }
@@ -54,7 +52,7 @@ class SettingsContentTest {
     }
 
     @Test
-    fun readyLocationAndGrantedCamera_showsExactAndGranted_andNoSettingsButton() {
+    fun readyLocationAndGrantedCamera_showsExactAndGranted_andTheGrantedNoticeWithSettingsButton() {
         setContent(
             SettingsUiState(
                 locationStatus = LocationStatus.READY,
@@ -64,11 +62,27 @@ class SettingsContentTest {
 
         composeTestRule.onNodeWithText(string(R.string.settings_permission_exact)).assertIsDisplayed()
         composeTestRule.onNodeWithText(string(R.string.settings_permission_granted)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_go_to_settings)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_granted)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_title)).assertDoesNotExist()
+        composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(1)
     }
 
     @Test
-    fun deviceLocationOffAndGrantedCamera_showsExactAndGranted_andNoSettingsButton() {
+    fun allPermissionsGranted_clickGoToSettingsButton_opensTheSystemSettingsToRevoke() {
+        setContent(
+            SettingsUiState(
+                locationStatus = LocationStatus.READY,
+                cameraPermissionStatus = CameraPermissionStatus.GRANTED,
+            ),
+        )
+
+        composeTestRule.onNodeWithText(string(R.string.settings_go_to_settings)).performScrollTo().performClick()
+
+        assertEquals(1, systemSettingsClicks)
+    }
+
+    @Test
+    fun deviceLocationOffAndGrantedCamera_showsExactAndGranted_andASingleSettingsButton() {
         setContent(
             SettingsUiState(
                 locationStatus = LocationStatus.DEVICE_LOCATION_OFF,
@@ -78,11 +92,11 @@ class SettingsContentTest {
 
         composeTestRule.onNodeWithText(string(R.string.settings_permission_exact)).assertIsDisplayed()
         composeTestRule.onNodeWithText(string(R.string.settings_permission_granted)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_go_to_settings)).assertDoesNotExist()
+        composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(1)
     }
 
     @Test
-    fun deniedLocationAndDeniedCamera_showsDeniedAndTwoSettingsButtons() {
+    fun deniedLocationAndDeniedCamera_showsDenied_theRestrictedNotice_andASingleSettingsButton() {
         setContent(
             SettingsUiState(
                 locationStatus = LocationStatus.PERMISSION_DENIED,
@@ -91,11 +105,14 @@ class SettingsContentTest {
         )
 
         composeTestRule.onAllNodesWithText(string(R.string.settings_permission_denied)).assertCountEquals(2)
-        composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(2)
+        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_body)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_granted)).assertDoesNotExist()
+        composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(1)
     }
 
     @Test
-    fun deniedLocationAndUnknownCamera_showsDeniedAndTwoSettingsButtons() {
+    fun deniedLocationAndUnknownCamera_showsDeniedTwice_andASingleSettingsButton() {
         setContent(
             SettingsUiState(
                 locationStatus = LocationStatus.PERMISSION_DENIED,
@@ -104,11 +121,11 @@ class SettingsContentTest {
         )
 
         composeTestRule.onAllNodesWithText(string(R.string.settings_permission_denied)).assertCountEquals(2)
-        composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(2)
+        composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(1)
     }
 
     @Test
-    fun approximateLocationAndGrantedCamera_showsApproximateAndGranted_andOneSettingsButton() {
+    fun approximateLocationAndGrantedCamera_showsApproximate_andTheRestrictedNotice() {
         setContent(
             SettingsUiState(
                 locationStatus = LocationStatus.APPROXIMATE_ONLY,
@@ -118,11 +135,12 @@ class SettingsContentTest {
 
         composeTestRule.onNodeWithText(string(R.string.settings_permission_approximate)).assertIsDisplayed()
         composeTestRule.onNodeWithText(string(R.string.settings_permission_granted)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_title)).assertIsDisplayed()
         composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(1)
     }
 
     @Test
-    fun clickLocationAndCameraSettingsButtons_triggersRespectiveCallbacks() {
+    fun clickGoToSettingsButton_opensTheSystemSettings() {
         setContent(
             SettingsUiState(
                 locationStatus = LocationStatus.PERMISSION_DENIED,
@@ -130,14 +148,48 @@ class SettingsContentTest {
             ),
         )
 
-        val buttons = composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings))
-        buttons[0].performClick()
-        assertEquals(1, locationSettingsClicks)
-        assertEquals(0, cameraSettingsClicks)
+        composeTestRule.onNodeWithText(string(R.string.settings_go_to_settings)).performScrollTo().performClick()
 
-        buttons[1].performClick()
-        assertEquals(1, locationSettingsClicks)
-        assertEquals(1, cameraSettingsClicks)
+        assertEquals(1, systemSettingsClicks)
+    }
+
+    @Test
+    fun missingPermissionRows_areClickable_andOpenTheSystemSettings() {
+        setContent(
+            SettingsUiState(
+                locationStatus = LocationStatus.APPROXIMATE_ONLY,
+                cameraPermissionStatus = CameraPermissionStatus.DENIED,
+            ),
+        )
+
+        composeTestRule.onNodeWithText(string(R.string.settings_location_label)).performClick()
+        composeTestRule.onNodeWithText(string(R.string.settings_camera_label)).performClick()
+
+        assertEquals(2, systemSettingsClicks)
+    }
+
+    @Test
+    fun grantedPermissionRows_areClickable_andOpenTheSystemSettings() {
+        setContent(
+            SettingsUiState(
+                locationStatus = LocationStatus.READY,
+                cameraPermissionStatus = CameraPermissionStatus.GRANTED,
+            ),
+        )
+
+        composeTestRule.onNodeWithText(string(R.string.settings_location_label)).performClick()
+        composeTestRule.onNodeWithText(string(R.string.settings_camera_label)).performClick()
+
+        assertEquals(2, systemSettingsClicks)
+    }
+
+    @Test
+    fun sections_showPermissionsAndAdvanced() {
+        setContent(SettingsUiState())
+
+        composeTestRule.onNodeWithText(string(R.string.settings_permissions_section)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(string(R.string.settings_advanced_section)).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText(string(R.string.settings_demo_mode_subtitle)).performScrollTo().assertIsDisplayed()
     }
 
     @Test

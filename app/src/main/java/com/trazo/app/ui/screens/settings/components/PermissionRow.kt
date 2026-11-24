@@ -1,72 +1,49 @@
 package com.trazo.app.ui.screens.settings.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import com.trazo.app.R
 import com.trazo.app.domain.model.CameraPermissionStatus
 import com.trazo.app.domain.model.LocationStatus
-import com.trazo.app.ui.theme.Sizes
-import com.trazo.app.ui.theme.Spacing
 
+/**
+ * Fila de un permiso con su estado y una flecha. Tocarla abre los ajustes del sistema con [onClick],
+ * para conceder o revocar el permiso.
+ */
 @Composable
 fun PermissionRow(
+    icon: ImageVector,
     label: String,
+    subtitle: String,
     statusText: String,
-    showSettingsButton: Boolean,
-    onSettingsClick: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
+    SettingsRow(
+        icon = icon,
+        label = label,
+        subtitle = subtitle,
+        modifier = modifier.clickable(role = Role.Button, onClick = onClick),
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = Sizes.minTouchTarget),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        if (showSettingsButton) {
-            Spacer(modifier = Modifier.height(Spacing.xs))
-            OutlinedButton(
-                onClick = onSettingsClick,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = Sizes.minTouchTarget),
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_go_to_settings),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
-        }
+        Text(
+            text = statusText,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

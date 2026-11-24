@@ -1,5 +1,20 @@
 # Technical Design Document — Configuración
 
+> **Revisión 2026-11-23 · nueva UI de Configuración.** Esta nota manda sobre lo que se contradiga más
+> abajo (ver también la revisión de `requirements.md`).
+>
+> - `SettingsContent` recibe un solo `onOpenSystemSettingsClick` (antes uno por permiso; los dos abrían
+>   `appDetailsSettingsIntent`). La pantalla no tiene lógica: pasa valores de `SettingsUiState`.
+> - `SettingsUiState` suma `arePermissionsGranted`. `showLocationSettingsButton` y
+>   `showCameraSettingsButton` indican que falta el permiso y solo alimentan `arePermissionsGranted`.
+> - Componentes en `ui/screens/settings/components/`:
+>   - `SettingsGroup.kt`: `SettingsSectionHeader`, `SettingsGroup` (card) y `SettingsRow` (ícono,
+>     título, subtítulo y contenido a la derecha).
+>   - `PermissionRow`: ícono, subtítulo, estado y flecha; siempre tocable (conceder o revocar).
+>   - `PermissionNotice` (nuevo): «Acceso restringido» o el mensaje de permisos completos (ícono de
+>     check, colores de éxito); en los dos casos, debajo, el botón «Ir a configuración».
+>   - `DemoModeSwitch`: fila con ícono y subtítulo dentro de una card, en la sección «Avanzado».
+
 ## Executive Summary
 
 La pantalla "Configuración" permite a los corredores consultar el estado real de los permisos de ubicación y cámara, acceder a los ajustes del sistema Android cuando faltan permisos, y gestionar el interruptor de "Modo demo" para simular carreras sin salir a la calle, asegurando mediante un caso de uso de dominio (`SetDemoModeUseCase`) que no se pueda modificar mientras un recorrido está en curso.

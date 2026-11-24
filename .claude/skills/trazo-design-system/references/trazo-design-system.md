@@ -395,7 +395,7 @@ Los avisos que no requieren acción usan `role=status`. Los de error usan `role=
 | **¡Meta cumplida! / Recorrido finalizado** | Ver 6.13 |
 | **Guardar recorrido** | Barra superior con volver. Card de resumen (fecha, marca, 3 métricas). Campo de título. "¿Qué destacarías del recorrido?" (opcional) con chips. "Fotos" con contador. Botón fijo "Guardar recorrido". Si el corredor vuelve sin guardar, aparece el diálogo "¿Descartar el recorrido?" con "Descartar" y "Seguir editando" |
 | **Detalle (modal)** | Mapa con la traza completa, título, métricas, meta y estado, destacados (se ocultan si no hay), grilla de fotos (se oculta si no hay) y marca "Demo" si corresponde |
-| **Configuración** | Secciones "Permisos" (ubicación: Precisa, Aproximada o Denegada; cámara: Permitida o Denegada; botón outlined "Ir a configuración") y "Modo demo" (switch en color tertiary). Durante un recorrido, el switch está deshabilitado y aparece "Finalizá el recorrido para cambiar el modo demo" |
+| **Configuración** | Sección "Permisos": card blanca con las filas Ubicación (Precisa, Aproximada o Denegada) y Cámara (Permitida o Denegada), cada una con ícono en un cuadro, subtítulo, estado y `chevron_right`; toda fila es tocable y abre los ajustes (para conceder o revocar). Debajo, un aviso: "Acceso restringido" (surfaceContainer, ícono de error) o el mensaje de permisos completos (successContainer, ícono de check), y en los dos casos un único botón outlined "Ir a configuración". Sección "Avanzado": card con la fila "Modo demo · Simular recorridos" y el switch (tertiary). Durante un recorrido, el switch está deshabilitado y aparece "Finalizá el recorrido para cambiar el modo demo" |
 
 ---
 
