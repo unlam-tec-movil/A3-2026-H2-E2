@@ -1,5 +1,12 @@
 package com.trazo.app.ui.screens.startrun.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +42,7 @@ import com.trazo.app.ui.theme.Elevation
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme
+import com.trazo.app.ui.theme.rememberReduceMotion
 
 /** Opacidades de Material 3 para un contenedor y un contenido deshabilitados. */
 private const val DISABLED_CONTAINER_ALPHA = 0.12f
@@ -55,8 +63,13 @@ fun StartRunFab(
     onOptionClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val reduceMotion = rememberReduceMotion()
+    val enter = if (reduceMotion) EnterTransition.None else scaleIn() + fadeIn()
+    val exit = if (reduceMotion) ExitTransition.None else scaleOut() + fadeOut()
+
     Box(modifier = modifier) {
-        if (enabled) {
+        // Al habilitarse o deshabilitarse, el «+» activo y el gris se cruzan con escala + fundido.
+        AnimatedVisibility(visible = enabled, enter = enter, exit = exit) {
             FloatingActionButton(
                 onClick = onFabClick,
                 shape = MaterialTheme.shapes.large,
@@ -70,7 +83,8 @@ fun StartRunFab(
                     contentDescription = stringResource(R.string.start_run_fab_description),
                 )
             }
-        } else {
+        }
+        AnimatedVisibility(visible = !enabled, enter = enter, exit = exit) {
             DisabledFab()
         }
 

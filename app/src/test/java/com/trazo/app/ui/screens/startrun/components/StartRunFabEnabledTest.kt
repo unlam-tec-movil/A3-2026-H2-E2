@@ -1,7 +1,11 @@
 package com.trazo.app.ui.screens.startrun.components
 
 import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -50,6 +54,38 @@ class StartRunFabEnabledTest {
 
         // Then
         assertEquals(1, fabClicks)
-        composeTestRule.onNodeWithText(context.getString(R.string.start_run_fab_option)).assertDoesNotExist()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.start_run_fab_option))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun `given an enabled fab, when it becomes disabled, then the animation ends with the disabled fab only`() {
+        // Given
+        var enabled by mutableStateOf(true)
+        composeTestRule.setContent {
+            TrazoTheme {
+                StartRunFab(
+                    enabled = enabled,
+                    isOptionVisible = false,
+                    onFabClick = { fabClicks++ },
+                    onOptionDismiss = {},
+                    onOptionClick = {},
+                )
+            }
+        }
+        val description = context.getString(R.string.start_run_fab_description)
+        composeTestRule.onNodeWithContentDescription(description).assertIsEnabled()
+
+        // When
+        composeTestRule.runOnIdle { enabled = false }
+        composeTestRule.waitForIdle()
+
+        // Then
+        composeTestRule
+            .onNodeWithContentDescription(description)
+            .assertIsNotEnabled()
+            .performClick()
+        assertEquals(0, fabClicks)
     }
 }
