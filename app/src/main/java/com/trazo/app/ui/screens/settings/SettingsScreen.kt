@@ -37,7 +37,6 @@ import com.trazo.app.R
 import com.trazo.app.domain.model.CameraPermissionStatus
 import com.trazo.app.domain.model.LocationStatus
 import com.trazo.app.ui.navigation.appDetailsSettingsIntent
-import com.trazo.app.ui.screens.settings.components.DemoModeSwitch
 import com.trazo.app.ui.screens.settings.components.PermissionNotice
 import com.trazo.app.ui.screens.settings.components.PermissionRow
 import com.trazo.app.ui.screens.settings.components.SettingsGroup
@@ -76,7 +75,6 @@ fun SettingsScreen(
         onOpenSystemSettingsClick = {
             context.startActivity(appDetailsSettingsIntent(context))
         },
-        onDemoModeToggle = viewModel::onDemoModeToggled,
         modifier = modifier,
     )
 }
@@ -87,7 +85,6 @@ fun SettingsContent(
     state: SettingsUiState,
     onBackClick: () -> Unit,
     onOpenSystemSettingsClick: () -> Unit,
-    onDemoModeToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -155,17 +152,6 @@ fun SettingsContent(
                 arePermissionsGranted = state.arePermissionsGranted,
                 onOpenSystemSettingsClick = onOpenSystemSettingsClick,
             )
-
-            Spacer(modifier = Modifier.height(Spacing.xl))
-
-            SettingsSectionHeader(text = stringResource(R.string.settings_advanced_section))
-
-            Spacer(modifier = Modifier.height(Spacing.sm))
-
-            DemoModeSwitch(
-                state = state,
-                onDemoModeToggle = onDemoModeToggle,
-            )
         }
     }
 }
@@ -182,7 +168,6 @@ private fun SettingsContentRestrictedPreview() {
                 ),
             onBackClick = {},
             onOpenSystemSettingsClick = {},
-            onDemoModeToggle = {},
         )
     }
 }
@@ -196,11 +181,9 @@ private fun SettingsContentGrantedPreview() {
                 SettingsUiState(
                     locationStatus = LocationStatus.READY,
                     cameraPermissionStatus = CameraPermissionStatus.GRANTED,
-                    isDemoModeEnabled = true,
                 ),
             onBackClick = {},
             onOpenSystemSettingsClick = {},
-            onDemoModeToggle = {},
         )
     }
 }
