@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.layout
+package com.trazo.app.data.tiles
 
 /**
  * Arma la URL de un tile a partir de la plantilla «PNG tile URL» que entrega CARTO (con la API key

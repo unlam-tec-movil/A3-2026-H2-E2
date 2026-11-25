@@ -25,9 +25,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.RoutePoint
-import com.trazo.app.ui.components.layout.MapAttribution
-import com.trazo.app.ui.components.layout.WebMercator
-import com.trazo.app.ui.components.layout.rememberTrazoMapState
+import com.trazo.app.ui.components.common.MapAttribution
+import com.trazo.app.ui.components.common.WebMercator
+import com.trazo.app.ui.components.common.rememberTrazoMapState
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme

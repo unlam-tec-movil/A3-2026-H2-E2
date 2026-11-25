@@ -49,7 +49,8 @@ interfaz de cada repositorio vive en Data**, junto a su implementación, y devue
   modelos de `domain.model`.
 - Un paquete por fuente, con su interfaz y su adaptador de Android: `location/` (`LocationClient`,
   `LocationStatusReader`), `sensors/` (`MotionSource`, `MotionSensorAvailability`), `clock/`
-  (`MonotonicClock`) y, cuando existan, `local/` (Room), `preferences/` y `camera/`.
+  (`MonotonicClock`), `tiles/` (`CartoTileStreamProvider`, `CartoTileUrl`: tiles del mapa por
+  HTTP) y, cuando existan, `local/` (Room), `preferences/` y `camera/`.
 - `di/`: módulos Hilt que enlazan las interfaces de `data` con sus implementaciones.
 
 ### Inyección

@@ -11,7 +11,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.RoutePoint
-import com.trazo.app.ui.components.layout.WebMercator
+import com.trazo.app.ui.components.common.WebMercator
 import com.trazo.app.ui.theme.TrazoTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule

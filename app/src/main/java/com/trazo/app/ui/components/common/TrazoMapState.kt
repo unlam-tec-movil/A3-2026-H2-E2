@@ -1,10 +1,11 @@
-package com.trazo.app.ui.components.layout
+package com.trazo.app.ui.components.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import com.trazo.app.data.tiles.CartoTileStreamProvider
 import ovh.plrapps.mapcompose.api.addLayer
 import ovh.plrapps.mapcompose.api.onTouchDown
 import ovh.plrapps.mapcompose.ui.layout.Forced

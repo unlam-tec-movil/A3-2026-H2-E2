@@ -1,4 +1,4 @@
-package com.trazo.app.ui.screens.saverun
+package com.trazo.app.ui.screens.saverun.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

@@ -109,10 +109,10 @@ fun TrazoApp() {
                 onLeave = onLeaveToActivity,
             )
         },
-        saveRunScreen = { onLeaveToActivity ->
+        saveRunScreen = { onSaved, onClose ->
             SaveRunScreen(
-                onSaved = onLeaveToActivity,
-                onClose = onLeaveToActivity,
+                onSaved = onSaved,
+                onClose = onClose,
             )
         },
         settingsScreen = { onBackClick ->
