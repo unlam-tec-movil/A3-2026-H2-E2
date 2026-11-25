@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.layout
+package com.trazo.app.ui.components.common
 
 import kotlin.math.PI
 import kotlin.math.atan

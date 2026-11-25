@@ -1,5 +1,10 @@
 # Requirements Document
 
+> **Revisión 2026-11-24 · 5.3 cerrado.** Al guardar, la app saca el resultado y «Guardar recorrido»
+> de la pila, va a la pestaña **Perfil** («Mis recorridos», que reemplaza a Historial) y muestra el
+> aviso de éxito «Recorrido guardado.» (Lima, ícono de check), que el lector de pantalla anuncia sin
+> interrumpir (7.6). Cerrar «Guardar recorrido» sin guardar sigue volviendo a Actividad.
+
 > **Revisión 2026-11-20 · pestañas Actividad · Perfil.** Esta nota manda sobre lo que se
 > contradiga más abajo. La barra inferior pasa de 3 pestañas (Inicio · Mapa · Historial) a 2:
 >

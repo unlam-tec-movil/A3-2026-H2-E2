@@ -78,6 +78,7 @@
     <string name="map_goal_3km">3 km</string>
     <string name="map_goal_5km">5 km</string>
     <string name="map_goal_10km">10 km</string>
+    <string name="map_goal_km">%1$d km</string>
     <string name="map_goal_generic">tu meta</string>
     <string name="map_finish_error">No se pudo finalizar el recorrido. Podés reintentar.</string>
     <string name="map_retry">Reintentar</string>

@@ -4,6 +4,7 @@
     <string name="save_run_title_label">Título del recorrido</string>
     <string name="save_run_title_error">Escribí un título</string>
     <string name="save_run_save">Guardar</string>
+    <string name="save_run_saved_notice">Recorrido guardado.</string>
     <string name="save_run_highlights_title">¿Qué destacarías del recorrido?</string>
     <string name="save_run_highlight_even_floor">Piso parejo</string>
     <string name="save_run_highlight_safe">Seguro</string>

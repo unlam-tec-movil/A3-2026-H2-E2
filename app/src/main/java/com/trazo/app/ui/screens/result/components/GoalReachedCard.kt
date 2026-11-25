@@ -33,7 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.RunGoal
-import com.trazo.app.ui.components.layout.goalLabel
+import com.trazo.app.ui.components.common.goalLabel
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme
 import com.trazo.app.ui.theme.rememberReduceMotion
@@ -79,7 +79,7 @@ fun GoalReachedCard(
 
             if (isGoalReached) {
                 Text(
-                    text = stringResource(R.string.result_goal_completed, goalLabel(goal)),
+                    text = stringResource(R.string.result_goal_completed, goalLabel(goal?.distanceKm)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,

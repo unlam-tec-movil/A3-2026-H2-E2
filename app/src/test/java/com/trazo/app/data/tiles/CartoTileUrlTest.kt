@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.layout
+package com.trazo.app.data.tiles
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

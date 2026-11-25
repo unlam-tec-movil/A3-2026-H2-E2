@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.layout
+package com.trazo.app.ui.components.common
 
 import android.content.Context
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -25,7 +25,7 @@ class GoalLabelTest {
         val labels = mutableListOf<String>()
 
         // When
-        composeTestRule.setContent { goals.forEach { labels += goalLabel(it) } }
+        composeTestRule.setContent { goals.forEach { labels += goalLabel(it?.distanceKm) } }
         composeTestRule.waitForIdle()
 
         // Then

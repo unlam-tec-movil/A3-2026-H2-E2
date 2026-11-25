@@ -1,4 +1,4 @@
-package com.trazo.app.ui.components.layout
+package com.trazo.app.ui.components.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding

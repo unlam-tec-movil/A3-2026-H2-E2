@@ -50,6 +50,7 @@ import coil.compose.AsyncImage
 import com.trazo.app.R
 import com.trazo.app.domain.model.saved.SavedRun
 import com.trazo.app.ui.screens.camera.CameraCaptureScreen
+import com.trazo.app.ui.screens.saverun.components.SaveRunSummaryCard
 import com.trazo.app.ui.theme.Sizes
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.TrazoTheme

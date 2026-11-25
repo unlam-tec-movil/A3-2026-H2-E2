@@ -27,7 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.RunGoal
-import com.trazo.app.ui.components.layout.goalLabel
+import com.trazo.app.ui.components.common.goalLabel
 import com.trazo.app.ui.theme.Spacing
 import com.trazo.app.ui.theme.rememberReduceMotion
 
@@ -66,7 +66,7 @@ fun GoalCelebrationOverlay(
                     textAlign = TextAlign.Center,
                 )
 
-                val goalText = goalLabel(goal)
+                val goalText = goalLabel(goal?.distanceKm)
 
                 Text(
                     text = stringResource(R.string.map_celebration_reached_goal, goalText),

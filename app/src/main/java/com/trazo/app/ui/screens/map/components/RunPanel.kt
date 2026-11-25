@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.trazo.app.R
 import com.trazo.app.domain.model.map.RunGoal
 import com.trazo.app.domain.model.map.RunState
-import com.trazo.app.ui.components.layout.goalLabel
+import com.trazo.app.ui.components.common.goalLabel
 import com.trazo.app.ui.screens.map.LiveRouteTrackingUiState
 import com.trazo.app.ui.theme.Elevation
 import com.trazo.app.ui.theme.Spacing
@@ -138,7 +138,7 @@ private fun GoalBadge(goal: RunGoal) {
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = stringResource(R.string.map_goal_badge, goalLabel(goal)),
+                text = stringResource(R.string.map_goal_badge, goalLabel(goal.distanceKm)),
                 style = MaterialTheme.typography.labelMedium,
             )
         }

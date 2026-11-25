@@ -1,6 +1,7 @@
 package com.trazo.app.ui.navigation
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -19,6 +20,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.trazo.app.R
 import com.trazo.app.ui.theme.TrazoTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -54,7 +56,14 @@ class TrazoScaffoldTest {
                         Text(RESULT_SCREEN)
                         Button(onClick = onLeaveToActivity) { Text(LEAVE_RESULT) }
                     },
-                    saveRunScreen = {},
+                    saveRunScreen = { onSaved, onClose ->
+                        // En columna: el NavHost apila el contenido en un Box y los botones se taparían.
+                        Column {
+                            Text(SAVE_RUN_SCREEN)
+                            Button(onClick = onSaved) { Text(SAVE_RUN) }
+                            Button(onClick = onClose) { Text(CLOSE_SAVE_RUN) }
+                        }
+                    },
                     settingsScreen = { onBackClick ->
                         Text(SETTINGS_SCREEN)
                         Button(onClick = onBackClick) { Text(LEAVE_SETTINGS) }
@@ -151,6 +160,42 @@ class TrazoScaffoldTest {
         assertNull(navController.previousBackStackEntry)
     }
 
+    private fun openSaveRun() {
+        composeTestRule.onNodeWithText(OPEN_RESULT).performClick()
+        composeTestRule.runOnIdle { navController.navigate("saverun/$RUN_ID") }
+        composeTestRule.onNodeWithText(SAVE_RUN_SCREEN).assertIsDisplayed()
+    }
+
+    @Test
+    fun savingARun_goesToProfile_removesResultAndSaveRun_andShowsSavedNotice() {
+        setContent()
+        openSaveRun()
+
+        composeTestRule.onNodeWithText(SAVE_RUN).performClick()
+        composeTestRule.waitForIdle()
+
+        val routes = navController.currentBackStack.value.mapNotNull { it.destination.route }
+        assertEquals(routes.toString(), TrazoDestination.PROFILE.route, currentRoute())
+        composeTestRule.onNodeWithText(PROFILE_SCREEN).assertIsDisplayed()
+        navItem(R.string.nav_profile).assertIsSelected()
+        assertFalse(RESULT_ROUTE in routes)
+        assertFalse(SAVE_RUN_ROUTE in routes)
+        composeTestRule.onNodeWithText(string(R.string.save_run_saved_notice)).assertIsDisplayed()
+    }
+
+    @Test
+    fun closingSaveRun_returnsToActivity_withoutSavedNotice() {
+        setContent()
+        openSaveRun()
+
+        composeTestRule.onNodeWithText(CLOSE_SAVE_RUN).performClick()
+
+        composeTestRule.onNodeWithText(ACTIVITY_SCREEN).assertIsDisplayed()
+        assertEquals(TrazoDestination.ACTIVITY.route, currentRoute())
+        assertNull(navController.previousBackStackEntry)
+        composeTestRule.onNodeWithText(string(R.string.save_run_saved_notice)).assertDoesNotExist()
+    }
+
     @Test
     fun navigateToTab_fromCode_goesToActivity() {
         setContent()
@@ -167,6 +212,9 @@ class TrazoScaffoldTest {
         const val PROFILE_SCREEN = "pantalla Perfil"
         const val RESULT_SCREEN = "pantalla Resultado"
         const val SETTINGS_SCREEN = "pantalla Configuración"
+        const val SAVE_RUN_SCREEN = "pantalla Guardar recorrido"
+        const val SAVE_RUN = "guardar recorrido"
+        const val CLOSE_SAVE_RUN = "cerrar guardar recorrido"
         const val OPEN_RESULT = "abrir resultado"
         const val LEAVE_RESULT = "salir del resultado"
         const val OPEN_SETTINGS = "abrir configuración"
