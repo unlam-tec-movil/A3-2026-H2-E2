@@ -3,11 +3,6 @@ package com.trazo.app.ui.screens.settings
 import androidx.annotation.StringRes
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -32,7 +27,6 @@ class SettingsContentTest {
 
     private var backClicks = 0
     private var systemSettingsClicks = 0
-    private var lastToggledDemoMode: Boolean? = null
 
     private fun string(
         @StringRes id: Int,
@@ -45,7 +39,6 @@ class SettingsContentTest {
                     state = state,
                     onBackClick = { backClicks++ },
                     onOpenSystemSettingsClick = { systemSettingsClicks++ },
-                    onDemoModeToggle = { lastToggledDemoMode = it },
                 )
             }
         }
@@ -60,11 +53,21 @@ class SettingsContentTest {
             ),
         )
 
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_exact)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_granted)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_granted)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_title)).assertDoesNotExist()
-        composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(1)
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_exact))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_granted))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_notice_granted))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_notice_title))
+            .assertDoesNotExist()
+        composeTestRule
+            .onAllNodesWithText(string(R.string.settings_go_to_settings))
+            .assertCountEquals(1)
     }
 
     @Test
@@ -76,7 +79,10 @@ class SettingsContentTest {
             ),
         )
 
-        composeTestRule.onNodeWithText(string(R.string.settings_go_to_settings)).performScrollTo().performClick()
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_go_to_settings))
+            .performScrollTo()
+            .performClick()
 
         assertEquals(1, systemSettingsClicks)
     }
@@ -90,9 +96,15 @@ class SettingsContentTest {
             ),
         )
 
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_exact)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_granted)).assertIsDisplayed()
-        composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(1)
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_exact))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_granted))
+            .assertIsDisplayed()
+        composeTestRule
+            .onAllNodesWithText(string(R.string.settings_go_to_settings))
+            .assertCountEquals(1)
     }
 
     @Test
@@ -104,11 +116,21 @@ class SettingsContentTest {
             ),
         )
 
-        composeTestRule.onAllNodesWithText(string(R.string.settings_permission_denied)).assertCountEquals(2)
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_title)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_body)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_granted)).assertDoesNotExist()
-        composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(1)
+        composeTestRule
+            .onAllNodesWithText(string(R.string.settings_permission_denied))
+            .assertCountEquals(2)
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_notice_title))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_notice_body))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_notice_granted))
+            .assertDoesNotExist()
+        composeTestRule
+            .onAllNodesWithText(string(R.string.settings_go_to_settings))
+            .assertCountEquals(1)
     }
 
     @Test
@@ -120,8 +142,12 @@ class SettingsContentTest {
             ),
         )
 
-        composeTestRule.onAllNodesWithText(string(R.string.settings_permission_denied)).assertCountEquals(2)
-        composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(1)
+        composeTestRule
+            .onAllNodesWithText(string(R.string.settings_permission_denied))
+            .assertCountEquals(2)
+        composeTestRule
+            .onAllNodesWithText(string(R.string.settings_go_to_settings))
+            .assertCountEquals(1)
     }
 
     @Test
@@ -133,10 +159,18 @@ class SettingsContentTest {
             ),
         )
 
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_approximate)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_granted)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_permission_notice_title)).assertIsDisplayed()
-        composeTestRule.onAllNodesWithText(string(R.string.settings_go_to_settings)).assertCountEquals(1)
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_approximate))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_granted))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_permission_notice_title))
+            .assertIsDisplayed()
+        composeTestRule
+            .onAllNodesWithText(string(R.string.settings_go_to_settings))
+            .assertCountEquals(1)
     }
 
     @Test
@@ -148,7 +182,10 @@ class SettingsContentTest {
             ),
         )
 
-        composeTestRule.onNodeWithText(string(R.string.settings_go_to_settings)).performScrollTo().performClick()
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_go_to_settings))
+            .performScrollTo()
+            .performClick()
 
         assertEquals(1, systemSettingsClicks)
     }
@@ -184,62 +221,18 @@ class SettingsContentTest {
     }
 
     @Test
-    fun sections_showPermissionsAndAdvanced() {
+    fun sections_showOnlyPermissions_andNoAdvancedSection() {
         setContent(SettingsUiState())
 
-        composeTestRule.onNodeWithText(string(R.string.settings_permissions_section)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_advanced_section)).performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText(string(R.string.settings_demo_mode_subtitle)).performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun demoModeWithRunNotInProgressAndDemoEnabled_switchEnabled_showsActiveNotice_andToggleSendsFalse() {
-        setContent(
-            SettingsUiState(
-                isDemoModeEnabled = true,
-                isRunInProgress = false,
-            ),
-        )
-
         composeTestRule
-            .onNode(isToggleable())
-            .performScrollTo()
-            .assertIsEnabled()
-            .assertIsOn()
-            .performClick()
-        composeTestRule.onNodeWithText(string(R.string.settings_demo_mode_active_notice)).performScrollTo().assertIsDisplayed()
-        assertEquals(false, lastToggledDemoMode)
-    }
-
-    @Test
-    fun demoModeWithRunNotInProgressAndDemoDisabled_toggleSendsTrue() {
-        setContent(
-            SettingsUiState(
-                isDemoModeEnabled = false,
-                isRunInProgress = false,
-            ),
-        )
-
+            .onNodeWithText(string(R.string.settings_permissions_section))
+            .assertIsDisplayed()
         composeTestRule
-            .onNode(isToggleable())
-            .performScrollTo()
-            .assertIsEnabled()
-            .assertIsOff()
-            .performClick()
-        assertEquals(true, lastToggledDemoMode)
-    }
-
-    @Test
-    fun demoModeWithRunInProgress_switchDisabled_andShowsRunningNotice() {
-        setContent(
-            SettingsUiState(
-                isDemoModeEnabled = false,
-                isRunInProgress = true,
-            ),
-        )
-
-        composeTestRule.onNode(isToggleable()).performScrollTo().assertIsNotEnabled()
-        composeTestRule.onNodeWithText(string(R.string.settings_demo_mode_running_notice)).performScrollTo().assertIsDisplayed()
+            .onNodeWithText(string(R.string.settings_advanced_section))
+            .assertDoesNotExist()
+        composeTestRule
+            .onNodeWithText(string(R.string.settings_demo_mode_label))
+            .assertDoesNotExist()
     }
 
     @Test
